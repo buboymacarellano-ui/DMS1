@@ -1,0 +1,100 @@
+<%- include('../partials/header') %>
+
+<h2>Transaction Details</h2>
+<p>
+  <a class="btn btn-secondary" href="/transactions">Back to Data Base &amp; Inventory</a>
+</p>
+
+<div class="detail-hero card">
+  <h3>Work Order <%= record['work order Number'] || '' %></h3>
+  <p><strong>Customer:</strong> <%= record['Customer name'] || '' %></p>
+  <p><strong>Technician:</strong> <%= record['Tecnician'] || '' %></p>
+  <p><strong>Grand Total:</strong> <%= record['Grand Total'] || '' %></p>
+</div>
+
+<div class="tabs" data-tabs>
+  <div class="tab-list" role="tablist">
+    <button type="button" class="tab-button active" data-tab-target="header-panel">Header</button>
+    <button type="button" class="tab-button" data-tab-target="services-panel">Services</button>
+    <button type="button" class="tab-button" data-tab-target="parts-panel">Parts</button>
+  </div>
+
+  <section id="header-panel" class="tab-panel active">
+    <div class="detail-grid">
+      <% headerFields.forEach(field => { %>
+        <div class="detail-item card">
+          <div class="detail-label"><%= field[0] %></div>
+          <div class="detail-value"><%= field[1] || '—' %></div>
+        </div>
+      <% }) %>
+    </div>
+  </section>
+
+  <section id="services-panel" class="tab-panel">
+    <table class="list">
+      <thead>
+        <tr>
+          <th>Line</th>
+          <th>Service Rendered</th>
+          <th>Labor</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!services.length) { %>
+          <tr><td colspan="3">No service lines saved.</td></tr>
+        <% } %>
+        <% services.forEach(item => { %>
+          <tr>
+            <td><%= item.line %></td>
+            <td><%= item.service %></td>
+            <td><%= item.labor %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="parts-panel" class="tab-panel">
+    <table class="list">
+      <thead>
+        <tr>
+          <th>Line</th>
+          <th>Part</th>
+          <th>Parts Price</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!parts.length) { %>
+          <tr><td colspan="3">No parts saved.</td></tr>
+        <% } %>
+        <% parts.forEach(item => { %>
+          <tr>
+            <td><%= item.line %></td>
+            <td><%= item.part %></td>
+            <td><%= item.price %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<script>
+  document.querySelectorAll('[data-tabs]').forEach(container => {
+    const buttons = Array.from(container.querySelectorAll('.tab-button'));
+    const panels = Array.from(container.querySelectorAll('.tab-panel'));
+
+    buttons.forEach(button => {
+      button.addEventListener('click', () => {
+        const target = button.dataset.tabTarget;
+        buttons.forEach(item => item.classList.remove('active'));
+        panels.forEach(panel => panel.classList.remove('active'));
+        button.classList.add('active');
+        const panel = document.getElementById(target);
+        if (panel) panel.classList.add('active');
+      });
+    });
+  });
+</script>
+
+<%- include('../partials/footer') %>

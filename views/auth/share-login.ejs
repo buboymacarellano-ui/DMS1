@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>A&amp;E Login Shortcut</title>
+  <meta name="description" content="Open the A&E Auto Service DMS login." />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="A&E Login" />
+  <meta property="og:description" content="Open the A&E Auto Service DMS login." />
+  <meta property="og:url" content="<%= shareUrl %>" />
+  <meta property="og:image" content="<%= iconUrl %>" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="A&E Login" />
+  <meta name="twitter:image" content="<%= iconUrl %>" />
+  <link rel="icon" href="/icons/login-shortcut.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="login-share-shell">
+    <section class="login-share-panel">
+      <a class="login-shortcut" href="<%= loginUrl %>" aria-label="Open A&E Login">
+        <img src="/icons/login-shortcut.svg" alt="A&E Login" />
+      </a>
+      <h1>A&amp;E Login</h1>
+      <p class="login-share-url"><%= loginUrl %></p>
+
+      <div class="login-share-actions">
+        <button type="button" id="share-native">Share</button>
+        <button type="button" id="copy-login-link">Copy Link</button>
+        <a class="btn" href="viber://forward?text=<%= encodeURIComponent('A&E Login: ' + shareUrl) %>">Viber</a>
+        <a class="btn" href="fb-messenger://share/?link=<%= encodeURIComponent(shareUrl) %>">Messenger</a>
+        <a class="btn" target="_blank" rel="noopener" href="https://www.facebook.com/sharer/sharer.php?u=<%= encodeURIComponent(shareUrl) %>">Facebook</a>
+        <a class="btn" href="mailto:?subject=<%= encodeURIComponent('A&E Login') %>&body=<%= encodeURIComponent('Open A&E Login: ' + shareUrl) %>">Email</a>
+        <a class="btn" href="/auth/login-shortcut.url">Download Shortcut</a>
+      </div>
+      <p id="copy-status" class="login-share-status" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script>
+    (function initLoginSharing() {
+      const shareUrl = <%- JSON.stringify(shareUrl) %>;
+      const status = document.getElementById('copy-status');
+      const nativeButton = document.getElementById('share-native');
+      const copyButton = document.getElementById('copy-login-link');
+
+      nativeButton.hidden = !navigator.share;
+      nativeButton.addEventListener('click', async () => {
+        try {
+          await navigator.share({ title: 'A&E Login', text: 'Open A&E Login', url: shareUrl });
+        } catch (error) {
+          if (error.name !== 'AbortError') status.textContent = 'Sharing is unavailable on this device.';
+        }
+      });
+
+      copyButton.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+          status.textContent = 'Login shortcut link copied.';
+        } catch (error) {
+          status.textContent = 'Select and copy the login address shown above.';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

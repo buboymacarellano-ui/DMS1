@@ -1,0 +1,33 @@
+<%
+  const backMode = (typeof backChipMode !== 'undefined' && backChipMode) ? String(backChipMode) : 'page';
+  const isUnderLogo = backMode === 'under-logo' || backMode === 'header';
+  const backClass = isUnderLogo
+    ? 'app-back-arrow app-back-arrow--under-logo'
+    : 'app-back-arrow';
+%>
+<button
+  type="button"
+  class="<%= backClass %>"
+  aria-label="Go back to previous page"
+  title="Back"
+>
+  <span class="app-back-arrow__icon" aria-hidden="true">←</span>
+</button>
+<script>
+  (function initBackArrow() {
+    var buttons = document.querySelectorAll('.app-back-arrow');
+    if (!buttons.length) return;
+    buttons.forEach(function (btn) {
+      if (btn.dataset.bound === '1') return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', function () {
+        if (window.history.length > 1) {
+          window.history.back();
+          return;
+        }
+        var fallback = document.referrer && document.referrer.trim() ? document.referrer : '/';
+        window.location.href = fallback;
+      });
+    });
+  })();
+</script>

@@ -1,0 +1,36 @@
+{
+  "name": "auto-shop-manager",
+  "version": "1.0.0",
+  "description": "Simple auto repair shop data management (Express + EJS)",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "start:admin": "node app-admin.js",
+    "start:gm": "node app-gm.js",
+    "migrate:sqlite": "node scripts/migrate-json-to-sqlite.js",
+    "start:prod": "set NODE_ENV=production&&node app.js",
+    "dev": "nodemon app.js",
+    "backup": "node scripts/backup-app.js",
+    "backup:retain30": "set BACKUP_RETENTION_DAYS=30&&node scripts/backup-app.js",
+    "simulate:july-2026": "node scripts/generate-july-2026-simulation.js",
+    "simulate:july-2026:dry-run": "node scripts/generate-july-2026-simulation.js --dry-run",
+    "normalize:technicians": "node scripts/normalize-technician-identities.js",
+    "migrate:proposed-location-branch": "node scripts/migrate-add-proposed-location-branch.js",
+    "migrate:proposed-location-branch:dry-run": "node scripts/migrate-add-proposed-location-branch.js --dry-run",
+    "import:transactions": "node scripts/import-transaction-records.js",
+    "import:transactions:replace": "node scripts/import-transaction-records.js --replace"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "csv-parser": "^3.2.1",
+    "ejs": "^3.1.9",
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.6.1",
+    "express-session": "^1.19.0",
+    "helmet": "^8.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  }
+}

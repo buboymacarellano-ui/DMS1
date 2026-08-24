@@ -1,0 +1,27 @@
+<%- include('../partials/header') %>
+
+<h2>Customers</h2>
+<a class="btn" href="/customers/new">+ New Customer</a>
+
+<div class="table-scroll">
+<table class="list">
+  <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th></th></tr></thead>
+  <tbody>
+    <% customers.forEach(c => { %>
+      <tr>
+        <td><%= c.name %></td>
+        <td><%= c.phone %></td>
+        <td><%= c.email %></td>
+        <td class="actions">
+          <a href="/customers/<%= c.id %>/edit">Edit</a>
+          <form method="post" action="/customers/<%= c.id %>/delete" onsubmit="return confirm('Delete customer?');" style="display:inline">
+            <button type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+</div>
+
+<%- include('../partials/footer') %>

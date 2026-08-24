@@ -1,0 +1,31 @@
+<%- include('../partials/header') %>
+
+<h2>Vehicles</h2>
+<a class="btn" href="/vehicles/new">+ New Vehicle</a>
+
+<div class="table-scroll">
+<table class="list">
+  <thead><tr><th>Customer</th><th>Make/Model</th><th>Year</th><th>Unit Type</th><th>VIN</th><th></th></tr></thead>
+  <tbody>
+    <% vehicles.forEach(v => { 
+         const owner = customers.find(c => c.id === v.customer_id) || {};
+    %>
+      <tr>
+        <td><%= owner.name || '—' %></td>
+        <td><%= v.make %> <%= v.model %></td>
+        <td><%= v.year %></td>
+        <td><%= v.vehicle_type || '—' %></td>
+        <td><%= v.vin %></td>
+        <td class="actions">
+          <a href="/vehicles/<%= v.id %>/edit">Edit</a>
+          <form method="post" action="/vehicles/<%= v.id %>/delete" onsubmit="return confirm('Delete vehicle?');" style="display:inline">
+            <button type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+</div>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,94 @@
+﻿Service Required,Flat Rate (Hours),Rate/HOUR,Small,Medium,Large,CompactSuv,VanSuvPickUp,Truck,
+Comprehensive Vehicle Inspection,1,350,350,385,420,525,612.5,700,
+Engine Diagnosis,0.5,350,175,192.5,210,262.5,306.25,350,
+Suspension Diagnosis Drivability,0.5,350,175,192.5,210,262.5,306.25,350,
+Suspension Diagnosis Noise,0.75,350,262.5,288.75,315,393.75,459.375,525,
+Transmission Performance Diagnosis,1,350,350,385,420,525,612.5,700,
+Brakes System Diagnosis,1,350,350,385,420,525,612.5,700,
+Running Noise Diagnosis,0.75,350,262.5,288.75,315,393.75,459.375,525,
+Electrical/Electronic Diagnosis,3,350,1050,1155,1260,1575,1837.5,2100,
+Top Overhaul,22,350,7700,8470,9240,11550,13475,15400,
+General Overhaul,48,350,16800,18480,20160,25200,29400,33600,
+Timing Belt/Chain Component Replacement,8,350,2800,3080,3360,4200,4900,5600,
+Replace Sparkplug/Ignition Coil,1.5,350,525,577.5,630,787.5,918.75,1050,
+Gasket Seal Replacement,3,350,1050,1155,1260,1575,1837.5,2100,
+Rear CrankShaft Oil Seal Replacement,16,350,5600,6160,6720,8400,9800,11200,
+Front Crankshaft Oil Seal Replacement,8,350,2800,3080,3360,4200,4900,5600,
+Performance Tune -Up,5,350,1750,1925,2100,2625,3062.5,3500,
+Mounting/Support Replacement,3,350,1050,1155,1260,1575,1837.5,2100,
+Egr/Manifold Cleaning,8,350,2800,3080,3360,4200,4900,5600,
+Trottle Body Cleaning,4,350,1400,1540,1680,2100,2450,2800,
+Drive Belt/Tensioner Replacement,7,350,2450,2695,2940,3675,4287.5,4900,
+Manual Clutch Component Replacement,16,350,5600,6160,6720,8400,9800,11200,
+ATF/Filter Replacement,4,350,1400,1540,1680,2100,2450,2800,
+ Valve Body Cleaning,10,350,3500,3850,4200,5250,6125,7000,
+ Automatic Transmission Overhaul,48,350,16800,18480,20160,25200,29400,33600,
+ Rack and Pinion Replacement,6,350,2100,2310,2520,3150,3675,4200,
+ Tie Rod End Replacement,2,350,700,770,840,1050,1225,1400,
+ Tie Rod Bar Replacement,1,350,350,385,420,525,612.5,700,
+ Stabilizer Link Replacement,1,350,350,385,420,525,612.5,700,
+ Stabilizer Bar Replacement,2,350,700,770,840,1050,1225,1400,
+ Suspension Arm Replacement,4,350,1400,1540,1680,2100,2450,2800,
+ Ball Joint Replacement,4,350,1400,1540,1680,2100,2450,2800,
+ Shock Absorber/Spring Replacement,4,350,1400,1540,1680,2100,2450,2800,
+ Knuckle Arm Replacement,3,350,1050,1155,1260,1575,1837.5,2100,
+ Wheel Bearing Replacement,2,350,700,770,840,1050,1225,1400,
+ Brake Fluid Flushing/Bleeding,3,350,1050,1155,1260,1575,1837.5,2100,
+ Brake Caliper Replacement,3,350,1050,1155,1260,1575,1837.5,2100,
+ Brake Disc Reface,3,350,1050,1155,1260,1575,1837.5,2100,
+ Brake Disc Replacement,3,350,1050,1155,1260,1575,1837.5,2100,
+ Brake Pads Replacement,1,350,350,385,420,525,612.5,700,
+ Replace Tire,1,350,350,385,420,525,612.5,700,
+ Tire Functure Repair,0.5,350,175,192.5,210,262.5,306.25,350,
+ Tire Balancing,0.5,350,175,192.5,210,262.5,306.25,350,
+ Computerized Alignment,2,350,700,770,840,1050,1225,1400,
+ Aircon General Cleaning,16,350,5600,6160,6720,8400,9800,11200,
+ Replace Radiator Fan,1.5,350,525,577.5,630,787.5,918.75,1050,
+ Replace Auxillary Fan,1.25,350,437.5,481.25,525,656.25,765.625,875,
+Replace Alternator,4,350,1400,1540,1680,2100,2450,2800,
+Replace Fuel Pump,5,350,1750,1925,2100,2625,3062.5,3500,
+Replace Fuel Filter,1,350,350,385,420,525,612.5,700,
+Clean Injectors,8,350,2800,3080,3360,4200,4900,5600,
+Pull Down Gas Tank,12,350,4200,4620,5040,6300,7350,8400,
+Fuel System General Works,4,350,1400,1540,1680,2100,2450,2800,
+Labor Only OCPD,1.26,350,460,480,500,550,580,650,700
+OCPD- REGULAR,0.43,350,160,180,190,200,250,250,250
+OCPD- SEMI-SYNTHETIC,0.43,350,160,180,190,200,250,250,250
+OCPD- FULLY SYNTHETIC,0.43,350,160,180,190,200,250,250,250
+OCPD- REGULAR W/ PMS,3,350,1050,1200,1300,1400,1500,1500,1500
+OCPD- SEMI-SYNTHETIC W/ PMS,3,350,1050,1200,1300,1400,1500,1500,1500
+OCPD- FULLY SYNTHETIC W/PMS,3,350,1050,1200,1300,1400,1500,1500,1500
+Gear Oil -Labor,0.43,150,150,150,150,150,220,250,300
+Gear Oil Per Pump,0.11,40,40,40,40,40,40,40,40
+Gear Oil -Labor Only,0.71,250,250,250,250,250,300,350,400
+Mityvac Gear Oil Flush,1,350,350,350,350,350,,,
+Mityvac-Labor only,1.29,450,450,450,450,450,,,
+Greasing / Nipple,0.09,30,30,30,30,30,35,40,45
+ATF Flush/with Machine,3.43,1200,1300,1300,1400,1500,,,
+ATF Flush Manual,1.86,650,680,710,730,750,,,
+Raditor Flushing,1.37,480,480,500,500,500,550,650,750
+Heavy Dirt,1.71,600,600,750,750,790,650,750,850
+Labor only,1.71,600,600,750,750,790,700,800,900
+Labor only - heavy dirt,2.14,750,750,780,800,800,800,1100,1100
+Brake Fluid Flush,1.86,650,650,650,650,650,,,
+Brake Cleaning,1.71,600,600,650,760,800,,,
+Check up underChassis,0.79,275,275,275,275,275,,,
+Caster Adustment,0.63,220,220,220,250,250,,,
+Camber Adjustment,1.14,400,400,430,430,430,,,
+Toe In and Toe Out,1.43,500,500,550,550,550,,,
+Complete Alignment,4.29,1500,1500,1550,1550,1600,,,
+Check Up Alignment,1,350,350,350,350,350,,,
+Tire Rotation Full,0.51,180,220,250,250,250,,,
+Wheel Balancing per strip,0.45,159,200,300,300,300,,,
+Tire Check Up,0.17,60,70,80,80,80,,,
+Bead Sealing,0.21,75,85,95,95,95,,,
+Nitrogen Vacuum / Tire,0.29,100,100,100,100,100,,,
+Nitrogen Air Top Up,0.1,35,35,35,35,35,,,
+AC Check Up with Digital  Borescope,1,350,350,350,350,350,350,350,350
+Clean pressure wash Condenser,1,350,350,350,400,400,400,400,400
+AC Belt Replace,1,350,350,350,350,350,350,350,350
+Compressor Replace,3.43,1200,1200,1200,1500,1500,1500,1500,1500
+AC Electrical Check w/ Scanning,3.43,1200,1200,1200,1200,1200,1200,1200,1200
+Full Freon Charging Single,5.14,1800,2000,2200,2200,2400,2400,2400,2400
+Full Freon Charging Dual,0,,,2400,2600,2800,2800,2800,2800
+,,check first / as per sample>>>>,,,cf/aps,cf/aps,cf/aps,cf/aps,cf/aps

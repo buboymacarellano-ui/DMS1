@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title><%= report.title %></title>
+  <style>
+    :root {
+      --ink: #10243d;
+      --muted: #355872;
+      --line: #9bb4c7;
+      --head: #d7e8c8;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: #fff; color: var(--ink); }
+    body {
+      padding: 18px 22px 28px;
+      font-family: "Segoe UI", Calibri, Arial, Helvetica, sans-serif;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .no-print { margin-bottom: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .no-print button, .no-print a {
+      appearance: none;
+      display: inline-flex;
+      align-items: center;
+      padding: 7px 12px;
+      border: 1px solid #1a6bbf;
+      background: #1a6bbf;
+      color: #fff;
+      text-decoration: none;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .no-print a { background: #17365c; border-color: #17365c; }
+    header { border-bottom: 2px solid #10243d; padding-bottom: 8px; margin-bottom: 12px; }
+    h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: 0.02em; }
+    .subtitle, .generated { margin: 0; color: var(--muted); }
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 8px;
+      margin: 12px 0 16px;
+    }
+    .meta div { border: 1px solid var(--line); padding: 7px 9px; }
+    .meta span { display: block; font-size: 10px; text-transform: uppercase; color: var(--muted); }
+    .meta strong { font-size: 14px; }
+    h2 { margin: 16px 0 8px; font-size: 14px; }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid var(--line); padding: 5px 6px; text-align: left; vertical-align: top; }
+    th { background: var(--head); text-transform: uppercase; font-size: 10px; }
+    td.num { text-align: right; white-space: nowrap; }
+    .empty { text-align: center; padding: 16px; color: var(--muted); }
+    .error { color: #8a1f2a; font-weight: 700; }
+    @page { size: A4 landscape; margin: 10mm; }
+    @media print {
+      .no-print { display: none !important; }
+      html, body { background: #fff !important; }
+      body { padding: 0; color: #000; }
+      a { color: inherit; text-decoration: none; }
+      header { border-bottom-color: #000; }
+      th { background: #e8e8e8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .split { break-inside: avoid; }
+    }
+    @media (max-width: 900px) {
+      .split { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print">
+    <button type="button" onclick="window.print()">Print / Save as PDF</button>
+    <a href="/parts">Back to Parts Database</a>
+  </div>
+
+  <header>
+    <h1><%= report.title %></h1>
+    <% if (report.subtitle) { %><p class="subtitle"><%= report.subtitle %></p><% } %>
+    <p class="generated">Generated <%= String(report.generatedAt || '').replace('T', ' ').slice(0, 19) %></p>
+    <% if (report.error) { %><p class="error"><%= report.error %></p><% } %>
+  </header>
+
+  <% if (report.meta && report.meta.length) { %>
+    <section class="meta">
+      <% report.meta.forEach((item) => { %>
+        <div>
+          <span><%= item.label %></span>
+          <strong><%= item.value == null || item.value === '' ? '—' : item.value %></strong>
+        </div>
+      <% }) %>
+    </section>
+  <% } %>
+
+  <main class="<%= report.layout === 'split' ? 'split' : '' %>">
+    <% (report.tables || []).forEach((table) => { %>
+      <section>
+        <% if (table.heading) { %><h2><%= table.heading %></h2><% } %>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <% table.columns.forEach((col) => { %>
+                <th><%= col.header %></th>
+              <% }) %>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (!table.rows.length) { %>
+              <tr><td class="empty" colspan="<%= table.columns.length + 1 %>">No records found.</td></tr>
+            <% } %>
+            <% table.rows.forEach((row, index) => { %>
+              <tr>
+                <td class="num"><%= index + 1 %></td>
+                <% table.columns.forEach((col) => { %>
+                  <td class="<%= col.numeric ? 'num' : '' %>"><%= row[col.key] == null ? '' : row[col.key] %></td>
+                <% }) %>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </section>
+    <% }) %>
+  </main>
+</body>
+</html>

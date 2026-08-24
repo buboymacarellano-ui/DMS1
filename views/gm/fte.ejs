@@ -1,0 +1,978 @@
+<%- include('../partials/header') %>
+<%
+  const pesos = (value) => {
+    const amount = Number(value || 0);
+    return '₱ ' + amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+  const m = typeof metrics !== 'undefined' && metrics ? metrics : {};
+  const emergencyOrders = Array.isArray(m.emergencyOrders) ? m.emergencyOrders : [];
+  const scheduledPm = Array.isArray(m.scheduledPm) ? m.scheduledPm : [];
+  const recentExpenses = Array.isArray(m.recentExpenses) ? m.recentExpenses : [];
+  const cribTracker = Array.isArray(m.cribTracker) ? m.cribTracker : [];
+  const safetyChecklist = Array.isArray(m.safetyChecklist) ? m.safetyChecklist : [];
+  const calibrationAlerts = Array.isArray(m.calibrationAlerts) ? m.calibrationAlerts : [];
+  const transactions = Array.isArray(m.transactions) ? m.transactions : [];
+  const transactionColumns = [
+    'Transaction_ID', 'Transaction_Date', 'Transaction_Time', 'Branch_Name', 'Asset_ID', 'Asset_Name',
+    'Asset_Category', 'Transaction_Type', 'Description', 'serviceRenderedBy', 'laborRate', 'serviceHours',
+    'laborPrice', 'partsPrice', 'total', 'Payment_Method', 'Vendor_Supplier', 'Requested_By_User_ID',
+    'Approved_By_User_ID', 'Status'
+  ];
+  const columnLabels = {
+    Transaction_ID: 'TRANSACTION ID',
+    Transaction_Date: 'TRANSACTION DATE',
+    Transaction_Time: 'TRANSACTION TIME',
+    Branch_Name: 'BRANCH NAME',
+    Asset_ID: 'ASSET ID',
+    Asset_Name: 'ASSET NAME',
+    Asset_Category: 'ASSET CATEGORY',
+    Transaction_Type: 'TRANSACTION TYPE',
+    Description: 'DESCRIPTION',
+    serviceRenderedBy: 'SERVICE RENDERED BY',
+    laborRate: 'LABOR RATE',
+    serviceHours: 'SERVICE HOURS',
+    laborPrice: 'LABOR PRICE',
+    partsPrice: 'PARTS PRICE',
+    total: 'TOTAL',
+    Payment_Method: 'PAYMENT METHOD',
+    Vendor_Supplier: 'VENDOR / SUPPLIER',
+    Requested_By_User_ID: 'REQUESTED BY',
+    Approved_By_User_ID: 'APPROVED BY',
+    Status: 'STATUS'
+  };
+  const branchOptions = Array.isArray(typeof branches !== 'undefined' ? branches : null)
+    ? branches
+    : ['Carx2', 'Carmen', 'CebuCity', 'Lapux2', 'Bogo', 'Toledo', 'ITPark'];
+  const cribActionLabel = (action) => {
+    const key = String(action || '').trim().toLowerCase();
+    if (key === 'check-out' || key === 'checked out' || key === 'out') return { label: 'Checked Out', tone: 'out' };
+    if (key === 'check-in' || key === 'returned' || key === 'in') return { label: 'Returned', tone: 'in' };
+    return { label: action || '—', tone: 'medium' };
+  };
+  const txnStatusTone = (status) => {
+    const key = String(status || '').toLowerCase();
+    if (key.indexOf('pending') >= 0) return 'out';
+    if (key.indexOf('void') >= 0 || key.indexOf('reject') >= 0) return 'fail';
+    return 'pass';
+  };
+  const ledgerRowClass = (status) => {
+    const key = String(status || '').trim().toLowerCase();
+    if (key === 'pending approval') {
+      return 'fte-ledger-row fte-ledger-row--pending bg-amber-50 hover:bg-amber-100/80 transition-colors';
+    }
+    if (key === 'rejected') {
+      return 'fte-ledger-row fte-ledger-row--rejected bg-red-50/50 hover:bg-red-100/50 transition-colors';
+    }
+    return 'fte-ledger-row fte-ledger-row--default transition-colors';
+  };
+  const allowApproveFte = typeof canApproveFte !== 'undefined' ? Boolean(canApproveFte) : false;
+  const frontlineMode = typeof isFrontlineFte !== 'undefined' ? Boolean(isFrontlineFte) : false;
+  const lockedBranch = typeof assignedBranch !== 'undefined' ? String(assignedBranch || '').trim() : '';
+  const homeHref = typeof fteHomeHref !== 'undefined' && fteHomeHref ? fteHomeHref : '/gm';
+  const homeLabel = typeof fteHomeLabel !== 'undefined' && fteHomeLabel ? fteHomeLabel : '← GM Dashboard';
+  const normalizeBranchKey = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const visibleTransactions = frontlineMode && lockedBranch
+    ? transactions.filter((row) => normalizeBranchKey(row.Branch_Name) === normalizeBranchKey(lockedBranch))
+    : transactions;
+  const formBranchOptions = frontlineMode && lockedBranch ? [lockedBranch] : branchOptions;
+%>
+
+<section class="dashboard-shell gm-shell fte-shell<%= frontlineMode ? ' fte-shell--frontline' : '' %>">
+  <div class="fte-header-row">
+    <div class="dashboard-title gm-title role-dashboard-title">
+      <span>Facility, Tool &amp; Equipment</span>
+      <span class="role-dashboard-title__suffix">Tracking Panel</span>
+    </div>
+    <div class="fte-header-actions">
+      <a class="btn gm-dense-link" href="<%= homeHref %>"><%= homeLabel %></a>
+      <% if (frontlineMode && lockedBranch) { %>
+        <span class="fte-branch-locked-badge" title="Assigned branch (locked)">
+          Branch: <strong><%= lockedBranch %></strong>
+        </span>
+      <% } else { %>
+        <label class="fte-branch-select" for="fte-branch-filter">
+          <span class="fte-branch-select__label">Select Branch</span>
+          <select id="fte-branch-filter" name="branch" aria-label="Select Branch">
+            <option value="">Select Branch</option>
+            <% branchOptions.forEach((branchName) => { %>
+              <option value="<%= branchName %>"><%= branchName %></option>
+            <% }) %>
+          </select>
+        </label>
+      <% } %>
+      <% if (!frontlineMode) { %>
+        <button type="button" class="btn fte-export-btn" id="fte-export-csv-btn">Export CSV</button>
+      <% } %>
+      <button type="button" class="btn fte-log-btn" id="fte-log-issue-btn">+ Log FTE Issue</button>
+    </div>
+  </div>
+  <% if (!frontlineMode) { %>
+  <div class="gm-kpi-grid gm-kpi-grid--tier1 fte-kpi-grid">
+    <article class="gm-kpi-card">
+      <p class="gm-kpi-label">FTE OPEX MTD</p>
+      <h2 class="gm-kpi-value"><%= pesos(m.opexMtd) %></h2>
+    </article>
+    <article class="gm-kpi-card">
+      <p class="gm-kpi-label">CRITICAL EQUIPMENT UPTIME</p>
+      <h2 class="gm-kpi-value"><%= Number(m.criticalUptimePct || 0).toFixed(1) %>%</h2>
+    </article>
+    <article class="gm-kpi-card">
+      <p class="gm-kpi-label">OPEN WORK ORDERS</p>
+      <h2 class="gm-kpi-value"><%= m.openWorkOrders != null ? m.openWorkOrders : 0 %></h2>
+    </article>
+    <article class="gm-kpi-card">
+      <p class="gm-kpi-label">UPCOMING PMS (7 DAYS)</p>
+      <h2 class="gm-kpi-value"><%= m.upcomingPms7Days != null ? m.upcomingPms7Days : 0 %></h2>
+    </article>
+  </div>
+
+  <div class="fte-body-grid">
+    <div class="fte-col">
+      <article class="dashboard-card gm-panel fte-panel">
+        <div class="dashboard-card__header gm-panel-header">Emergency Equipment Work Orders</div>
+        <div class="fte-scroll">
+          <table class="list gm-table fte-table">
+            <thead>
+              <tr>
+                <th>WO #</th>
+                <th>Equipment</th>
+                <th>Branch</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Age</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (!emergencyOrders.length) { %>
+                <tr><td colspan="6" style="text-align:center;">No emergency equipment orders.</td></tr>
+              <% } %>
+              <% emergencyOrders.forEach((row) => { %>
+                <tr>
+                  <td><%= row.id %></td>
+                  <td><%= row.equipment %></td>
+                  <td><%= row.branch %></td>
+                  <td><span class="fte-pill fte-pill--<%= String(row.priority || '').toLowerCase() %>"><%= row.priority %></span></td>
+                  <td><%= row.status %></td>
+                  <td><%= row.ageHours %>h</td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="dashboard-card gm-panel fte-panel">
+        <div class="dashboard-card__header gm-panel-header">Scheduled PM</div>
+        <div class="fte-scroll fte-list-feed">
+          <% if (!scheduledPm.length) { %>
+            <p class="dashboard-note">No scheduled PM in the next 7 days.</p>
+          <% } %>
+          <% scheduledPm.forEach((item) => { %>
+            <div class="fte-feed-item">
+              <strong><%= item.asset %></strong>
+              <span><%= item.branch %></span>
+              <em><%= item.dueDate %></em>
+              <small><%= item.technician %></small>
+            </div>
+          <% }) %>
+        </div>
+      </article>
+    </div>
+
+    <div class="fte-col">
+      <article class="dashboard-card gm-panel fte-panel">
+        <div class="dashboard-card__header gm-panel-header">Recent FTE Expenses</div>
+        <div class="fte-scroll">
+          <table class="list gm-table fte-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Category</th>
+                <th>Branch</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (!recentExpenses.length) { %>
+                <tr><td colspan="5" style="text-align:center;">No recent FTE expenses.</td></tr>
+              <% } %>
+              <% recentExpenses.forEach((row) => { %>
+                <tr>
+                  <td><%= row.date %></td>
+                  <td><%= row.description %></td>
+                  <td><%= row.category %></td>
+                  <td><%= row.branch %></td>
+                  <td class="fte-money"><%= pesos(row.amount) %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="dashboard-card gm-panel fte-panel">
+        <div class="dashboard-card__header gm-panel-header">Tool Crib Check-In / Out</div>
+        <div class="fte-scroll">
+          <table class="list gm-table fte-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Tool</th>
+                <th>Assignee</th>
+                <th>Branch</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (!cribTracker.length) { %>
+                <tr><td colspan="5" style="text-align:center;">No crib activity yet.</td></tr>
+              <% } %>
+              <% cribTracker.forEach((row) => { const crib = cribActionLabel(row.action); %>
+                <tr>
+                  <td><%= row.at %></td>
+                  <td><%= row.tool %></td>
+                  <td><%= row.assignee %></td>
+                  <td><%= row.branch %></td>
+                  <td>
+                    <span class="fte-pill fte-pill--<%= crib.tone %>"><%= crib.label %></span>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </div>
+
+    <div class="fte-col">
+      <article class="dashboard-card gm-panel fte-panel">
+        <div class="dashboard-card__header gm-panel-header">Daily Shop Safety Checklist</div>
+        <div class="fte-scroll fte-list-feed">
+          <% if (!safetyChecklist.length) { %>
+            <p class="dashboard-note">No safety checklist submissions today.</p>
+          <% } %>
+          <% safetyChecklist.forEach((row) => { %>
+            <div class="fte-feed-item">
+              <strong><%= row.branch %></strong>
+              <span><%= row.date %></span>
+              <span class="fte-pill fte-pill--<%= String(row.result || '').toLowerCase() %>"><%= row.result %></span>
+              <small><%= row.completedBy %></small>
+            </div>
+          <% }) %>
+        </div>
+      </article>
+
+      <article class="dashboard-card gm-panel fte-panel">
+        <div class="dashboard-card__header gm-panel-header">Calibration Due Alerts</div>
+        <div class="fte-scroll fte-list-feed">
+          <% if (!calibrationAlerts.length) { %>
+            <p class="dashboard-note">No calibration due in the next 7 days.</p>
+          <% } %>
+          <% calibrationAlerts.forEach((row) => { %>
+            <div class="fte-feed-item">
+              <strong><%= row.asset %></strong>
+              <span><%= row.branch %></span>
+              <em class="<%= Number(row.dueInDays) <= 3 ? 'fte-due-urgent' : '' %>"><%= row.dueInDays %> day<%= Number(row.dueInDays) === 1 ? '' : 's' %></em>
+              <small><%= row.serial %></small>
+            </div>
+          <% }) %>
+        </div>
+      </article>
+    </div>
+  </div>
+  <% } %>
+
+  <% if (!frontlineMode) { %>
+  <%
+    const workspaceTabs = ['ALL', 'CARX2', 'CARMEN', 'CEBUCITY', 'LAPUX2', 'BOGO', 'TOLEDO', 'ITPARK'];
+    const tabAliases = {
+      CARX2: ['Carx2'],
+      CARMEN: ['Carmen'],
+      CEBUCITY: ['CebuCity'],
+      LAPUX2: ['Lapux2'],
+      BOGO: ['Bogo'],
+      TOLEDO: ['Toledo'],
+      ITPARK: ['ITPark']
+    };
+    const branchKey = (value) => String(value || '').trim().toUpperCase().replace(/\s+/g, ' ');
+    const matchesTab = (branchName, tab) => {
+      if (tab === 'ALL') return true;
+      const aliases = tabAliases[tab] || [];
+      const key = branchKey(branchName);
+      return aliases.some((alias) => branchKey(alias) === key);
+    };
+    const countTab = (tab) => {
+      let pending = 0;
+      let posted = 0;
+      transactions.forEach((row) => {
+        if (!matchesTab(row.Branch_Name, tab)) return;
+        const status = String(row.Status || '').trim().toLowerCase();
+        if (status === 'pending approval') pending += 1;
+        else if (status === 'posted' || status === 'completed') posted += 1;
+      });
+      return { pending: pending, posted: posted };
+    };
+  %>
+  <article class="dashboard-card gm-panel fte-panel fte-branch-workspace">
+    <div class="dashboard-card__header gm-panel-header fte-ledger-header">
+      <span>Branch Tracking Workspace</span>
+      <small>Role: GM · Global visibility</small>
+    </div>
+    <div class="fte-branch-tabs" id="fte-branch-tabs" role="tablist" aria-label="Branch tracking shortcuts">
+      <% workspaceTabs.forEach((tab) => { const counts = countTab(tab); %>
+        <button
+          type="button"
+          class="fte-branch-tab<%= tab === 'ALL' ? ' is-active' : '' %>"
+          data-fte-branch-tab="<%= tab %>"
+          role="tab"
+          aria-selected="<%= tab === 'ALL' ? 'true' : 'false' %>"
+        >
+          <strong><%= tab %></strong>
+          <span><%= counts.pending %> Pending / <%= counts.posted %> Posted</span>
+        </button>
+      <% }) %>
+    </div>
+    <div class="fte-status-filter-row" role="group" aria-label="Status filter">
+      <button type="button" class="fte-status-filter is-active" data-fte-status-filter="ALL">All Statuses</button>
+      <button type="button" class="fte-status-filter" data-fte-status-filter="Pending Approval">Pending Approval</button>
+      <button type="button" class="fte-status-filter" data-fte-status-filter="Posted">Posted</button>
+    </div>
+  </article>
+  <% } %>
+
+  <article class="dashboard-card gm-panel fte-panel fte-ledger-panel">
+    <div class="dashboard-card__header gm-panel-header fte-ledger-header">
+      <span>FTE Transaction Ledger History</span>
+      <small id="fte-ledger-count"><%= visibleTransactions.length %> record<%= visibleTransactions.length === 1 ? '' : 's' %><%= frontlineMode && lockedBranch ? ` · ${lockedBranch} · Branch-locked` : '' %> · 20 columns</small>
+    </div>
+    <div class="fte-ledger-scroll table-scroll">
+      <table class="list gm-table fte-table fte-ledger-table" id="fte-ledger-table">
+        <thead>
+          <tr>
+            <% transactionColumns.forEach((column) => { %>
+              <th><%= columnLabels[column] || column %></th>
+            <% }) %>
+          </tr>
+        </thead>
+        <tbody id="fte-ledger-tbody">
+          <% if (!visibleTransactions.length) { %>
+            <tr><td colspan="<%= transactionColumns.length %>" style="text-align:center;">No FTE transactions logged.</td></tr>
+          <% } %>
+          <% visibleTransactions.forEach((row) => { %>
+            <tr data-branch="<%= row.Branch_Name %>" class="<%= ledgerRowClass(row.Status) %>">
+              <td><%= row.Transaction_ID %></td>
+              <td><%= row.Transaction_Date %></td>
+              <td><%= row.Transaction_Time %></td>
+              <td><%= row.Branch_Name %></td>
+              <td><%= row.Asset_ID %></td>
+              <td><%= row.Asset_Name %></td>
+              <td><%= row.Asset_Category %></td>
+              <td><%= row.Transaction_Type %></td>
+              <td title="<%= row.Description %>"><%= row.Description %></td>
+              <td><%= row.serviceRenderedBy %></td>
+              <td class="fte-money"><%= pesos(row.laborRate) %></td>
+              <td><%= Number(row.serviceHours || 0).toFixed(2) %></td>
+              <td class="fte-money"><%= pesos(row.laborPrice) %></td>
+              <td class="fte-money"><%= pesos(row.partsPrice) %></td>
+              <td class="fte-money"><%= pesos(row.total != null ? row.total : row.Amount_PHP) %></td>
+              <td><%= row.Payment_Method %></td>
+              <td><%= row.Vendor_Supplier %></td>
+              <td><%= row.Requested_By_User_ID %></td>
+              <td><%= row.Approved_By_User_ID %></td>
+              <td>
+                <% if (String(row.Status || '').trim().toLowerCase() === 'pending approval') { %>
+                  <button
+                    type="button"
+                    class="fte-pill fte-pill--<%= txnStatusTone(row.Status) %> fte-status-trigger"
+                    data-fte-review-id="<%= row.Transaction_ID %>"
+                    title="Review &amp; approve this pending transaction"
+                  ><%= row.Status %></button>
+                <% } else { %>
+                  <span class="fte-pill fte-pill--<%= txnStatusTone(row.Status) %>"><%= row.Status %></span>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+
+<div id="fte-issue-modal" class="fte-modal-backdrop" hidden aria-hidden="true">
+  <div class="fte-modal" role="dialog" aria-modal="true" aria-labelledby="fte-issue-modal-title">
+    <div class="fte-modal__header">
+      <h3 id="fte-issue-modal-title">Log FTE Issue / Transaction</h3>
+      <button type="button" class="btn gm-dense-link" id="fte-modal-close">Close</button>
+    </div>
+    <form class="fte-modal__form" id="fte-issue-form" novalidate>
+      <input type="hidden" id="fte-editing-transaction-id" value="" />
+      <div class="fte-modal__grid">
+        <label>Branch
+          <select
+            name="Branch_Name"
+            id="fte-form-branch"
+            required
+            <%= frontlineMode && lockedBranch ? 'disabled class="fte-modal__readonly"' : '' %>
+            title="<%= frontlineMode && lockedBranch ? `Locked to your assigned branch (${lockedBranch})` : '' %>"
+          >
+            <% if (!(frontlineMode && lockedBranch)) { %>
+              <option value="">Select Branch</option>
+            <% } %>
+            <% formBranchOptions.forEach((branchName) => { %>
+              <option value="<%= branchName %>" <%= frontlineMode && lockedBranch && branchName === lockedBranch ? 'selected' : '' %>><%= branchName %></option>
+            <% }) %>
+          </select>
+          <% if (frontlineMode && lockedBranch) { %>
+            <input type="hidden" name="Branch_Name" value="<%= lockedBranch %>" />
+          <% } %>
+        </label>
+        <label>Transaction Type
+          <select name="Transaction_Type">
+            <option>Repair</option>
+            <option>Calibration</option>
+            <option>Purchase</option>
+            <option>Preventive Maintenance</option>
+            <option>Tool Replacement</option>
+            <option>Service Contract</option>
+          </select>
+        </label>
+        <label>Asset ID<input name="Asset_ID" placeholder="AST-LFT-003" /></label>
+        <label>Asset Name<input name="Asset_Name" placeholder="2-Post Lift #3" /></label>
+        <label>Asset Category<input name="Asset_Category" value="Shop Equipment" /></label>
+        <label>Service Rendered By
+          <select name="serviceRenderedBy" id="fte-form-service-rendered-by">
+            <option value="In-House Mechanic">In-House Mechanic</option>
+            <option value="In-House Electrician">In-House Electrician</option>
+            <option value="Third-Party Provider">Third-Party Provider</option>
+            <option value="Manufacturer Tech">Manufacturer Tech</option>
+          </select>
+        </label>
+        <label>Labor Rate (₱/hr)
+          <input type="number" name="laborRate" id="fte-form-labor-rate" min="0" step="0.01" value="350" />
+        </label>
+        <label>Service Hours
+          <input type="number" name="serviceHours" id="fte-form-service-hours" min="0" step="0.25" value="1" />
+        </label>
+        <label>Labor Price
+          <input type="number" name="laborPrice" id="fte-form-labor-price" min="0" step="0.01" value="350" />
+        </label>
+        <label>Parts Price (₱)
+          <input type="number" name="partsPrice" id="fte-form-parts-price" min="0" step="0.01" value="0" />
+        </label>
+        <label>Total (auto)
+          <input type="text" id="fte-form-total" class="fte-modal__readonly" readonly value="₱ 350.00" />
+        </label>
+        <label>Payment Method
+          <select name="Payment_Method">
+            <option>Company Card</option>
+            <option>Bank Transfer</option>
+            <option>Cash</option>
+            <option>Petty Cash</option>
+          </select>
+        </label>
+        <label>Vendor / Supplier<input name="Vendor_Supplier" /></label>
+        <label>Requested By User ID<input name="Requested_By_User_ID" value="USR-STM-014" /></label>
+        <label>Approved By User ID<input name="Approved_By_User_ID" value="USR-GM-001" /></label>
+        <label class="fte-modal__full">Description
+          <textarea name="Description" rows="2" placeholder="Describe the FTE issue or work performed"></textarea>
+        </label>
+      </div>
+      <p class="fte-modal__calc-note" id="fte-form-calc-note">
+        In-house engine: <strong>laborPrice = ₱350 × serviceHours</strong> · <strong>total = laborPrice + partsPrice</strong>
+      </p>
+      <div class="fte-modal__actions">
+        <button type="button" class="btn gm-dense-link" id="fte-modal-cancel">Cancel</button>
+        <button type="button" class="btn fte-log-btn" id="fte-modal-save">Save Transaction</button>
+        <% if (allowApproveFte) { %>
+          <button type="button" class="btn fte-approve-btn" id="fte-modal-approve" hidden>Approve</button>
+        <% } %>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script id="fte-transactions-json" type="application/json"><%- JSON.stringify(visibleTransactions).replace(/</g, '\\u003c') %></script>
+<script>
+  (function () {
+    const IN_HOUSE_RATE = 350;
+    const NUMERIC_KEYS = ['laborRate', 'serviceHours', 'laborPrice', 'partsPrice', 'total'];
+    const columns = <%- JSON.stringify(transactionColumns) %>;
+    const FRONTLINE_MODE = <%= frontlineMode ? 'true' : 'false' %>;
+    const LOCKED_BRANCH = <%- JSON.stringify(lockedBranch || '') %>;
+    const btn = document.getElementById('fte-log-issue-btn');
+    const exportBtn = document.getElementById('fte-export-csv-btn');
+    const branchFilter = document.getElementById('fte-branch-filter');
+    const countEl = document.getElementById('fte-ledger-count');
+    const tbody = document.getElementById('fte-ledger-tbody');
+    const modal = document.getElementById('fte-issue-modal');
+    const form = document.getElementById('fte-issue-form');
+    const closeBtn = document.getElementById('fte-modal-close');
+    const cancelBtn = document.getElementById('fte-modal-cancel');
+    const saveBtn = document.getElementById('fte-modal-save');
+    const approveBtn = document.getElementById('fte-modal-approve');
+    const editingIdInput = document.getElementById('fte-editing-transaction-id');
+    const modalTitle = document.getElementById('fte-issue-modal-title');
+    const branchSelect = document.getElementById('fte-form-branch');
+    const serviceRenderedBy = document.getElementById('fte-form-service-rendered-by');
+    const laborRate = document.getElementById('fte-form-labor-rate');
+    const serviceHours = document.getElementById('fte-form-service-hours');
+    const partsPrice = document.getElementById('fte-form-parts-price');
+    const laborPriceInput = document.getElementById('fte-form-labor-price');
+    const totalOut = document.getElementById('fte-form-total');
+    const calcNote = document.getElementById('fte-form-calc-note');
+
+    if (!modal || !form || !closeBtn || !cancelBtn || !saveBtn) return;
+
+    function normalizeBranchKey(value) {
+      return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    // Escape stacking contexts from page layout so buttons always receive clicks.
+    if (modal.parentElement !== document.body) {
+      document.body.appendChild(modal);
+    }
+
+    let transactions = [];
+    try {
+      const raw = document.getElementById('fte-transactions-json');
+      transactions = raw ? JSON.parse(raw.textContent || '[]') : [];
+    } catch (e) {
+      transactions = [];
+    }
+
+    function pesos(value) {
+      const amount = Number(value || 0);
+      return '₱ ' + amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function isInHouse(value) {
+      return value === 'In-House Mechanic' || value === 'In-House Electrician';
+    }
+
+    function computeLabor(rate, hours) {
+      return Math.round((Number(rate || 0) * Number(hours || 0)) * 100) / 100;
+    }
+
+    function computeTotal(labor, parts) {
+      return Math.round((Number(labor || 0) + Number(parts || 0)) * 100) / 100;
+    }
+
+    function statusTone(status) {
+      const key = String(status || '').toLowerCase();
+      if (key.indexOf('pending') >= 0) return 'out';
+      if (key.indexOf('void') >= 0 || key.indexOf('reject') >= 0) return 'fail';
+      return 'pass';
+    }
+
+    function ledgerRowClass(status) {
+      const key = String(status || '').trim().toLowerCase();
+      if (key === 'pending approval') {
+        return 'fte-ledger-row fte-ledger-row--pending bg-amber-50 hover:bg-amber-100/80 transition-colors';
+      }
+      if (key === 'rejected') {
+        return 'fte-ledger-row fte-ledger-row--rejected bg-red-50/50 hover:bg-red-100/50 transition-colors';
+      }
+      return 'fte-ledger-row fte-ledger-row--default transition-colors';
+    }
+
+    function recalculate() {
+      const inHouse = isInHouse(serviceRenderedBy && serviceRenderedBy.value);
+      let labor;
+      if (inHouse) {
+        labor = computeLabor(IN_HOUSE_RATE, serviceHours && serviceHours.value);
+        if (laborPriceInput) laborPriceInput.value = String(labor);
+      } else {
+        labor = Number(laborPriceInput && laborPriceInput.value || 0);
+      }
+      const total = computeTotal(labor, partsPrice && partsPrice.value);
+      if (totalOut) totalOut.value = pesos(total);
+      return { labor: labor, total: total, inHouse: inHouse };
+    }
+
+    function syncLaborSource() {
+      if (!serviceRenderedBy || !laborRate || !laborPriceInput) return recalculate();
+      const inHouse = isInHouse(serviceRenderedBy.value);
+      if (inHouse) {
+        laborRate.value = String(IN_HOUSE_RATE);
+        laborRate.readOnly = true;
+        laborRate.classList.add('fte-modal__readonly');
+        laborPriceInput.readOnly = true;
+        laborPriceInput.classList.add('fte-modal__readonly');
+        if (calcNote) {
+          calcNote.innerHTML = 'In-house engine: <strong>laborPrice = ₱350 × serviceHours</strong> · <strong>total = laborPrice + partsPrice</strong>';
+        }
+      } else {
+        laborRate.value = '0';
+        laborRate.readOnly = true;
+        laborRate.classList.add('fte-modal__readonly');
+        laborPriceInput.readOnly = false;
+        laborPriceInput.classList.remove('fte-modal__readonly');
+        laborPriceInput.value = '0';
+        if (calcNote) {
+          calcNote.innerHTML = 'External engine: <strong>Labor Rate = 0</strong>; enter flat <strong>Labor Price</strong> from invoice · <strong>total = laborPrice + partsPrice</strong>';
+        }
+      }
+      return recalculate();
+    }
+
+    const canApproveFte = <%= allowApproveFte ? 'true' : 'false' %>;
+
+    function setApproveVisible(visible) {
+      if (!approveBtn) return;
+      // GM only — STM/SA never see Approve in the modal footer.
+      approveBtn.hidden = !(canApproveFte && visible);
+    }
+
+    function openModal(event) {
+      if (event) event.preventDefault();
+      if (editingIdInput) editingIdInput.value = '';
+      if (modalTitle) modalTitle.textContent = 'Log FTE Issue / Transaction';
+      setApproveVisible(false);
+      modal.hidden = false;
+      modal.setAttribute('aria-hidden', 'false');
+      modal.classList.add('is-open');
+      if (branchSelect) {
+        if (FRONTLINE_MODE && LOCKED_BRANCH) {
+          branchSelect.value = LOCKED_BRANCH;
+        } else if (branchFilter && branchFilter.value) {
+          branchSelect.value = branchFilter.value;
+        } else if (!branchSelect.value && branchSelect.options.length > 1) {
+          branchSelect.selectedIndex = 1;
+        }
+      }
+      syncLaborSource();
+    }
+
+    function fillFormFromRow(row) {
+      if (!form || !row) return;
+      if (branchSelect) branchSelect.value = row.Branch_Name || '';
+      form.Transaction_Type.value = row.Transaction_Type || 'Repair';
+      form.Asset_ID.value = row.Asset_ID || '';
+      form.Asset_Name.value = row.Asset_Name || '';
+      form.Asset_Category.value = row.Asset_Category || 'Shop Equipment';
+      if (serviceRenderedBy) serviceRenderedBy.value = row.serviceRenderedBy || 'In-House Mechanic';
+      if (laborRate) laborRate.value = String(row.laborRate != null ? row.laborRate : IN_HOUSE_RATE);
+      if (serviceHours) serviceHours.value = String(row.serviceHours != null ? row.serviceHours : 0);
+      if (laborPriceInput) laborPriceInput.value = String(row.laborPrice != null ? row.laborPrice : 0);
+      if (partsPrice) partsPrice.value = String(row.partsPrice != null ? row.partsPrice : 0);
+      form.Payment_Method.value = row.Payment_Method || 'Company Card';
+      form.Vendor_Supplier.value = row.Vendor_Supplier || '';
+      form.Requested_By_User_ID.value = row.Requested_By_User_ID || 'USR-STM-014';
+      form.Approved_By_User_ID.value = row.Approved_By_User_ID || 'USR-GM-001';
+      form.Description.value = row.Description || '';
+      syncLaborSource();
+      if (!isInHouse(row.serviceRenderedBy) && laborPriceInput) {
+        laborPriceInput.value = String(row.laborPrice != null ? row.laborPrice : 0);
+        recalculate();
+      }
+    }
+
+    function openPendingReview(transactionId) {
+      const row = transactions.find(function (item) { return item.Transaction_ID === transactionId; });
+      if (!row || String(row.Status || '').trim().toLowerCase() !== 'pending approval') return;
+      if (editingIdInput) editingIdInput.value = row.Transaction_ID;
+      if (modalTitle) modalTitle.textContent = 'Review Pending FTE Transaction';
+      setApproveVisible(true);
+      fillFormFromRow(row);
+      modal.hidden = false;
+      modal.setAttribute('aria-hidden', 'false');
+      modal.classList.add('is-open');
+    }
+
+    function closeModal(event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      modal.classList.remove('is-open');
+      modal.hidden = true;
+      modal.setAttribute('aria-hidden', 'true');
+      if (editingIdInput) editingIdInput.value = '';
+      setApproveVisible(false);
+      if (modalTitle) modalTitle.textContent = 'Log FTE Issue / Transaction';
+    }
+
+    function handleApprove(event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      if (!canApproveFte) return;
+      const editingId = editingIdInput ? String(editingIdInput.value || '') : '';
+      if (!editingId) return;
+      transactions = transactions.map(function (row) {
+        if (row.Transaction_ID !== editingId) return row;
+        return Object.assign({}, row, { Status: 'Posted' });
+      });
+      renderRows(transactions);
+      closeModal();
+    }
+
+    function renderRows(rows) {
+      if (!tbody) return;
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="' + columns.length + '" style="text-align:center;">No FTE transactions logged.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map(function (row) {
+        const pending = String(row.Status || '').trim().toLowerCase() === 'pending approval';
+        const statusCell = pending
+          ? '<button type="button" class="fte-pill fte-pill--' + statusTone(row.Status) + ' fte-status-trigger" data-fte-review-id="' + row.Transaction_ID + '" title="Review &amp; approve this pending transaction">' + row.Status + '</button>'
+          : '<span class="fte-pill fte-pill--' + statusTone(row.Status) + '">' + row.Status + '</span>';
+        return '<tr data-branch="' + row.Branch_Name + '" class="' + ledgerRowClass(row.Status) + '">'
+          + '<td>' + row.Transaction_ID + '</td>'
+          + '<td>' + row.Transaction_Date + '</td>'
+          + '<td>' + row.Transaction_Time + '</td>'
+          + '<td>' + row.Branch_Name + '</td>'
+          + '<td>' + row.Asset_ID + '</td>'
+          + '<td>' + row.Asset_Name + '</td>'
+          + '<td>' + row.Asset_Category + '</td>'
+          + '<td>' + row.Transaction_Type + '</td>'
+          + '<td title="' + String(row.Description || '').replace(/"/g, '&quot;') + '">' + row.Description + '</td>'
+          + '<td>' + (row.serviceRenderedBy || '') + '</td>'
+          + '<td class="fte-money">' + pesos(row.laborRate) + '</td>'
+          + '<td>' + Number(row.serviceHours || 0).toFixed(2) + '</td>'
+          + '<td class="fte-money">' + pesos(row.laborPrice) + '</td>'
+          + '<td class="fte-money">' + pesos(row.partsPrice) + '</td>'
+          + '<td class="fte-money">' + pesos(row.total != null ? row.total : row.Amount_PHP) + '</td>'
+          + '<td>' + row.Payment_Method + '</td>'
+          + '<td>' + row.Vendor_Supplier + '</td>'
+          + '<td>' + row.Requested_By_User_ID + '</td>'
+          + '<td>' + row.Approved_By_User_ID + '</td>'
+          + '<td>' + statusCell + '</td>'
+          + '</tr>';
+      }).join('');
+      applyBranchFilter();
+    }
+
+    let activeBranchTab = 'ALL';
+    let activeStatusFilter = 'ALL';
+    const tabAliases = {
+      CARX2: ['Carx2'],
+      CARMEN: ['Carmen'],
+      CEBUCITY: ['CebuCity'],
+      LAPUX2: ['Lapux2'],
+      BOGO: ['Bogo'],
+      TOLEDO: ['Toledo'],
+      ITPARK: ['ITPark']
+    };
+
+    function branchKey(value) {
+      return String(value || '').trim().toUpperCase().replace(/\s+/g, ' ');
+    }
+
+    function matchesTab(branchName, tab) {
+      if (tab === 'ALL') return true;
+      const aliases = tabAliases[tab] || [];
+      const key = branchKey(branchName);
+      return aliases.some(function (alias) { return branchKey(alias) === key; });
+    }
+
+    function applyBranchFilter() {
+      if (!tbody) return;
+      const selected = branchFilter ? String(branchFilter.value || '') : '';
+      const rows = tbody.querySelectorAll('tr[data-branch]');
+      let visible = 0;
+      rows.forEach(function (row) {
+        const branchName = row.getAttribute('data-branch') || '';
+        const statusText = (row.querySelector('.fte-pill') && row.querySelector('.fte-pill').textContent) || '';
+        const status = String(statusText).trim().toLowerCase();
+        const tabOk = matchesTab(branchName, activeBranchTab);
+        const dropdownOk = !selected || branchName === selected;
+        let statusOk = true;
+        if (activeStatusFilter === 'Pending Approval') statusOk = status === 'pending approval';
+        if (activeStatusFilter === 'Posted') statusOk = status === 'posted' || status === 'completed';
+        const match = tabOk && dropdownOk && statusOk;
+        row.style.display = match ? '' : 'none';
+        if (match) visible += 1;
+      });
+      if (countEl) {
+        countEl.textContent = visible + ' record' + (visible === 1 ? '' : 's') + ' · ' + activeBranchTab + (activeStatusFilter !== 'ALL' ? (' · ' + activeStatusFilter) : '') + ' · 20 columns';
+      }
+    }
+
+    const branchTabs = document.getElementById('fte-branch-tabs');
+    if (branchTabs) {
+      branchTabs.addEventListener('click', function (event) {
+        const tabBtn = event.target.closest('[data-fte-branch-tab]');
+        if (!tabBtn) return;
+        activeBranchTab = tabBtn.getAttribute('data-fte-branch-tab') || 'ALL';
+        branchTabs.querySelectorAll('[data-fte-branch-tab]').forEach(function (btn) {
+          const on = btn === tabBtn;
+          btn.classList.toggle('is-active', on);
+          btn.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        if (branchFilter) {
+          if (activeBranchTab === 'ALL') branchFilter.value = '';
+          else {
+            const aliases = tabAliases[activeBranchTab] || [];
+            branchFilter.value = aliases[0] || '';
+          }
+        }
+        applyBranchFilter();
+      });
+    }
+
+    document.querySelectorAll('[data-fte-status-filter]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        activeStatusFilter = btn.getAttribute('data-fte-status-filter') || 'ALL';
+        document.querySelectorAll('[data-fte-status-filter]').forEach(function (item) {
+          item.classList.toggle('is-active', item === btn);
+        });
+        applyBranchFilter();
+      });
+    });
+
+    function csvEscape(value) {
+      const text = String(value == null ? '' : value);
+      if (/[",\n\r]/.test(text)) return '"' + text.replace(/"/g, '""') + '"';
+      return text;
+    }
+
+    function exportCsv() {
+      const selected = branchFilter ? String(branchFilter.value || '') : '';
+      const rows = selected
+        ? transactions.filter(function (row) { return row.Branch_Name === selected; })
+        : transactions;
+      const header = columns.join(',');
+      const body = rows.map(function (row) {
+        return columns.map(function (key) {
+          if (NUMERIC_KEYS.indexOf(key) >= 0) return csvEscape(Number(row[key] || 0));
+          return csvEscape(row[key]);
+        }).join(',');
+      }).join('\r\n');
+      const csv = '\uFEFF' + header + '\r\n' + body + '\r\n';
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'FTE_Transaction_Ledger_' + new Date().toISOString().slice(0, 10) + '.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function nextId() {
+      return 'FTE-TXN-20260813-' + String(transactions.length + 1).padStart(4, '0');
+    }
+
+    function saveTransaction(event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      const data = new FormData(form);
+      let branchName = String(data.get('Branch_Name') || '').trim();
+      if (FRONTLINE_MODE && LOCKED_BRANCH) {
+        branchName = LOCKED_BRANCH;
+        if (branchSelect) branchSelect.value = LOCKED_BRANCH;
+      }
+      const assetName = String(data.get('Asset_Name') || '').trim();
+      const renderedBy = String(data.get('serviceRenderedBy') || 'In-House Mechanic');
+      if (!branchName) {
+        window.alert('Please select a Branch before saving.');
+        if (branchSelect) branchSelect.focus();
+        return;
+      }
+      if (
+        FRONTLINE_MODE &&
+        LOCKED_BRANCH &&
+        normalizeBranchKey(branchName) !== normalizeBranchKey(LOCKED_BRANCH)
+      ) {
+        window.alert('You can only log FTE issues for your assigned branch (' + LOCKED_BRANCH + ').');
+        return;
+      }
+      const calc = recalculate();
+      const inHouse = isInHouse(renderedBy);
+      const editingId = editingIdInput ? String(editingIdInput.value || '') : '';
+      const shared = {
+        Branch_Name: branchName,
+        Asset_ID: String(data.get('Asset_ID') || 'AST-NEW'),
+        Asset_Name: assetName,
+        Asset_Category: String(data.get('Asset_Category') || 'Shop Equipment'),
+        Transaction_Type: String(data.get('Transaction_Type') || 'Repair'),
+        Description: String(data.get('Description') || 'FTE issue logged'),
+        serviceRenderedBy: renderedBy,
+        laborRate: inHouse ? IN_HOUSE_RATE : 0,
+        serviceHours: Number(data.get('serviceHours') || serviceHours.value || 0),
+        laborPrice: calc.labor,
+        partsPrice: Number(data.get('partsPrice') || partsPrice.value || 0),
+        total: calc.total,
+        Payment_Method: String(data.get('Payment_Method') || 'Company Card'),
+        Vendor_Supplier: String(data.get('Vendor_Supplier') || (inHouse ? renderedBy : 'External Invoice Vendor')),
+        Requested_By_User_ID: String(data.get('Requested_By_User_ID') || 'USR-STM-014'),
+        Approved_By_User_ID: String(data.get('Approved_By_User_ID') || 'USR-GM-001')
+      };
+      if (editingId) {
+        transactions = transactions.map(function (row) {
+          if (row.Transaction_ID !== editingId) return row;
+          return Object.assign({}, row, shared);
+        });
+      } else {
+        transactions.unshift(Object.assign({
+          Transaction_ID: nextId(),
+          Transaction_Date: '2026-08-13',
+          Transaction_Time: new Date().toTimeString().slice(0, 8),
+          Status: 'Pending Approval'
+        }, shared));
+      }
+      renderRows(transactions);
+      closeModal();
+      form.reset();
+      if (serviceRenderedBy) serviceRenderedBy.value = 'In-House Mechanic';
+      if (laborRate) laborRate.value = String(IN_HOUSE_RATE);
+      if (serviceHours) serviceHours.value = '1';
+      if (partsPrice) partsPrice.value = '0';
+      if (laborPriceInput) laborPriceInput.value = String(IN_HOUSE_RATE);
+      syncLaborSource();
+    }
+
+    if (btn) btn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+    saveBtn.addEventListener('click', saveTransaction);
+    if (approveBtn) approveBtn.addEventListener('click', handleApprove);
+    form.addEventListener('submit', saveTransaction);
+    if (tbody) {
+      tbody.addEventListener('click', function (event) {
+        const trigger = event.target.closest('[data-fte-review-id]');
+        if (!trigger) return;
+        event.preventDefault();
+        openPendingReview(trigger.getAttribute('data-fte-review-id'));
+      });
+    }
+    modal.addEventListener('click', function (event) {
+      if (event.target === modal) closeModal(event);
+    });
+    const dialog = modal.querySelector('.fte-modal');
+    if (dialog) {
+      dialog.addEventListener('click', function (event) {
+        event.stopPropagation();
+      });
+    }
+    if (serviceRenderedBy) serviceRenderedBy.addEventListener('change', syncLaborSource);
+    if (serviceHours) serviceHours.addEventListener('input', recalculate);
+    if (laborPriceInput) laborPriceInput.addEventListener('input', recalculate);
+    if (partsPrice) partsPrice.addEventListener('input', recalculate);
+    if (branchFilter) branchFilter.addEventListener('change', applyBranchFilter);
+    if (exportBtn) exportBtn.addEventListener('click', exportCsv);
+    syncLaborSource();
+
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      if (params.get('log') === '1') {
+        openModal();
+        if (window.history && window.history.replaceState) {
+          params.delete('log');
+          const next = params.toString();
+          window.history.replaceState({}, '', window.location.pathname + (next ? '?' + next : ''));
+        }
+      }
+    } catch (e) { /* ignore */ }
+  })();
+</script>
+
+<%- include('../partials/footer') %>

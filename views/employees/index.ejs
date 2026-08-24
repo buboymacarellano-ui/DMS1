@@ -1,0 +1,200 @@
+<%- include('../partials/header') %>
+
+<%
+  const safeFilterSlots = Array.isArray(filterSlots) ? filterSlots : Array.from({ length: 15 }, () => ({ field: '', value: '' }));
+  const employeeFilterOptions = Array.isArray(employeeFieldOptions) ? employeeFieldOptions : [];
+  const safeFilteredCount = typeof filteredCount !== 'undefined' ? filteredCount : 0;
+  const safeImportMode = typeof importMode !== 'undefined' ? importMode : 'replace';
+  const safeImportCsv = typeof importCsv !== 'undefined' ? importCsv : '';
+%>
+
+<style>
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+
+    .dashboard-shell {
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+
+    .table-scroll {
+      max-height: none !important;
+      overflow: visible !important;
+    }
+  }
+</style>
+
+<section class="dashboard-shell admin-shell">
+  <div class="dashboard-title admin-title">Employee Database</div>
+
+  <% if (error) { %><p class="error"><%= error %></p><% } %>
+  <% if (success) { %><p class="success"><%= success %></p><% } %>
+
+  <div class="no-print employee-toolbar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+    <a class="btn employee-toolbar__btn employee-toolbar__btn--blue" href="/employees/new">+ New Employee</a>
+    <button type="button" class="employee-toolbar__btn employee-toolbar__btn--orange" id="toggle-edb-panel">Download EDB</button>
+    <a class="btn employee-toolbar__btn employee-toolbar__btn--yellow" href="/employees/export.csv?mode=all">Download EDB All</a>
+    <button type="button" class="employee-toolbar__btn employee-toolbar__btn--brown" id="toggle-edb-import">Import EDB CSV</button>
+    <span class="dashboard-note admin-note" style="margin:0;">Total Records: <strong><%= total %></strong></span>
+    <span class="dashboard-note admin-note" style="margin:0;">Selected Records: <strong><%= safeFilteredCount %></strong></span>
+  </div>
+
+  <div id="employee-import-panel" class="employee-export-panel no-print" style="display:none;margin-bottom:14px;">
+    <form id="employee-import-form" method="post" action="/employees/import-csv" class="form" style="margin-bottom:12px;">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px;">
+        <label style="margin:0;min-width:280px;">CSV File
+          <input type="file" id="employee-import-file" accept="text/csv,.csv" />
+        </label>
+        <label style="margin:0;min-width:220px;">Import Mode
+          <select name="import_mode">
+            <option value="replace" <%= safeImportMode === 'replace' ? 'selected' : '' %>>Replace Employee DB</option>
+            <option value="merge" <%= safeImportMode === 'merge' ? 'selected' : '' %>>Merge Into Employee DB</option>
+          </select>
+        </label>
+        <button type="submit" style="background:#8a5a2b;">Import CSV to EDB</button>
+        <button type="button" id="employee-import-close" style="background:#555;">Close</button>
+      </div>
+      <p class="dashboard-note admin-note" style="margin-bottom:10px;">Use a CSV with the same Employee DB headers. Replace is best for initial seeding if the database is empty.</p>
+      <label>CSV Payload
+        <textarea name="import_csv" id="employee-import-textarea" rows="12" spellcheck="false" required placeholder="Paste CSV here or choose a file above..."><%= safeImportCsv %></textarea>
+      </label>
+    </form>
+  </div>
+
+  <div id="employee-export-panel" class="employee-export-panel no-print" style="display:none;margin-bottom:14px;">
+    <form id="employee-filter-form" method="get" action="/employees" class="form" style="margin-bottom:12px;">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px;">
+        <label style="margin:0;min-width:280px;">Search
+          <input name="q" value="<%= q %>" placeholder="Employee ID, name, email, title, department..." style="min-width:260px;" />
+        </label>
+        <button type="submit">Filter Table</button>
+        <button type="submit" formaction="/employees/export.csv" class="employee-toolbar__btn employee-toolbar__btn--orange" onclick="return confirm('Continue downloading the selected Employee DB records?');">Download EDB Selected</button>
+        <button type="button" onclick="window.print()" style="background:#555;">Print Selection</button>
+        <a class="btn" href="/employees">Clear</a>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:12px;">
+        <% safeFilterSlots.forEach((slot, index) => { %>
+          <fieldset style="border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px;background:rgba(255,255,255,0.03);">
+            <legend style="padding:0 6px;">Panel <%= index + 1 %></legend>
+            <label style="display:block;margin-bottom:8px;">Header
+              <select name="field_<%= index + 1 %>">
+                <option value="">-- Select header --</option>
+                <% employeeFilterOptions.forEach((field) => { %>
+                  <option value="<%= field.key %>" <%= slot.field === field.key ? 'selected' : '' %>><%= field.label %></option>
+                <% }) %>
+              </select>
+            </label>
+            <label style="display:block;">Value
+              <input name="value_<%= index + 1 %>" value="<%= slot.value %>" placeholder="Type to narrow this panel" />
+            </label>
+          </fieldset>
+        <% }) %>
+      </div>
+    </form>
+  </div>
+
+  <div class="table-scroll" style="overflow-x:auto;max-height:72vh;overflow-y:auto;">
+    <table class="list" style="min-width:max-content;font-size:12px;">
+      <thead style="position:sticky;top:0;z-index:5;">
+        <tr>
+          <th>#</th>
+          <th>Employee ID</th>
+          <th>Name</th>
+          <th>Preferred</th>
+          <th>Employment Status</th>
+          <th>Type</th>
+          <th>Job Title</th>
+          <th>Department</th>
+          <th>Branch</th>
+          <th>Manager</th>
+          <th>Work Email</th>
+          <th>Phone</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!employees.length) { %>
+          <tr><td colspan="13" style="text-align:center;padding:20px;">No records found.</td></tr>
+        <% } %>
+        <% employees.forEach((employee, index) => { %>
+          <tr>
+            <td><%= index + 1 %></td>
+            <td><%= employee.employee_id || '' %></td>
+            <td><%= [employee.first_name, employee.middle_name, employee.last_name].filter(Boolean).join(' ') || '' %></td>
+            <td><%= employee.preferred_name || '' %></td>
+            <td><%= employee.employment_status || '' %></td>
+            <td><%= employee.employment_type || '' %></td>
+            <td><%= employee.job_title || '' %></td>
+            <td><%= employee.department_id_name || '' %></td>
+            <td><%= employee.work_location_branch_id || '' %></td>
+            <td><%= employee.manager_name || '' %></td>
+            <td><%= employee.work_email || '' %></td>
+            <td><%= employee.personal_phone || employee.work_phone || '' %></td>
+            <td style="white-space:nowrap;">
+              <a class="btn" href="/employees/<%= employee.id %>/edit" style="font-size:11px;padding:4px 8px;">Edit</a>
+              <form method="post" action="/employees/<%= employee.id %>/delete" style="display:inline;" onsubmit="return confirm('Delete this employee record?')">
+                <button type="submit" class="btn" style="font-size:11px;padding:4px 8px;background:#c0392b;">Del</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<script>
+  (function initEmployeeExportToggle() {
+    const toggleButton = document.getElementById('toggle-edb-panel');
+    const panel = document.getElementById('employee-export-panel');
+    if (!toggleButton || !panel) return;
+
+    toggleButton.addEventListener('click', () => {
+      const isHidden = panel.style.display === 'none' || !panel.style.display;
+      panel.style.display = isHidden ? 'block' : 'none';
+      if (isHidden) {
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  })();
+
+  (function initEmployeeImportToggle() {
+    const toggleButton = document.getElementById('toggle-edb-import');
+    const panel = document.getElementById('employee-import-panel');
+    const closeButton = document.getElementById('employee-import-close');
+    const fileInput = document.getElementById('employee-import-file');
+    const textarea = document.getElementById('employee-import-textarea');
+    if (!toggleButton || !panel || !closeButton || !fileInput || !textarea) return;
+
+    toggleButton.addEventListener('click', () => {
+      const isHidden = panel.style.display === 'none' || !panel.style.display;
+      panel.style.display = isHidden ? 'block' : 'none';
+      if (isHidden) {
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+
+    closeButton.addEventListener('click', () => {
+      panel.style.display = 'none';
+    });
+
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        textarea.value = String(reader.result || '');
+      };
+      reader.onerror = () => {
+        window.alert('Unable to read the selected CSV file.');
+      };
+      reader.readAsText(file);
+    });
+  })();
+</script>
+
+<%- include('../partials/footer') %>

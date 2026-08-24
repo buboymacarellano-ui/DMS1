@@ -1,0 +1,2015 @@
+const express = require('express');
+const path = require('path');
+const crypto = require('crypto');
+const session = require('express-session');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
+const customersRouter = require('./routes/customers');
+const vehiclesRouter = require('./routes/vehicles');
+const workOrdersRouter = require('./routes/workorders');
+const workOrderTransactionsRouter = require('./routes/workorder-transactions');
+const pricingRouter = require('./routes/pricing');
+const transactionsRouter = require('./routes/transactions');
+const partsRouter = require('./routes/parts');
+const partsManagerRouter = require('./routes/parts-manager');
+const { isPartsManagerRole } = require('./routes/parts-manager');
+const employeesRouter = require('./routes/employees');
+const helperRouter = require('./routes/helper');
+const branchPartsRouter = require('./routes/branch-parts');
+const technicianRouter = require('./routes/technician');
+const adminRouter = require('./routes/admin');
+const authRouter = require('./routes/auth');
+const kpiRouter = require('./routes/kpi');
+const approvalsRouter = require('./routes/approvals');
+const reportsRouter = require('./routes/reports');
+const store = require('./data/store');
+const {
+  buildComebackWorkOrderIdSet,
+  computeQualityMetrics,
+} = require('./lib/comeback-metrics');
+const {
+  resolveBranchCatalog,
+  averageOperationalBranchMetric,
+  normalizeBranchKey,
+  isPipelineBranch,
+  DEFAULT_OPERATIONAL_BRANCHES,
+  PRIMARY_BRANCH_NAME,
+} = require('./lib/branches');
+const { buildOcpdReport } = require('./lib/ocpd-reporting');
+
+const ROLE_GENERAL_MANAGER = 'general_manager';
+const ROLE_ADMIN = 'admin';
+const ROLE_HR = 'hr';
+const {
+  ROLE_SERVICE_ADVISOR,
+  ROLE_SERVICE_RECEPTIONIST,
+  ROLE_SENIOR_SERVICE_RECEPTIONIST,
+  isFrontlineRole,
+  frontlineHomePath,
+  frontlineRoleLabel,
+} = require('./lib/frontline-roles');
+const ROLE_STM = 'service_technical_manager';
+const ROLE_PARTS_MANAGER = 'parts_manager';
+const ROLE_TECHNICIAN = 'technician';
+const APPROVER_ROLES = new Set([ROLE_GENERAL_MANAGER, ROLE_ADMIN, ROLE_HR, ROLE_STM]);
+const BYPASS_ROLES = new Set([
+  ROLE_SERVICE_ADVISOR,
+  ROLE_SERVICE_RECEPTIONIST,
+  ROLE_SENIOR_SERVICE_RECEPTIONIST,
+  ROLE_GENERAL_MANAGER,
+  ROLE_ADMIN,
+  ROLE_HR,
+  ROLE_STM,
+  ROLE_PARTS_MANAGER,
+  ROLE_TECHNICIAN,
+]);
+const HR_SEED_USERNAME = 'HR';
+const HR_SEED_PASSWORD = 'Hr123456';
+
+// Temporary dev toggle: set DISABLE_LOGIN=1 to bypass auth in local dev.
+// Default is normal login for all roles.
+const AUTH_DISABLED = String(process.env.DISABLE_LOGIN || '0').trim() === '1';
+const requestedBypassRole = String(process.env.BYPASS_ROLE || ROLE_SERVICE_RECEPTIONIST).trim().toLowerCase();
+const BYPASS_ROLE = BYPASS_ROLES.has(requestedBypassRole) ? requestedBypassRole : ROLE_SERVICE_RECEPTIONIST;
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const isProduction = process.env.NODE_ENV === 'production';
+const sessionSecret = String(process.env.SESSION_SECRET || '').trim();
+
+if (isProduction && sessionSecret.length < 32) {
+  throw new Error('SESSION_SECRET must be set to at least 32 characters in production.');
+}
+
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+app.set('trust proxy', 1);
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
+app.use(express.urlencoded({ extended: true, limit: '200kb' }));
+app.use(express.json({ limit: '200kb' }));
+app.use(session({
+  name: 'dms.sid',
+  secret: sessionSecret || 'local-dev-only-secret-change-me',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isProduction,
+    maxAge: 1000 * 60 * 60 * 12,
+  },
+}));
+app.use(express.static(path.join(__dirname, 'public')));
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many authentication requests. Please try again in 15 minutes.',
+});
+
+app.use(async (req, res, next) => {
+  if (AUTH_DISABLED && !req.session.user) {
+    const roleLabel = BYPASS_ROLE === ROLE_GENERAL_MANAGER
+      ? 'GM'
+      : (BYPASS_ROLE === ROLE_ADMIN ? 'ADMIN' : (BYPASS_ROLE === ROLE_HR ? 'HR' : (BYPASS_ROLE === ROLE_STM ? 'STM' : (BYPASS_ROLE === ROLE_PARTS_MANAGER ? 'PARTS' : (BYPASS_ROLE === ROLE_TECHNICIAN ? 'TECH' : 'SA')))));
+    req.session.user = {
+      id: `dev-bypass-${BYPASS_ROLE}`,
+      username: `DEV-${roleLabel}`,
+      role: BYPASS_ROLE,
+    };
+  }
+  res.locals.currentUser = req.session.user || null;
+  res.locals.globalError = req.session.globalError || '';
+  res.locals.deletePasswordEnabled = await store.isDeletePasswordEnabled();
+  res.locals.currentPath = req.path || '';
+  res.locals.currentQuery = req.query || {};
+  const activeRole = String(req.session.user && req.session.user.role || '').trim().toLowerCase();
+  res.locals.canApproveRequests = APPROVER_ROLES.has(activeRole);
+  res.locals.isPartsManager = isPartsManagerRole(activeRole);
+  res.locals.isGmSupervisor = activeRole === ROLE_GENERAL_MANAGER;
+  res.locals.pendingApprovalCount = res.locals.canApproveRequests
+    ? (await store.getAll('approval_requests')).filter(request => request.status === 'pending').length
+    : 0;
+  delete req.session.globalError;
+  next();
+});
+
+app.get('/healthz', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    storage: 'sqlite',
+    sqlitePath: store.getSqlitePath(),
+  });
+});
+
+app.use('/auth', authLimiter, authRouter);
+
+app.use((req, res, next) => {
+  if (AUTH_DISABLED) return next();
+  if (req.path.startsWith('/auth/')) return next();
+  if (req.session.user) return next();
+  if (req.path.startsWith('/api/')) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  return res.redirect('/auth/login');
+});
+
+function normalizeBranchAccess(value) {
+  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+app.use((req, res, next) => {
+  if (req.method !== 'POST') return next();
+  const isNewWorkOrder = req.path === '/work-orders/new';
+  const isWorkOrderEdit = /^\/work-orders\/[^/]+\/edit\/?$/i.test(req.path);
+  if (!isNewWorkOrder && !isWorkOrderEdit) return next();
+
+  const user = req.session && req.session.user ? req.session.user : {};
+  req.body.service_advisor = String(user.username || user.receptionist_name || '').trim();
+  return next();
+});
+
+app.use(async (req, res, next) => {
+  const user = req.session && req.session.user ? req.session.user : {};
+  if (!isFrontlineRole(user.role)) return next();
+
+  const branch = String(user.branch || '').trim();
+  if (!branch) return res.status(403).send('Assigned branch is required. Please log in again.');
+
+  if (req.method === 'POST' && req.path === '/work-orders/new') {
+    req.body.branch = branch;
+    req.body.service_advisor = user.username || user.receptionist_name || '';
+  }
+
+  const workOrderMatch = req.path.match(/^\/work-orders\/([^/]+)(?:\/|$)/i);
+  if (!workOrderMatch || workOrderMatch[1] === 'new') return next();
+  const workOrder = await store.getById('work_orders', decodeURIComponent(workOrderMatch[1]));
+  if (!workOrder) return next();
+  if (normalizeBranchAccess(workOrder.branch) !== normalizeBranchAccess(branch)) {
+    return res.status(403).send('This work order belongs to another branch.');
+  }
+  if (req.method === 'POST' && /\/edit\/?$/i.test(req.path)) {
+    req.body.branch = branch;
+    req.body.service_advisor = user.username || user.receptionist_name || '';
+  }
+  return next();
+});
+
+function getSafeReturnPath(req) {
+  const fallback = '/';
+  const referrer = String(req.get('referer') || '').trim();
+  if (!referrer) return fallback;
+
+  try {
+    const base = `${req.protocol}://${req.get('host')}`;
+    const parsed = new URL(referrer, base);
+    if (parsed.host !== req.get('host')) return fallback;
+    return `${parsed.pathname}${parsed.search}`;
+  } catch (error) {
+    return fallback;
+  }
+}
+
+app.use(async (req, res, next) => {
+  if (!res.locals.deletePasswordEnabled) return next();
+  const isDeleteRequest = req.method === 'POST' && /\/delete\/?$/i.test(req.path);
+  if (!isDeleteRequest) return next();
+
+  const configured = await store.hasDeletePassword();
+  const valid = configured && await store.verifyDeletePassword(req.body.delete_password);
+  if (valid) return next();
+
+  req.session.globalError = configured
+    ? 'Delete cancelled: incorrect admin delete password.'
+    : 'Delete cancelled: the Admin has not configured the delete password.';
+  return res.redirect(getSafeReturnPath(req));
+});
+
+function requireRole(role) {
+  return (req, res, next) => {
+    if (AUTH_DISABLED) return next();
+    const activeRole = String(req.session.user && req.session.user.role || '').trim().toLowerCase();
+    if (activeRole === role) return next();
+    if (req.path.startsWith('/api/')) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    return res.redirect('/');
+  };
+}
+
+function requireAnyRole(...roles) {
+  return (req, res, next) => {
+    if (AUTH_DISABLED) return next();
+    const activeRole = String(req.session.user && req.session.user.role || '').trim().toLowerCase();
+    if (roles.includes(activeRole)) return next();
+    return res.redirect('/');
+  };
+}
+
+function requirePartsManager(req, res, next) {
+  if (AUTH_DISABLED) return next();
+  const activeRole = String(req.session.user && req.session.user.role || '').trim().toLowerCase();
+  // GM has full supervisory read/write access to PM workspace
+  if (isPartsManagerRole(activeRole) || activeRole === ROLE_GENERAL_MANAGER) return next();
+  return res.status(403).send('Parts Manager access only.');
+}
+
+async function ensureSeedHrAccount() {
+  const users = await store.getAll('users');
+  const exists = users.some((user) => String(user.role || '').trim().toLowerCase() === ROLE_HR);
+  if (exists) return;
+
+  const salt = crypto.randomBytes(16).toString('hex');
+  const passwordHash = crypto.pbkdf2Sync(HR_SEED_PASSWORD, salt, 120000, 64, 'sha512').toString('hex');
+
+  await store.create('users', {
+    username: HR_SEED_USERNAME,
+    role: ROLE_HR,
+    password_salt: salt,
+    password_hash: passwordHash,
+  });
+}
+
+function toNumber(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function getServiceLineTotal(item) {
+  const manualTotal = toNumber(item && item.total_price);
+  if (manualTotal > 0) return manualTotal;
+
+  const labor = toNumber(item && item.labor_price);
+  const serviceQty = Math.max(1, toNumber(item && item.service_qty) || 1);
+  const qtyRaw = Number(item && item.parts_qty);
+  const hasQty = Number.isFinite(qtyRaw) && qtyRaw > 0;
+  const partsUnitPrice = toNumber(item && item.parts_price);
+  const partsTotal = hasQty ? qtyRaw * partsUnitPrice : partsUnitPrice;
+  return (labor * serviceQty) + partsTotal;
+}
+
+function getWorkOrderTotal(wo) {
+  const items = Array.isArray(wo && wo.service_items) ? wo.service_items : [];
+  return items.reduce((sum, item) => sum + getServiceLineTotal(item), 0);
+}
+
+function getWorkOrderLaborTotal(wo) {
+  const items = Array.isArray(wo && wo.service_items) ? wo.service_items : [];
+  return items.reduce((sum, item) => sum + (toNumber(item && item.labor_price) * Math.max(1, toNumber(item && item.service_qty) || 1)), 0);
+}
+
+function getWorkOrderPartsTotal(wo) {
+  const items = Array.isArray(wo && wo.service_items) ? wo.service_items : [];
+  return items.reduce((sum, item) => {
+    const qtyRaw = Number(item && item.parts_qty);
+    const hasQty = Number.isFinite(qtyRaw) && qtyRaw > 0;
+    const unitPrice = toNumber(item && item.parts_price);
+    return sum + (hasQty ? (qtyRaw * unitPrice) : unitPrice);
+  }, 0);
+}
+
+function getWorkOrderRevenueTotal(wo) {
+  return getWorkOrderLaborTotal(wo) + getWorkOrderPartsTotal(wo);
+}
+
+function getStartOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+}
+
+function getStartOfWeek(date) {
+  const day = date.getDay();
+  const shift = day === 0 ? 6 : day - 1;
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() - shift, 0, 0, 0, 0);
+}
+
+function isWorkOrderOpen(wo) {
+  const status = String(wo && wo.status || '').trim().toLowerCase();
+  return status === 'open' || status === 'in-progress' || status === 'completed';
+}
+
+function isWorkOrderClosed(wo) {
+  const status = String(wo && wo.status || '').trim().toLowerCase();
+  return status === 'closed';
+}
+
+function toAgeBucket(createdAt, now) {
+  const startedAt = new Date(createdAt || 0);
+  const elapsedMs = Math.max(0, now.getTime() - startedAt.getTime());
+  const ageDays = Math.floor(elapsedMs / 86400000);
+  if (ageDays <= 2) return '0-2';
+  if (ageDays <= 5) return '3-5';
+  return '6+';
+}
+
+function buildTopServices(workOrders) {
+  const groups = new Map();
+  for (const wo of workOrders) {
+    const items = Array.isArray(wo.service_items) ? wo.service_items : [];
+    for (const item of items) {
+      const service = String(item.reason || item.service_type || item.description || '').trim() || 'Unspecified';
+      const total = getServiceLineTotal(item);
+      const entry = groups.get(service) || { service, count: 0, revenue: 0 };
+      entry.count += 1;
+      entry.revenue += total;
+      groups.set(service, entry);
+    }
+  }
+
+  return Array.from(groups.values())
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 5);
+}
+
+function buildTopTechnicians(workOrders) {
+  const groups = new Map();
+  for (const wo of workOrders) {
+    const tech = String(wo.technician || '').trim();
+    if (!tech) continue;
+    const total = getWorkOrderTotal(wo);
+    const entry = groups.get(tech) || { technician: tech, closedCount: 0, revenue: 0 };
+    if (isWorkOrderClosed(wo)) {
+      entry.closedCount += 1;
+      entry.revenue += total;
+    }
+    groups.set(tech, entry);
+  }
+
+  return Array.from(groups.values())
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 5);
+}
+
+const GM_BRANCH_TARGET_TOTAL = 25;
+
+function defaultGmBranchSalesTargets() {
+  return {
+    monthKey: '2026-08',
+    monthLabel: 'August 2026',
+    branches: {
+      Carx2: 1800000,
+      Carmen: 1500000,
+      CebuCity: 2500000,
+      Lapux2: 2600000,
+      Bogo: 2000000,
+      Toledo: 1600000,
+      ITPark: 1700000,
+    },
+  };
+}
+
+function resolveGmBranchSalesTargets(pricingSettings) {
+  const defaults = defaultGmBranchSalesTargets();
+  const stored = pricingSettings && pricingSettings.gm_branch_sales_targets
+    ? pricingSettings.gm_branch_sales_targets
+    : {};
+  const storedBranches = stored.branches && typeof stored.branches === 'object' ? stored.branches : {};
+  const branches = {};
+  DEFAULT_OPERATIONAL_BRANCHES.forEach((name) => {
+    const value = Number(storedBranches[name]);
+    branches[name] = Number.isFinite(value) && value >= 0 ? value : defaults.branches[name];
+  });
+  return {
+    monthKey: stored.monthKey || defaults.monthKey,
+    monthLabel: stored.monthLabel || defaults.monthLabel,
+    branches,
+  };
+}
+
+function scaleMonthlySalesTarget(monthlyAmount, duration) {
+  const monthly = Math.max(0, Number(monthlyAmount) || 0);
+  const code = normalizeGmDuration(duration);
+  if (code === 'H') return monthly / 22 / 8;
+  if (code === 'D') return monthly / 22;
+  if (code === 'W') return monthly / 4;
+  if (code === 'Y' || code === 'ALL') return monthly * 12;
+  return monthly;
+}
+
+function durationWorkOrderTarget(duration) {
+  const code = normalizeGmDuration(duration);
+  if (code === 'H') return Math.max(1, Number((GM_BRANCH_TARGET_TOTAL / 22 / 8).toFixed(2)));
+  if (code === 'D') return Math.max(1, Number((GM_BRANCH_TARGET_TOTAL / 22).toFixed(2)));
+  if (code === 'W') return Math.max(1, Number((GM_BRANCH_TARGET_TOTAL / 4).toFixed(2)));
+  if (code === 'Y') return GM_BRANCH_TARGET_TOTAL * 12;
+  if (code === 'ALL') return GM_BRANCH_TARGET_TOTAL * 12;
+  return GM_BRANCH_TARGET_TOTAL;
+}
+
+function isDateInGmWindow(date, rangeWindow) {
+  if (!rangeWindow || !date || !Number.isFinite(date.getTime())) return !rangeWindow;
+  return date >= rangeWindow.start && date < rangeWindow.end;
+}
+
+function normalizeGmBranchKey(value) {
+  return normalizeBranchKey(value);
+}
+
+function getTransactionRecordDate(record) {
+  const date = new Date(record && (record['Transaction date'] || record.created_at) || 0);
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
+function getTransactionRecordTotal(record) {
+  if (!record) return 0;
+
+  // 1. Extract the base positive total amount
+  const baseTotal = toNumber(record['Grand Total'] || record['Totalwith Vat']);
+
+  // 2. Identify if this specific record is flagged as a "Back Job"
+  const statusField = record['Job Type'] || record['Transaction Type'] || record['Status'] || '';
+  const isBackJob = String(statusField).toLowerCase().includes('back job');
+
+  // 3. Return negative value if it's a Back Job, otherwise return normal total
+  return isBackJob ? -Math.abs(baseTotal) : baseTotal;
+}
+
+
+function getLatestTransactionSnapshots(records, endOfDay) {
+  const latestByWorkOrder = new Map();
+  for (const record of records) {
+    const key = String(record.work_order_id || record['work order Number'] || record.id || '').trim();
+    const date = getTransactionRecordDate(record);
+    if (!key || !date || date >= endOfDay) continue;
+    const current = latestByWorkOrder.get(key);
+    if (!current || date > current.date) latestByWorkOrder.set(key, { record, date });
+  }
+  return Array.from(latestByWorkOrder.values());
+}
+
+function getManilaDateKey(date) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function resolveGmReportPeriod(value) {
+  const requested = String(value || '').trim();
+  const dateKey = /^\d{4}-\d{2}-\d{2}$/.test(requested) ? requested : getManilaDateKey(new Date());
+  const startOfDay = new Date(`${dateKey}T00:00:00+08:00`);
+  if (!Number.isFinite(startOfDay.getTime())) return resolveGmReportPeriod('');
+  const endOfDay = new Date(startOfDay.getTime() + 86400000);
+  const weekday = new Date(`${dateKey}T00:00:00Z`).getUTCDay();
+  const daysFromMonday = weekday === 0 ? 6 : weekday - 1;
+  const startOfWeek = new Date(startOfDay.getTime() - (daysFromMonday * 86400000));
+  const endOfWeek = new Date(startOfWeek.getTime() + (7 * 86400000));
+  const startOfMonth = new Date(startOfDay.getFullYear(), startOfDay.getMonth(), 1);
+  const endOfMonth = new Date(startOfDay.getFullYear(), startOfDay.getMonth() + 1, 1);
+  const startOfYear = new Date(startOfDay.getFullYear(), 0, 1);
+  const label = new Intl.DateTimeFormat('en-PH', {
+    timeZone: 'Asia/Manila',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(`${dateKey}T12:00:00+08:00`));
+  return { dateKey, label, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear };
+}
+
+function normalizeGmDuration(value) {
+  const code = String(value || 'D').trim().toUpperCase();
+  return ['H', 'D', 'W', 'M', 'Y', 'ALL'].includes(code) ? code : 'D';
+}
+
+function manilaHourOnDate(dateKey) {
+  const hourText = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Manila',
+    hour: '2-digit',
+    hour12: false,
+  }).format(new Date());
+  const hour = String(Math.min(23, Math.max(0, Number(hourText) || 0))).padStart(2, '0');
+  const start = new Date(`${dateKey}T${hour}:00:00+08:00`);
+  return { start, end: new Date(start.getTime() + 3600000) };
+}
+
+function resolveGmDurationWindow(period, duration) {
+  const code = normalizeGmDuration(duration);
+  const hourly = manilaHourOnDate(period.dateKey);
+  const windows = {
+    H: {
+      start: hourly.start,
+      end: hourly.end,
+      cumulativeStart: period.startOfDay,
+      revenueLabel: `Revenue on ${period.label}`,
+      revenueDelta: '▲ Hourly close',
+      cumulativeLabel: `Day Through ${period.label}`,
+      cumulativeDelta: '▲ Day to date',
+    },
+    D: {
+      start: period.startOfDay,
+      end: period.endOfDay,
+      cumulativeStart: period.startOfWeek,
+      revenueLabel: `Revenue on ${period.label}`,
+      revenueDelta: '▲ Daily close',
+      cumulativeLabel: `Week Through ${period.label}`,
+      cumulativeDelta: '▲ Week to date',
+    },
+    W: {
+      start: period.startOfWeek,
+      end: period.endOfDay,
+      cumulativeStart: period.startOfMonth,
+      revenueLabel: `Revenue on ${period.label}`,
+      revenueDelta: '▲ Weekly close',
+      cumulativeLabel: `Month Through ${period.label}`,
+      cumulativeDelta: '▲ Month to date',
+    },
+    M: {
+      start: period.startOfMonth,
+      end: period.endOfDay,
+      cumulativeStart: period.startOfYear,
+      revenueLabel: `Revenue on ${period.label}`,
+      revenueDelta: '▲ Monthly close',
+      cumulativeLabel: `Year Through ${period.label}`,
+      cumulativeDelta: '▲ Year to date',
+    },
+    Y: {
+      start: period.startOfYear,
+      end: period.endOfDay,
+      cumulativeStart: new Date(0),
+      revenueLabel: `Revenue on ${period.label}`,
+      revenueDelta: '▲ Yearly close',
+      cumulativeLabel: `All Through ${period.label}`,
+      cumulativeDelta: '▲ All time',
+    },
+    ALL: {
+      start: new Date(0),
+      end: period.endOfDay,
+      cumulativeStart: new Date(0),
+      revenueLabel: `Revenue on ${period.label}`,
+      revenueDelta: '▲ All records',
+      cumulativeLabel: `All Through ${period.label}`,
+      cumulativeDelta: '▲ All time',
+    },
+  };
+  return Object.assign({ duration: code }, windows[code]);
+}
+
+function canonicalGmTechnicianName(value) {
+  return String(value || '')
+    .replace(/\s*\([^)]+\)\s*$/, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+function buildGmTechnicianPerformance(workOrders, employees, pricingSettings, period) {
+  const hourlyRate = Math.max(1, toNumber(pricingSettings && pricingSettings.hourly_rate) || 350);
+  const incentiveRates = (pricingSettings && typeof pricingSettings.technician_incentive_rates === 'object')
+    ? pricingSettings.technician_incentive_rates
+    : {};
+  const roster = new Map();
+
+  (employees || [])
+    .filter(employee => (
+      String(employee.employee_id || '').trim() &&
+      /(mechanic|aligner|toolkeeper|carwasher|technician)/i.test(String(employee.job_title || ''))
+    ))
+    .forEach(employee => {
+      const name = [employee.first_name, employee.middle_name, employee.last_name]
+        .map(value => String(value || '').trim())
+        .filter(Boolean)
+        .join(' ');
+      const key = canonicalGmTechnicianName(name);
+      if (key) roster.set(key, { id: String(employee.employee_id || '').trim() || '-', technician: name });
+    });
+
+  function rowsFor(start, end) {
+    const totals = new Map(Array.from(roster.entries()).map(([key, profile]) => [key, {
+      ...profile,
+      billableHours: 0,
+      laborHours: 0,
+      laborAmount: 0,
+    }]));
+
+    (workOrders || []).forEach(workOrder => {
+      const createdAt = new Date(workOrder.created_at || 0);
+      if (!Number.isFinite(createdAt.getTime()) || createdAt < start || createdAt >= end) return;
+      const key = canonicalGmTechnicianName(workOrder.technician);
+      if (!key || !totals.has(key)) return;
+
+      const entry = totals.get(key);
+      const laborAmount = getWorkOrderLaborTotal(workOrder);
+      const billableHours = laborAmount / hourlyRate;
+      const shiftStart = parseClockOnDate(createdAt, workOrder.time_in);
+      let shiftEnd = parseClockOnDate(createdAt, workOrder.time_out);
+      if (shiftStart && shiftEnd && shiftEnd < shiftStart) shiftEnd = new Date(shiftEnd.getTime() + 86400000);
+      const measuredHours = getElapsedHours(shiftStart, shiftEnd);
+
+      entry.billableHours += billableHours;
+      entry.laborHours += measuredHours > 0 ? measuredHours : billableHours;
+      entry.laborAmount += laborAmount;
+    });
+
+    return Array.from(totals.values())
+      .map(entry => {
+        const configuredRate = Number(incentiveRates[entry.id]);
+        const incentiveRatePct = Number.isFinite(configuredRate) && configuredRate >= 0 && configuredRate <= 100
+          ? configuredRate
+          : 5;
+        return {
+          ...entry,
+          incentiveRatePct,
+          incentive: entry.laborAmount * (incentiveRatePct / 100),
+        };
+      })
+      .filter(entry => entry.billableHours > 0 || entry.laborHours > 0 || entry.laborAmount > 0)
+      .sort((a, b) => b.laborAmount - a.laborAmount);
+  }
+
+  return {
+    hourlyRate,
+    incentiveConfigured: false,
+    periods: [
+      { key: 'mtd', label: 'MTD', rows: rowsFor(period.startOfMonth, period.endOfDay) },
+      { key: 'week', label: 'Week', rows: rowsFor(period.startOfWeek, period.endOfWeek) },
+      { key: 'month', label: 'Month', rows: rowsFor(period.startOfMonth, period.endOfMonth) },
+    ],
+  };
+}
+
+function isGmTechnicianEmployee(employee) {
+  return /(mechanic|aligner|toolkeeper|carwasher|technician)/i.test(String(employee && employee.job_title || ''));
+}
+
+function buildGmEmployeeSalesPerformance(transactionRecords, employees, pricingSettings, period) {
+  const incentiveRates = (pricingSettings && typeof pricingSettings.employee_incentive_rates === 'object')
+    ? pricingSettings.employee_incentive_rates
+    : {};
+  const roster = new Map();
+  (employees || []).forEach(employee => {
+    const id = String(employee.employee_id || '').trim();
+    if (!id || isGmTechnicianEmployee(employee)) return;
+    const employeeName = [employee.first_name, employee.middle_name, employee.last_name]
+      .map(value => String(value || '').trim()).filter(Boolean).join(' ');
+    roster.set(canonicalGmTechnicianName(employeeName), { id, employee: employeeName || '-', jobTitle: String(employee.job_title || '').trim() || '-' });
+  });
+
+  const totals = new Map(Array.from(roster.entries()).map(([key, profile]) => [key, { ...profile, totalSales: 0 }]));
+  getLatestTransactionSnapshots(transactionRecords || [], period.endOfDay).forEach(({ record, date }) => {
+    if (date < period.startOfMonth) return;
+    const advisor = canonicalGmTechnicianName(record['Service Advice Advisor'] || record.service_advisor);
+    const entry = totals.get(advisor);
+    if (entry) entry.totalSales += getTransactionRecordTotal(record);
+  });
+
+  return Array.from(totals.values()).map(entry => {
+    const configuredRate = Number(incentiveRates[entry.id]);
+    const incentiveRatePct = Number.isFinite(configuredRate) && configuredRate >= 0 && configuredRate <= 100 ? configuredRate : 0;
+    return { ...entry, incentiveRatePct, incentive: entry.totalSales * (incentiveRatePct / 100) };
+  }).sort((a, b) => b.totalSales - a.totalSales);
+}
+
+function buildGmCurrentTransactions(transactionRecords, period) {
+  return getLatestTransactionSnapshots(transactionRecords || [], period.endOfDay)
+    .filter(({ date }) => date >= period.startOfDay)
+    .map(({ record, date }) => ({
+      date,
+      workOrderNumber: String(record['work order Number'] || record.work_order_number || '-'),
+      customer: String(record['Customer name'] || record.customer_name || '-'),
+      advisor: String(record['Service Advice Advisor'] || record.service_advisor || '-'),
+      total: getTransactionRecordTotal(record),
+    }))
+    .sort((a, b) => b.total - a.total);
+}
+
+function buildTransactionTopServices(snapshots, endOfDay) {
+  const groups = new Map();
+  snapshots.forEach(({ record, date }) => {
+    if (date >= endOfDay) return;
+    for (let slot = 1; slot <= 15; slot += 1) {
+      const service = String(record[`Service${slot}`] || record[`Service Required${slot}`] || '').trim();
+      if (!service) continue;
+      const entry = groups.get(service) || { service, count: 0, revenue: 0 };
+      entry.count += 1;
+      entry.revenue += toNumber(record[`Labor${slot}`]);
+      groups.set(service, entry);
+    }
+  });
+  return Array.from(groups.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+}
+
+function buildTransactionTopTechnicians(snapshots, endOfDay) {
+  const groups = new Map();
+  snapshots.forEach(({ record, date }) => {
+    if (date >= endOfDay) return;
+    const technician = String(record.Tecnician || record.Technician || '').trim();
+    if (!technician) return;
+    const entry = groups.get(technician) || { technician, closedCount: 0, revenue: 0 };
+    entry.closedCount += 1;
+    entry.revenue += getTransactionRecordTotal(record);
+    groups.set(technician, entry);
+  });
+  return Array.from(groups.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+}
+
+function buildBranchStatusWarning(entry, isPipeline) {
+  if (isPipeline) return { code: 'pipeline', label: 'Pipeline' };
+  if (entry.openRiskCount >= 3 || entry.targetPacingPct < 35) {
+    return { code: 'alert', label: 'Alert' };
+  }
+  if (entry.openRiskCount > 0 || entry.pendingBillingCount >= 5 || entry.targetPacingPct < 60) {
+    return { code: 'watch', label: 'Watch' };
+  }
+  return { code: 'ok', label: 'OK' };
+}
+
+function buildBranchMilestones(workOrders, transactionSnapshots, period, branchCatalog, rangeWindow, salesTargets) {
+  const catalog = resolveBranchCatalog(branchCatalog);
+  const now = new Date();
+  const duration = (rangeWindow && rangeWindow.duration) || 'D';
+  const targetMap = salesTargets && typeof salesTargets === 'object' ? salesTargets : {};
+  const periodTarget = durationWorkOrderTarget(duration);
+  const byKey = new Map(
+    catalog.map((branch) => [normalizeGmBranchKey(branch.name), {
+      branch: branch.name,
+      status: branch.status,
+      type: branch.type,
+      totalWorkOrders: 0,
+      openWorkOrders: 0,
+      closedWorkOrders: 0,
+      pendingBillingCount: 0,
+      todayRevenue: 0,
+      weeklyRevenue: 0,
+      periodRevenue: 0,
+      periodWorkOrders: 0,
+      closedRevenue: 0,
+      laborRevenue: 0,
+      partsRevenue: 0,
+      openRiskCount: 0,
+      avgTicket: 0,
+      activeTechnicians: 0,
+      target: periodTarget,
+      milestonePercent: 0,
+      _techSet: new Set(),
+    }])
+  );
+
+  for (const wo of workOrders) {
+    const key = normalizeGmBranchKey(wo && wo.branch);
+    if (!key || !byKey.has(key)) continue;
+
+    const entry = byKey.get(key);
+    const createdAt = new Date(wo.created_at || 0);
+    const inWindow = isDateInGmWindow(createdAt, rangeWindow);
+    if (inWindow) entry.periodWorkOrders += 1;
+    entry.totalWorkOrders += 1;
+
+    if (isWorkOrderOpen(wo) && inWindow) {
+      entry.openWorkOrders += 1;
+      const ageHours = Math.floor(Math.max(0, now.getTime() - createdAt.getTime()) / 3600000);
+      if (ageHours > 24) entry.openRiskCount += 1;
+    }
+
+    if (inWindow && String(wo.status || '').trim().toLowerCase() === 'completed') {
+      entry.pendingBillingCount += 1;
+    }
+
+    const techName = String(wo.technician || '').trim();
+    if (techName && inWindow) {
+      entry._techSet.add(techName);
+    }
+  }
+
+  for (const { record, date } of transactionSnapshots) {
+    if (date >= period.endOfDay) continue;
+    const key = normalizeGmBranchKey(record && record.Branch);
+    if (!key || !byKey.has(key)) continue;
+    const entry = byKey.get(key);
+    const inWindow = isDateInGmWindow(date, rangeWindow);
+    const total = getTransactionRecordTotal(record);
+    const labor = toNumber(record['Total Labor']);
+    const parts = toNumber(record['Total Parts']);
+    if (date >= period.startOfDay) entry.todayRevenue += total;
+    if (date >= period.startOfWeek) entry.weeklyRevenue += total;
+    if (!inWindow) continue;
+    entry.closedWorkOrders += 1;
+    entry.closedRevenue += total;
+    entry.laborRevenue += labor;
+    entry.partsRevenue += parts;
+    entry.periodRevenue += total;
+  }
+
+  return catalog.map((branch) => {
+    const entry = byKey.get(normalizeGmBranchKey(branch.name));
+    const monthlySalesTarget = Number(
+      targetMap[branch.name] != null
+        ? targetMap[branch.name]
+        : targetMap[normalizeGmBranchKey(branch.name)]
+    );
+    if (Number.isFinite(monthlySalesTarget) && monthlySalesTarget > 0) {
+      entry.salesTargetMonthly = monthlySalesTarget;
+      entry.target = scaleMonthlySalesTarget(monthlySalesTarget, duration);
+    } else {
+      entry.target = periodTarget;
+    }
+    const progress = entry.target > 0
+      ? Math.min(100, ((Number.isFinite(monthlySalesTarget) && monthlySalesTarget > 0
+        ? entry.periodRevenue
+        : entry.periodWorkOrders) / entry.target) * 100)
+      : 0;
+    const avgTicket = entry.closedWorkOrders > 0 ? (entry.closedRevenue / entry.closedWorkOrders) : 0;
+    const mixBase = entry.laborRevenue + entry.partsRevenue;
+    const laborGrossMarginPct = mixBase > 0 ? (entry.laborRevenue / mixBase) * 100 : 0;
+    const partsGrossMarginPct = mixBase > 0 ? (entry.partsRevenue / mixBase) * 100 : 0;
+    const targetPacingPct = Math.round(progress * 10) / 10;
+    const pipeline = isPipelineBranch(branch);
+    const warning = buildBranchStatusWarning({
+      openRiskCount: entry.openRiskCount,
+      pendingBillingCount: entry.pendingBillingCount,
+      targetPacingPct,
+    }, pipeline);
+
+    return {
+      ...entry,
+      avgTicket,
+      activeTechnicians: entry._techSet.size,
+      milestonePercent: targetPacingPct,
+      targetPacingPct,
+      laborGrossMarginPct: Math.round(laborGrossMarginPct * 10) / 10,
+      partsGrossMarginPct: Math.round(partsGrossMarginPct * 10) / 10,
+      liveAccumulatedRevenue: entry.periodRevenue,
+      statusWarning: warning.label,
+      statusWarningCode: warning.code,
+      isPipeline: pipeline,
+      total: entry.periodWorkOrders,
+      open: entry.openWorkOrders,
+      closed: entry.closedWorkOrders,
+      revenue: entry.periodRevenue,
+      _techSet: undefined,
+    };
+  });
+}
+
+function buildGmLiveTransactionBranches(workOrders, transactionRecords, branchCatalog) {
+  const livePeriod = resolveGmReportPeriod();
+  const catalog = resolveBranchCatalog(branchCatalog);
+  const branches = new Map(catalog.map((branch) => [normalizeGmBranchKey(branch.name), {
+    branch: branch.name,
+    status: branch.status,
+    type: branch.type,
+    openWorkOrders: 0,
+    closedWorkOrders: 0,
+    revenue: 0,
+    workOrderCount: 0,
+    pendingJobs: 0,
+  }]));
+
+  (workOrders || []).forEach(workOrder => {
+    const entry = branches.get(normalizeGmBranchKey(workOrder && workOrder.branch));
+    if (!entry) return;
+    if (isWorkOrderOpen(workOrder)) entry.openWorkOrders += 1;
+    if (String(workOrder.status || '').trim().toLowerCase() === 'completed') entry.pendingJobs += 1;
+    const createdAt = new Date(workOrder.created_at || 0);
+    if (Number.isFinite(createdAt.getTime()) && createdAt >= livePeriod.startOfDay && createdAt < livePeriod.endOfDay) {
+      entry.workOrderCount += 1;
+    }
+  });
+
+  getLatestTransactionSnapshots(transactionRecords || [], livePeriod.endOfDay).forEach(({ record, date }) => {
+    if (date < livePeriod.startOfDay) return;
+    const entry = branches.get(normalizeGmBranchKey(record && record.Branch));
+    if (!entry) return;
+    entry.closedWorkOrders += 1;
+    entry.revenue += getTransactionRecordTotal(record);
+  });
+
+  const formattedDate = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Manila', weekday: 'long', month: 'numeric', day: 'numeric', year: 'numeric',
+  }).format(new Date(`${livePeriod.dateKey}T12:00:00+08:00`)).replace(',', '');
+  return { title: `Transactions Today ${formattedDate}`, branches: Array.from(branches.values()) };
+}
+
+function buildPendingSpark(workOrders, rangeStart, rangeEnd) {
+  const buckets = [0, 0, 0, 0, 0, 0, 0];
+  const startMs = rangeStart.getTime();
+  const span = Math.max(1, rangeEnd.getTime() - startMs);
+  for (const wo of workOrders) {
+    if (String(wo.status || '').trim().toLowerCase() !== 'completed') continue;
+    const createdAt = new Date(wo.created_at || 0);
+    if (!Number.isFinite(createdAt.getTime()) || createdAt < rangeStart || createdAt >= rangeEnd) continue;
+    const idx = Math.min(6, Math.floor(((createdAt.getTime() - startMs) / span) * 7));
+    buckets[idx] += 1;
+  }
+  const peak = Math.max.apply(null, buckets.concat([1]));
+  return buckets.map((count) => Math.max(18, Math.round((count / peak) * 100)));
+}
+
+function buildGmMetrics(workOrders, transactionRecords, employees, pricingSettings, reportDate, branchCatalog, duration) {
+  const now = new Date();
+  const period = resolveGmReportPeriod(reportDate);
+  const window = resolveGmDurationWindow(period, duration);
+  const transactionSnapshots = getLatestTransactionSnapshots(transactionRecords, period.endOfDay);
+  const catalog = resolveBranchCatalog(branchCatalog);
+
+  const openWorkOrders = workOrders.filter(isWorkOrderOpen);
+  const completedAwaitingBilling = workOrders.filter((wo) => {
+    if (String(wo.status || '').trim().toLowerCase() !== 'completed') return false;
+    const createdAt = new Date(wo.created_at || 0);
+    if (!Number.isFinite(createdAt.getTime())) return true;
+    return createdAt >= window.start && createdAt < window.end;
+  });
+
+  let todayRevenue = 0;
+  let weeklyRevenue = 0;
+  let windowRevenue = 0;
+  let windowClosedCount = 0;
+  let windowClosedRevenue = 0;
+  let totalClosedRevenue = 0;
+  let closedWorkOrders = 0;
+  for (const { record, date } of transactionSnapshots) {
+    if (date >= period.endOfDay) continue;
+    const total = getTransactionRecordTotal(record);
+    closedWorkOrders += 1;
+    totalClosedRevenue += total;
+    if (date >= period.startOfDay) todayRevenue += total;
+    if (date >= period.startOfWeek) weeklyRevenue += total;
+    if (date >= window.start && date < window.end) {
+      windowRevenue += total;
+      windowClosedCount += 1;
+      windowClosedRevenue += total;
+    }
+  }
+
+  let cumulativeRevenue = 0;
+  for (const { record, date } of transactionSnapshots) {
+    if (date >= window.end) continue;
+    if (date >= window.cumulativeStart) cumulativeRevenue += getTransactionRecordTotal(record);
+  }
+
+  const avgTicket = windowClosedCount ? windowClosedRevenue / windowClosedCount : 0;
+  const risks = [];
+  for (const wo of openWorkOrders) {
+    const createdAt = new Date(wo.created_at || 0);
+    const ageHours = Math.floor(Math.max(0, now.getTime() - createdAt.getTime()) / 3600000);
+    if (ageHours > 24) {
+      risks.push({
+        work_order_number: wo.work_order_number || wo.id,
+        status: wo.status || 'open',
+        ageHours,
+      });
+    }
+  }
+
+  const salesTargets = resolveGmBranchSalesTargets(pricingSettings);
+  const branchMilestones = buildBranchMilestones(
+    workOrders,
+    transactionSnapshots,
+    period,
+    catalog,
+    window,
+    salesTargets.branches
+  );
+  const transactionToday = buildGmLiveTransactionBranches(workOrders, transactionRecords, catalog);
+
+  return {
+    duration: window.duration,
+    branchSalesTargets: salesTargets,
+    kpis: {
+      todayRevenue: windowRevenue,
+      weeklyRevenue: cumulativeRevenue,
+      dayRevenue: todayRevenue,
+      weekRevenue: weeklyRevenue,
+      openWorkOrders: openWorkOrders.length,
+      closedWorkOrders,
+      avgTicket,
+      pendingBillingCount: completedAwaitingBilling.length,
+      pendingSpark: buildPendingSpark(workOrders, window.start, window.end),
+      activeTechnicians: new Set(workOrders.map((wo) => String(wo.technician || '').trim()).filter(Boolean)).size,
+      // Company-wide branch averages exclude pipeline / pre-operational + empty/zero values
+      avgBranchTodayRevenue: averageOperationalBranchMetric(branchMilestones, 'todayRevenue'),
+      avgBranchWeeklyRevenue: averageOperationalBranchMetric(branchMilestones, 'weeklyRevenue'),
+      avgBranchOpenWorkOrders: averageOperationalBranchMetric(branchMilestones, 'openWorkOrders'),
+    },
+    reporting: {
+      date: period.dateKey,
+      label: period.label,
+      duration: window.duration,
+      revenueLabel: window.revenueLabel,
+      revenueDelta: window.revenueDelta,
+      cumulativeLabel: window.cumulativeLabel,
+      cumulativeDelta: window.cumulativeDelta,
+    },
+    transactionToday,
+    technicianPerformance: buildGmTechnicianPerformance(workOrders, employees, pricingSettings, period),
+    branchMilestones,
+    topServices: buildTransactionTopServices(transactionSnapshots, period.endOfDay),
+    topTechnicians: buildTransactionTopTechnicians(transactionSnapshots, period.endOfDay),
+    riskAlerts: risks.sort((a, b) => b.ageHours - a.ageHours).slice(0, 8),
+  };
+}
+
+function serializeGmDashboardPayload(metrics) {
+  const allBranchRows = Array.isArray(metrics.branchMilestones) ? metrics.branchMilestones : [];
+  const branchRows = allBranchRows.filter((row) => !row.isPipeline && String(row.branch || '').trim().toLowerCase() !== 'proposed location');
+  const totals = branchRows.reduce((acc, row) => {
+    acc.openWorkOrders += Number(row.openWorkOrders || 0);
+    acc.liveAccumulatedRevenue += Number(row.liveAccumulatedRevenue != null ? row.liveAccumulatedRevenue : row.todayRevenue || 0);
+    acc.targetPacingPct += Number(row.targetPacingPct != null ? row.targetPacingPct : row.milestonePercent || 0);
+    acc.laborGrossMarginPct += Number(row.laborGrossMarginPct || 0);
+    acc.partsGrossMarginPct += Number(row.partsGrossMarginPct || 0);
+    return acc;
+  }, {
+    openWorkOrders: 0,
+    liveAccumulatedRevenue: 0,
+    targetPacingPct: 0,
+    laborGrossMarginPct: 0,
+    partsGrossMarginPct: 0,
+  });
+  const branchCount = branchRows.length || 1;
+  const avgPacing = totals.targetPacingPct / branchCount;
+  const avgLabor = totals.laborGrossMarginPct / branchCount;
+  const avgParts = totals.partsGrossMarginPct / branchCount;
+  const clampPct = (value) => Math.max(0, Math.min(100, Number(value) || 0));
+  const reporting = metrics.reporting || {};
+  const kpis = metrics.kpis || {};
+  return {
+    duration: metrics.duration || reporting.duration || 'D',
+    branchSalesTargets: metrics.branchSalesTargets || resolveGmBranchSalesTargets(null),
+    reporting,
+    cards: {
+      revenueLabel: reporting.revenueLabel || `Revenue on ${reporting.label || ''}`.trim(),
+      revenueValue: Number(kpis.todayRevenue || 0),
+      revenueDelta: reporting.revenueDelta || '▲ Daily close',
+      cumulativeLabel: reporting.cumulativeLabel || `Week Through ${reporting.label || ''}`.trim(),
+      cumulativeValue: Number(kpis.weeklyRevenue || 0),
+      cumulativeDelta: reporting.cumulativeDelta || '▲ Week to date',
+      pendingBillingCount: Number(kpis.pendingBillingCount || 0),
+      pendingSpark: Array.isArray(kpis.pendingSpark) ? kpis.pendingSpark : [36, 52, 44, 70, 58, 82, 64],
+      avgTicket: Number(kpis.avgTicket || 0),
+    },
+    pacing: {
+      avgPacing,
+      segA: clampPct(avgLabor * 0.45),
+      segB: clampPct(clampPct(avgLabor * 0.45) + (avgParts * 0.35)),
+      segC: clampPct(clampPct(clampPct(avgLabor * 0.45) + (avgParts * 0.35)) + (avgPacing * 0.35)),
+    },
+    matrix: {
+      rows: branchRows.map((row) => ({
+        branch: row.branch || '—',
+        openWorkOrders: Number(row.openWorkOrders || 0),
+        liveAccumulatedRevenue: Number(row.liveAccumulatedRevenue != null ? row.liveAccumulatedRevenue : row.todayRevenue || 0),
+        targetPacingPct: Number(row.targetPacingPct != null ? row.targetPacingPct : row.milestonePercent || 0),
+        laborGrossMarginPct: Number(row.laborGrossMarginPct || 0),
+        partsGrossMarginPct: Number(row.partsGrossMarginPct || 0),
+        statusWarning: row.statusWarning || 'OK',
+        statusWarningCode: row.statusWarningCode || 'ok',
+      })),
+      totals,
+    },
+  };
+}
+
+function parseTimeToday(value) {
+  const text = String(value || '').trim();
+  const match = text.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  const h = Number(match[1]);
+  const m = Number(match[2]);
+  if (!Number.isFinite(h) || !Number.isFinite(m) || h < 0 || h > 23 || m < 0 || m > 59) return null;
+  const now = new Date();
+  const dt = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0);
+  return dt;
+}
+
+function parseClockOnDate(referenceDate, value) {
+  if (!referenceDate) return null;
+  const text = String(value || '').trim();
+  const match = text.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  const h = Number(match[1]);
+  const m = Number(match[2]);
+  if (!Number.isFinite(h) || !Number.isFinite(m) || h < 0 || h > 23 || m < 0 || m > 59) return null;
+  return new Date(
+    referenceDate.getFullYear(),
+    referenceDate.getMonth(),
+    referenceDate.getDate(),
+    h,
+    m,
+    0,
+    0,
+  );
+}
+
+function parseDateSafe(value) {
+  const dt = new Date(value || 0);
+  return Number.isFinite(dt.getTime()) ? dt : null;
+}
+
+function getElapsedHours(start, end) {
+  if (!start || !end) return 0;
+  const diffMs = end.getTime() - start.getTime();
+  if (!Number.isFinite(diffMs) || diffMs <= 0) return 0;
+  return diffMs / 3600000;
+}
+
+function estimateAssignmentAt(wo) {
+  const explicit = parseDateSafe(wo && wo.technician_assigned_at);
+  if (explicit) return explicit;
+
+  const technician = String(wo && wo.technician || '').trim();
+  if (!technician) return null;
+
+  const createdAt = parseDateSafe(wo && wo.created_at);
+  if (!createdAt) return null;
+
+  const fromTimeIn = parseClockOnDate(createdAt, wo && wo.time_in);
+  if (!fromTimeIn) return null;
+  if (fromTimeIn.getTime() < createdAt.getTime()) {
+    fromTimeIn.setDate(fromTimeIn.getDate() + 1);
+  }
+  return fromTimeIn;
+}
+
+function buildCloseTimestampMap(transactionRecords) {
+  const closeMap = new Map();
+  const closeActions = new Set(['billing-printed', 'closed', 'finalized']);
+  for (const record of transactionRecords || []) {
+    const woId = String(record && record.work_order_id || '').trim();
+    if (!woId) continue;
+    const action = String(record && record.transaction_action || '').trim().toLowerCase();
+    if (!closeActions.has(action)) continue;
+    const when = parseDateSafe(record && (record.created_at || record['Transaction date']));
+    if (!when) continue;
+    const prev = closeMap.get(woId);
+    if (!prev || when.getTime() > prev.getTime()) {
+      closeMap.set(woId, when);
+    }
+  }
+  return closeMap;
+}
+
+function estimateClosedAt(wo, closeMap) {
+  const byRecord = closeMap.get(String(wo && wo.id || '').trim());
+  if (byRecord) return byRecord;
+
+  const createdAt = parseDateSafe(wo && wo.created_at);
+  if (!createdAt) return null;
+  const fromTimeOut = parseClockOnDate(createdAt, wo && wo.time_out);
+  if (!fromTimeOut) return null;
+  if (fromTimeOut.getTime() < createdAt.getTime()) {
+    fromTimeOut.setDate(fromTimeOut.getDate() + 1);
+  }
+  return fromTimeOut;
+}
+
+function getMonthStart(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0, 0);
+}
+
+function safePercent(numerator, denominator) {
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0) return 0;
+  return (numerator / denominator) * 100;
+}
+
+function buildStmMetrics(workOrders, transactionRecords, partsInventory, pricingSettings) {
+  const now = new Date();
+  const startOfMonth = getMonthStart(now);
+  const hourlyRate = Math.max(1, toNumber(pricingSettings && pricingSettings.hourly_rate) || 350);
+  const assignTargetMinutes = 10;
+
+  const workOrdersMtd = (workOrders || []).filter((wo) => {
+    const createdAt = parseDateSafe(wo && wo.created_at);
+    return createdAt && createdAt >= startOfMonth && createdAt <= now;
+  });
+
+  const technicianSet = new Set();
+  let laborRevenue = 0;
+  let partsRevenue = 0;
+  let billedHours = 0;
+  let actualHoursWorked = 0;
+  let assignedRos = 0;
+
+  const assignmentRows = [];
+  for (const wo of workOrdersMtd) {
+    const labor = getWorkOrderLaborTotal(wo);
+    const parts = getWorkOrderPartsTotal(wo);
+    laborRevenue += labor;
+    partsRevenue += parts;
+
+    const technician = String(wo && wo.technician || '').trim();
+    if (technician) {
+      technicianSet.add(technician);
+      assignedRos += 1;
+    }
+
+    const woBilledHours = labor / hourlyRate;
+    billedHours += woBilledHours;
+
+    const createdAt = parseDateSafe(wo && wo.created_at);
+    const start = parseClockOnDate(createdAt, wo && wo.time_in);
+    let end = parseClockOnDate(createdAt, wo && wo.time_out);
+    if (start && end && end.getTime() < start.getTime()) {
+      end = new Date(end.getTime() + 24 * 3600000);
+    }
+
+    const measuredActual = getElapsedHours(start, end);
+    actualHoursWorked += measuredActual > 0 ? measuredActual : woBilledHours;
+
+    const assignedAt = estimateAssignmentAt(wo);
+    if (technician && createdAt && assignedAt) {
+      const minutes = Math.max(0, Math.round((assignedAt.getTime() - createdAt.getTime()) / 60000));
+      assignmentRows.push({
+        work_order_number: wo.work_order_number || wo.id,
+        service_advisor: String(wo.service_advisor || '').trim() || '-',
+        technician,
+        minutes_to_assign: minutes,
+        within_target: minutes <= assignTargetMinutes,
+      });
+    }
+  }
+
+  const elapsedDays = Math.max(1, Math.floor((now.getTime() - startOfMonth.getTime()) / 86400000) + 1);
+  const availableHours = technicianSet.size * elapsedDays * 8;
+  const totalRevenue = laborRevenue + partsRevenue;
+
+  const openStatuses = new Set(['open', 'in-progress']);
+  const closedStatuses = new Set(['closed']);
+  const closeMap = buildCloseTimestampMap(transactionRecords || []);
+  const closedMtd = workOrdersMtd.filter((wo) => closedStatuses.has(String(wo.status || '').trim().toLowerCase()));
+  const tatHours = closedMtd
+    .map((wo) => {
+      const createdAt = parseDateSafe(wo && wo.created_at);
+      const closedAt = estimateClosedAt(wo, closeMap);
+      return getElapsedHours(createdAt, closedAt);
+    })
+    .filter((v) => v > 0);
+
+  const comebackSet = buildComebackWorkOrderIdSet(workOrders, transactionRecords);
+  const qualityMetrics = computeQualityMetrics(workOrdersMtd, comebackSet);
+
+  const byCustomer = new Map();
+  for (const wo of workOrders || []) {
+    const customerId = String(wo.customer_id || '').trim();
+    if (!customerId) continue;
+    byCustomer.set(customerId, (byCustomer.get(customerId) || 0) + 1);
+  }
+  const activeCustomers = Array.from(byCustomer.values()).filter((count) => count > 0).length;
+  const retainedCustomers = Array.from(byCustomer.values()).filter((count) => count > 1).length;
+
+  let soldQtyMtd = 0;
+  let soldRetailMtd = 0;
+  let soldCostMtd = 0;
+  const stockByPart = new Map();
+  for (const tx of partsInventory || []) {
+    const type = String(tx.transaction_type || '').trim().toLowerCase();
+    const qty = Math.max(0, toNumber(tx.qty));
+    const partNumber = String(tx.part_number || '').trim() || '__unknown';
+    const createdAt = parseDateSafe(tx.created_at || tx.transaction_date);
+    if (!stockByPart.has(partNumber)) stockByPart.set(partNumber, 0);
+
+    if (type === 'sold') {
+      stockByPart.set(partNumber, stockByPart.get(partNumber) - qty);
+      if (createdAt && createdAt >= startOfMonth && createdAt <= now) {
+        soldQtyMtd += qty;
+        soldRetailMtd += qty * toNumber(tx.retail_price);
+        soldCostMtd += qty * toNumber(tx.cost_price);
+      }
+    } else {
+      stockByPart.set(partNumber, stockByPart.get(partNumber) + qty);
+    }
+  }
+
+  const currentOnHandQty = Array.from(stockByPart.values()).reduce((sum, qty) => sum + Math.max(0, qty), 0);
+  const averageInventoryQty = currentOnHandQty + (soldQtyMtd / 2);
+
+  const assignmentAverage = assignmentRows.length
+    ? assignmentRows.reduce((sum, row) => sum + row.minutes_to_assign, 0) / assignmentRows.length
+    : 0;
+
+  assignmentRows.sort((a, b) => b.minutes_to_assign - a.minutes_to_assign);
+
+  return {
+    period: {
+      monthLabel: now.toLocaleString('en-US', { month: 'long', year: 'numeric' }),
+      hourlyRate,
+      assignTargetMinutes,
+    },
+    technicianLabor: {
+      activeTechnicians: technicianSet.size,
+      technicianProductivityPct: safePercent(actualHoursWorked, availableHours),
+      technicianEfficiencyPct: safePercent(billedHours, actualHoursWorked),
+      technicianUtilizationPct: safePercent(assignedRos, workOrdersMtd.length),
+      effectiveLaborRate: billedHours > 0 ? (laborRevenue / billedHours) : 0,
+      billedHours,
+      actualHoursWorked,
+      availableHours,
+    },
+    financial: {
+      totalRevenue,
+      laborRevenue,
+      partsRevenue,
+      averageRepairOrderValue: workOrdersMtd.length ? (totalRevenue / workOrdersMtd.length) : 0,
+      hoursSoldPerRepairOrder: workOrdersMtd.length ? (billedHours / workOrdersMtd.length) : 0,
+      laborToPartsRatio: partsRevenue > 0 ? (laborRevenue / partsRevenue) : null,
+      laborGrossProfitMarginPct: null,
+      partsGrossProfitMarginPct: soldRetailMtd > 0 ? safePercent((soldRetailMtd - soldCostMtd), soldRetailMtd) : null,
+    },
+    operations: {
+      serviceTurnaroundHoursAvg: tatHours.length ? (tatHours.reduce((sum, v) => sum + v, 0) / tatHours.length) : 0,
+      serviceTurnaroundSampleSize: tatHours.length,
+      carCountRoVolume: workOrdersMtd.length,
+      openRoCount: workOrdersMtd.filter((wo) => openStatuses.has(String(wo.status || '').trim().toLowerCase())).length,
+      closedRoCount: closedMtd.length,
+      partsInventoryTurnoverRate: averageInventoryQty > 0 ? (soldQtyMtd / averageInventoryQty) : 0,
+      soldQtyMtd,
+      averageInventoryQty,
+    },
+    quality: {
+      firstTimeFixRatePct: qualityMetrics.firstTimeFixRatePct,
+      comebackRatePct: qualityMetrics.comebackRatePct,
+      comebackCount: qualityMetrics.comebackCount,
+      activeRoCount: qualityMetrics.activeRoCount,
+      performanceEligibleCount: qualityMetrics.performanceEligibleCount,
+      customerRetentionRatePct: activeCustomers ? safePercent(retainedCustomers, activeCustomers) : 0,
+      npsOrCsi: null,
+    },
+    assignment: {
+      averageMinutesToAssignTechnician: assignmentAverage,
+      sampleSize: assignmentRows.length,
+      delayedCount: assignmentRows.filter((row) => !row.within_target).length,
+      rows: assignmentRows.slice(0, 12),
+    },
+  };
+}
+
+function formatElapsed(fromDate, toDate) {
+  if (!fromDate || !toDate) return '-';
+  const diffMs = Math.max(0, toDate.getTime() - fromDate.getTime());
+  const totalMinutes = Math.floor(diffMs / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
+function buildTechnicianStats(workOrders, vehicles) {
+  const byId = new Map(vehicles.map(vehicle => [vehicle.id, vehicle]));
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const groups = new Map();
+
+  for (const wo of workOrders) {
+    const techName = String(wo.technician || '').trim();
+    if (!techName) continue;
+
+    if (!groups.has(techName)) {
+      groups.set(techName, {
+        technician: techName,
+        current_car: '-',
+        current_job_time: '-',
+        total_labor_accumulated: 0,
+        total_labor_mtd: 0,
+        work_orders_mtd: 0,
+        _activeSource: null,
+      });
+    }
+
+    const group = groups.get(techName);
+    const items = wo.service_items || [];
+    const laborTotal = items.reduce((sum, item) => sum + (toNumber(item.labor_price) * Math.max(1, toNumber(item.service_qty) || 1)), 0);
+    group.total_labor_accumulated += laborTotal;
+
+    const created = new Date(wo.created_at || 0);
+    const isCurrentMonth = created.getFullYear() === currentYear && created.getMonth() === currentMonth;
+    if (isCurrentMonth) {
+      group.total_labor_mtd += laborTotal;
+      group.work_orders_mtd += 1;
+    }
+
+    const status = String(wo.status || '').toLowerCase();
+    const isActive = status === 'open' || status === 'in-progress';
+    if (!isActive) continue;
+
+    const sourceTime = new Date(wo.created_at || 0).getTime();
+    if (group._activeSource != null && sourceTime <= group._activeSource) continue;
+
+    const vehicle = byId.get(wo.vehicle_id) || {};
+    const brand = String(wo.car_brand || vehicle.make || '').trim();
+    const model = String(wo.car_model || vehicle.model || '').trim();
+    const plate = String(wo.plate_number || vehicle.license_plate || '').trim();
+    const carLabel = [brand, model].filter(Boolean).join(' ') || '-';
+    group.current_car = plate ? `${carLabel} (${plate})` : carLabel;
+
+    const start = parseTimeToday(wo.time_in);
+    const end = parseTimeToday(wo.time_out) || now;
+    group.current_job_time = start ? formatElapsed(start, end) : '-';
+    group._activeSource = sourceTime;
+  }
+
+  return Array.from(groups.values())
+    .map(group => ({
+      technician: group.technician,
+      current_car: group.current_car,
+      current_job_time: group.current_job_time,
+      total_labor_accumulated: group.total_labor_accumulated,
+      total_labor_mtd: group.total_labor_mtd,
+      work_orders_mtd: group.work_orders_mtd,
+    }))
+    .sort((a, b) => a.technician.localeCompare(b.technician));
+}
+
+// Role landing page
+app.get('/', async (req, res) => {
+  const activeRole = String(req.session.user && req.session.user.role || '').trim().toLowerCase();
+  if (activeRole === ROLE_GENERAL_MANAGER) {
+    return res.redirect('/gm');
+  }
+  if (activeRole === ROLE_ADMIN) {
+    return res.redirect('/admin');
+  }
+  if (activeRole === ROLE_HR) {
+    return res.redirect('/hr');
+  }
+  if (activeRole === ROLE_STM) {
+    return res.redirect('/stm');
+  }
+  if (activeRole === ROLE_TECHNICIAN) {
+    return res.redirect('/technician');
+  }
+  if (activeRole === ROLE_PARTS_MANAGER || activeRole === 'pm') {
+    return res.redirect('/parts-manager');
+  }
+  if (isFrontlineRole(activeRole)) {
+    return res.redirect(frontlineHomePath(activeRole));
+  }
+
+  return res.redirect('/work-order-transactions');
+});
+
+app.get('/service-receptionist', requireAnyRole(ROLE_SERVICE_ADVISOR, ROLE_SERVICE_RECEPTIONIST, ROLE_SENIOR_SERVICE_RECEPTIONIST), async (req, res) => {
+  const user = req.session && req.session.user ? req.session.user : {};
+  const branchKey = normalizeBranchAccess(user.branch);
+  const allWorkOrders = await store.getAll('work_orders');
+  const workOrders = allWorkOrders.filter(wo => normalizeBranchAccess(wo.branch) === branchKey);
+  const customerIds = new Set(workOrders.map(wo => wo.customer_id).filter(Boolean));
+  const vehicleIds = new Set(workOrders.map(wo => wo.vehicle_id).filter(Boolean));
+  const customers = (await store.getAll('customers')).filter(customer => (
+    customerIds.has(customer.id) || normalizeBranchAccess(customer.branch) === branchKey
+  ));
+  const vehicles = (await store.getAll('vehicles')).filter(vehicle => (
+    vehicleIds.has(vehicle.id) || normalizeBranchAccess(vehicle.branch) === branchKey
+  ));
+  return res.render('index', {
+    work_orders: workOrders,
+    customers,
+    vehicles,
+    technicianStats: buildTechnicianStats(workOrders, vehicles),
+    roleLabel: frontlineRoleLabel(user.role) || 'SA',
+    branch: user.branch,
+  });
+});
+
+app.get('/api/dashboard/metrics', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
+  try {
+    const [workOrders, transactionRecords, employees, pricingSettings, branches] = await Promise.all([
+      store.getAll('work_orders'),
+      store.getAll('transaction_records'),
+      store.getAll('employees'),
+      store.getPricingSettings(),
+      store.getAll('branches'),
+    ]);
+    const metrics = buildGmMetrics(
+      workOrders,
+      transactionRecords,
+      employees,
+      pricingSettings,
+      req.query.date,
+      branches,
+      req.query.duration
+    );
+    return res.json(serializeGmDashboardPayload(metrics));
+  } catch (error) {
+    console.error('GET /api/dashboard/metrics failed', error);
+    return res.status(500).json({ error: 'Unable to load dashboard metrics' });
+  }
+});
+
+app.get('/api/gm/ocpd', requireRole(ROLE_GENERAL_MANAGER), (req, res) => {
+  return res.json(buildOcpdReport(req.query.date));
+});
+
+app.post('/gm/branch-targets', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
+  const current = await store.getPricingSettings();
+  const resolved = resolveGmBranchSalesTargets(current);
+  const nextBranches = {};
+  DEFAULT_OPERATIONAL_BRANCHES.forEach((name) => {
+    const raw = req.body && req.body[name];
+    const value = Number(raw);
+    nextBranches[name] = Number.isFinite(value) && value >= 0 ? value : resolved.branches[name];
+  });
+  await store.updatePricingSettings({
+    gm_branch_sales_targets: {
+      monthKey: resolved.monthKey,
+      monthLabel: resolved.monthLabel,
+      branches: nextBranches,
+      updated_at: new Date().toISOString(),
+    },
+  });
+  const date = String((req.body && req.body.date) || req.query.date || '').trim();
+  const duration = normalizeGmDuration((req.body && req.body.duration) || req.query.duration);
+  const params = new URLSearchParams();
+  if (date) params.set('date', date);
+  if (duration) params.set('duration', duration);
+  params.set('targetsSaved', '1');
+  return res.redirect('/gm?' + params.toString());
+});
+
+app.get('/gm', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
+  const [customers, vehicles, workOrders, transactionRecords, employees, pricingSettings, branches] = await Promise.all([
+    store.getAll('customers'),
+    store.getAll('vehicles'),
+    store.getAll('work_orders'),
+    store.getAll('transaction_records'),
+    store.getAll('employees'),
+    store.getPricingSettings(),
+    store.getAll('branches'),
+  ]);
+  const metrics = buildGmMetrics(workOrders, transactionRecords, employees, pricingSettings, req.query.date, branches, req.query.duration);
+  res.render('gm/index', {
+    customersCount: customers.length,
+    vehiclesCount: vehicles.length,
+    totalWorkOrders: workOrders.length,
+    metrics,
+    ocpdReport: buildOcpdReport(),
+    targetsSaved: String(req.query.targetsSaved || '') === '1',
+  });
+});
+
+app.get(
+  '/gm/fte',
+  requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_STM, ROLE_SERVICE_ADVISOR, ROLE_SERVICE_RECEPTIONIST, ROLE_SENIOR_SERVICE_RECEPTIONIST),
+  async (req, res) => {
+  const branchRows = await store.getAll('branches').catch(() => []);
+  const branchNames = Array.isArray(branchRows) && branchRows.length
+    ? branchRows.map((row) => String(row.name || row.branch || '').trim()).filter(Boolean)
+    : DEFAULT_OPERATIONAL_BRANCHES.slice();
+  const viewerRole = String(
+    (req.session.user && req.session.user.role) || (AUTH_DISABLED ? BYPASS_ROLE : '') || ''
+  ).trim().toLowerCase();
+  const canApproveFte = viewerRole === ROLE_GENERAL_MANAGER;
+  const isFrontlineFte = isFrontlineRole(viewerRole);
+  const isStmFte = viewerRole === ROLE_STM;
+  const assignedBranch = isFrontlineFte
+    ? String((req.session.user && req.session.user.branch) || '').trim() || PRIMARY_BRANCH_NAME
+    : String((req.session.user && req.session.user.branch) || '').trim();
+  const assignedBranchCanonical = (() => {
+    if (isFrontlineFte) return PRIMARY_BRANCH_NAME;
+    const key = normalizeBranchAccess(assignedBranch);
+    if (!key) return '';
+    const hit = branchNames.find((name) => normalizeBranchAccess(name) === key);
+    return hit || assignedBranch;
+  })();
+  let fteHomeHref = '/gm';
+  let fteHomeLabel = '← GM Dashboard';
+  if (isStmFte) {
+    fteHomeHref = '/stm';
+    fteHomeLabel = '← STM Dashboard';
+  } else if (isFrontlineRole(viewerRole)) {
+    fteHomeHref = frontlineHomePath(viewerRole);
+    const tag = frontlineRoleLabel(viewerRole) || 'SA';
+    fteHomeLabel = `← ${tag} Dashboard`;
+  }
+  res.render('gm/fte', {
+    branches: branchNames,
+    canApproveFte,
+    isFrontlineFte,
+    assignedBranch: assignedBranchCanonical,
+    fteHomeHref,
+    fteHomeLabel,
+    metrics: {
+      opexMtd: 86420.75,
+      criticalUptimePct: 97.4,
+      openWorkOrders: 4,
+      upcomingPms7Days: 4,
+      emergencyOrders: [
+        { id: 'FTE-2401', equipment: '2-Post Lift #3', branch: 'Carmen', priority: 'Critical', status: 'Open', ageHours: 6 },
+        { id: 'FTE-2398', equipment: 'Wheel Aligner', branch: 'CebuCity', priority: 'High', status: 'In Progress', ageHours: 14 },
+        { id: 'FTE-2395', equipment: 'Air Compressor', branch: 'Lapux2', priority: 'Critical', status: 'Open', ageHours: 3 },
+        { id: 'FTE-2391', equipment: 'Tire Changer', branch: 'Bogo', priority: 'Medium', status: 'In Progress', ageHours: 22 },
+      ],
+      scheduledPm: [
+        { id: 'PM-118', asset: 'Torque Wrench Set A', branch: 'Toledo', dueDate: '2026-08-15', technician: 'R. Santos' },
+        { id: 'PM-119', asset: 'Paint Booth Filters', branch: 'ITPark', dueDate: '2026-08-16', technician: 'J. Cruz' },
+        { id: 'PM-120', asset: 'Hydraulic Press', branch: 'Carmen', dueDate: '2026-08-17', technician: 'M. Dela Cruz' },
+        { id: 'PM-121', asset: 'AC Recovery Unit', branch: 'CebuCity', dueDate: '2026-08-18', technician: 'A. Reyes' },
+      ],
+      recentExpenses: [
+        { id: 'EXP-901', date: '2026-08-13', description: 'Lift cable replacement', category: 'Repair', branch: 'Carmen', amount: 13750 },
+        { id: 'EXP-900', date: '2026-08-12', description: 'Calibration service fee', category: 'Calibration', branch: 'CebuCity', amount: 4800 },
+        { id: 'EXP-898', date: '2026-08-11', description: 'PPE restock (gloves/goggles)', category: 'Safety', branch: 'Bogo', amount: 2650.5 },
+        { id: 'EXP-896', date: '2026-08-10', description: 'Compressor oil & filters', category: 'Consumable', branch: 'Lapux2', amount: 3120 },
+      ],
+      cribTracker: [
+        { id: 'CRB-441', tool: 'Impact Oil Gun #12', assignee: 'K. Lim', branch: 'Carmen', action: 'Check-Out', at: '08:14' },
+        { id: 'CRB-440', tool: 'Scan Tool Elite', assignee: 'R. Santos', branch: 'CebuCity', action: 'Check-In', at: '09:02' },
+        { id: 'CRB-439', tool: 'Torque Wrench 1/2"', assignee: 'J. Cruz', branch: 'ITPark', action: 'Check-Out', at: '09:40' },
+        { id: 'CRB-438', tool: 'ATF Exchanger Hose', assignee: 'M. Dela Cruz', branch: 'Toledo', action: 'Check-In', at: '10:15' },
+      ],
+      safetyChecklist: [
+        { branch: 'Carmen', date: '2026-08-13', result: 'Pass', completedBy: 'STM Desk' },
+        { branch: 'CebuCity', date: '2026-08-13', result: 'Pass', completedBy: 'Lead Tech' },
+        { branch: 'Lapux2', date: '2026-08-13', result: 'Fail', completedBy: 'Shift Lead' },
+        { branch: 'Bogo', date: '2026-08-13', result: 'Pass', completedBy: 'STM Desk' },
+        { branch: 'ITPark', date: '2026-08-13', result: 'Pass', completedBy: 'Lead Tech' },
+        { branch: 'Carx2', date: '2026-08-13', result: 'Fail', completedBy: '—' },
+      ],
+      calibrationAlerts: [
+        { asset: 'Torque Wrench Master', branch: 'Carmen', dueInDays: 2, serial: 'TW-8841' },
+        { asset: 'Alignment Heads', branch: 'CebuCity', dueInDays: 5, serial: 'AL-2207' },
+        { asset: 'Pressure Gauge Kit', branch: 'Toledo', dueInDays: 6, serial: 'PG-1190' },
+        { asset: 'Multimeter Fluke', branch: 'Bogo', dueInDays: 7, serial: 'MM-552' },
+      ],
+      transactions: [
+        {
+          Transaction_ID: 'FTE-TXN-20260813-0001',
+          Transaction_Date: '2026-08-13',
+          Transaction_Time: '08:42:15',
+          Branch_Name: 'Carmen',
+          Asset_ID: 'AST-LFT-003',
+          Asset_Name: '2-Post Lift #3',
+          Asset_Category: 'Shop Equipment',
+          Transaction_Type: 'Repair',
+          Description: 'Hydraulic hose kit and seal replacement after bay leak',
+          serviceRenderedBy: 'In-House Mechanic',
+          laborRate: 350,
+          serviceHours: 4,
+          laborPrice: 1400,
+          partsPrice: 12350,
+          total: 13750,
+          Payment_Method: 'Company Card',
+          Vendor_Supplier: 'Industrial Supply PH',
+          Requested_By_User_ID: 'USR-STM-014',
+          Approved_By_User_ID: 'USR-GM-001',
+          Status: 'Posted',
+        },
+        {
+          Transaction_ID: 'FTE-TXN-20260812-0004',
+          Transaction_Date: '2026-08-12',
+          Transaction_Time: '14:18:03',
+          Branch_Name: 'CebuCity',
+          Asset_ID: 'AST-ALN-001',
+          Asset_Name: 'Wheel Aligner Heads',
+          Asset_Category: 'Calibration Asset',
+          Transaction_Type: 'Calibration',
+          Description: 'Annual camera head calibration and certificate renewal',
+          serviceRenderedBy: 'Manufacturer Tech',
+          laborRate: 0,
+          serviceHours: 6,
+          laborPrice: 4800,
+          partsPrice: 0,
+          total: 4800,
+          Payment_Method: 'Bank Transfer',
+          Vendor_Supplier: 'Metro Cal Lab',
+          Requested_By_User_ID: 'USR-TECH-027',
+          Approved_By_User_ID: 'USR-STM-008',
+          Status: 'Posted',
+        },
+        {
+          Transaction_ID: 'FTE-TXN-20260811-0009',
+          Transaction_Date: '2026-08-11',
+          Transaction_Time: '10:05:41',
+          Branch_Name: 'Bogo',
+          Asset_ID: 'AST-PPE-LOT',
+          Asset_Name: 'Shop PPE Restock Lot',
+          Asset_Category: 'Safety Consumable',
+          Transaction_Type: 'Purchase',
+          Description: 'Gloves, goggles, and spill kit refill for bay ends',
+          serviceRenderedBy: 'In-House Mechanic',
+          laborRate: 350,
+          serviceHours: 0,
+          laborPrice: 0,
+          partsPrice: 2650.5,
+          total: 2650.5,
+          Payment_Method: 'Cash',
+          Vendor_Supplier: 'Safety First Depot',
+          Requested_By_User_ID: 'USR-LEAD-003',
+          Approved_By_User_ID: 'USR-STM-014',
+          Status: 'Posted',
+        },
+        {
+          Transaction_ID: 'FTE-TXN-20260810-0012',
+          Transaction_Date: '2026-08-10',
+          Transaction_Time: '16:27:55',
+          Branch_Name: 'Lapux2',
+          Asset_ID: 'AST-CMP-002',
+          Asset_Name: 'Air Compressor Bay 2',
+          Asset_Category: 'Facility Equipment',
+          Transaction_Type: 'Preventive Maintenance',
+          Description: 'Compressor oil change, filter set, and pressure check',
+          serviceRenderedBy: 'In-House Electrician',
+          laborRate: 350,
+          serviceHours: 2,
+          laborPrice: 700,
+          partsPrice: 2420,
+          total: 3120,
+          Payment_Method: 'Company Card',
+          Vendor_Supplier: 'AirTech Parts',
+          Requested_By_User_ID: 'USR-FAC-002',
+          Approved_By_User_ID: 'USR-GM-001',
+          Status: 'Posted',
+        },
+        {
+          Transaction_ID: 'FTE-TXN-20260809-0007',
+          Transaction_Date: '2026-08-09',
+          Transaction_Time: '09:33:12',
+          Branch_Name: 'ITPark',
+          Asset_ID: 'AST-TW-012',
+          Asset_Name: 'Torque Wrench 1/2" TW-12',
+          Asset_Category: 'Hand Tool',
+          Transaction_Type: 'Tool Replacement',
+          Description: 'Replace damaged torque wrench from tool crib inventory',
+          serviceRenderedBy: 'Third-Party Provider',
+          laborRate: 0,
+          serviceHours: 0.5,
+          laborPrice: 175,
+          partsPrice: 4075,
+          total: 4250,
+          Payment_Method: 'Petty Cash',
+          Vendor_Supplier: 'Tool World Cebu',
+          Requested_By_User_ID: 'USR-TECH-041',
+          Approved_By_User_ID: 'USR-STM-008',
+          Status: 'Pending Approval',
+        },
+        {
+          Transaction_ID: 'FTE-TXN-20260808-0015',
+          Transaction_Date: '2026-08-08',
+          Transaction_Time: '11:50:28',
+          Branch_Name: 'Toledo',
+          Asset_ID: 'AST-GEN-001',
+          Asset_Name: 'Backup Generator',
+          Asset_Category: 'Facility Equipment',
+          Transaction_Type: 'Service Contract',
+          Description: 'Monthly load test service and diesel stabilizer top-up',
+          serviceRenderedBy: 'In-House Mechanic',
+          laborRate: 350,
+          serviceHours: 3,
+          laborPrice: 1050,
+          partsPrice: 5800,
+          total: 6850,
+          Payment_Method: 'Bank Transfer',
+          Vendor_Supplier: 'PowerSafe Facilities',
+          Requested_By_User_ID: 'USR-FAC-002',
+          Approved_By_User_ID: 'USR-GM-001',
+          Status: 'Posted',
+        },
+      ],
+    },
+  });
+});
+
+app.get(
+  '/gm/catalog',
+  requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_STM, ROLE_SERVICE_ADVISOR, ROLE_SERVICE_RECEPTIONIST, ROLE_SENIOR_SERVICE_RECEPTIONIST, ROLE_PARTS_MANAGER),
+  (req, res) => {
+    return res.render('gm/catalog');
+  }
+);
+
+app.get('/gm/performance-incentives', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
+  const [workOrders, transactionRecords, employees, pricingSettings] = await Promise.all([
+    store.getAll('work_orders'),
+    store.getAll('transaction_records'),
+    store.getAll('employees'),
+    store.getPricingSettings(),
+  ]);
+  const period = resolveGmReportPeriod(req.query.date);
+  return res.render('gm/performance-incentives', {
+    reporting: { date: period.dateKey, label: period.label },
+    technicianPerformance: buildGmTechnicianPerformance(workOrders, employees, pricingSettings, period),
+    employeeSalesPerformance: buildGmEmployeeSalesPerformance(transactionRecords, employees, pricingSettings, period),
+    currentTransactions: buildGmCurrentTransactions(transactionRecords, period),
+  });
+});
+
+app.post('/gm/technician-incentive-rate', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
+  const technicianId = String(req.body.technician_id || '').trim();
+  const incentiveType = String(req.body.incentive_type || 'technician').trim();
+  const ratePct = Number(req.body.rate_pct);
+  if (!technicianId || !['technician', 'employee'].includes(incentiveType) || !Number.isFinite(ratePct) || ratePct < 0 || ratePct > 100) {
+    return res.status(400).json({ error: 'Enter an incentive rate from 0 to 100.' });
+  }
+
+  const settings = await store.getPricingSettings();
+  const rateKey = incentiveType === 'employee' ? 'employee_incentive_rates' : 'technician_incentive_rates';
+  const incentiveRates = (settings && typeof settings[rateKey] === 'object')
+    ? settings[rateKey]
+    : {};
+  incentiveRates[technicianId] = ratePct;
+  await store.updatePricingSettings({ [rateKey]: incentiveRates });
+  return res.json({ technicianId, ratePct });
+});
+
+app.get('/gm/aging/:bucket', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
+  const bucket = String(req.params.bucket || '').trim();
+  const bucketLabels = {
+    '0-2': '0-2 Days',
+    '3-5': '3-5 Days',
+    '6+': '6+ Days',
+  };
+  if (!bucketLabels[bucket]) return res.status(404).send('Aging report not found');
+
+  const [workOrders, customers, vehicles] = await Promise.all([
+    store.getAll('work_orders'),
+    store.getAll('customers'),
+    store.getAll('vehicles'),
+  ]);
+  const customerById = new Map(customers.map(customer => [customer.id, customer]));
+  const vehicleById = new Map(vehicles.map(vehicle => [vehicle.id, vehicle]));
+  const now = new Date();
+  const agingWorkOrders = workOrders
+    .filter(wo => isWorkOrderOpen(wo) && toAgeBucket(wo.created_at, now) === bucket)
+    .map(wo => {
+      const customer = customerById.get(wo.customer_id) || {};
+      const vehicle = vehicleById.get(wo.vehicle_id) || {};
+      const createdAt = new Date(wo.created_at || 0);
+      const ageHours = Math.floor(Math.max(0, now.getTime() - createdAt.getTime()) / 3600000);
+      return {
+        ...wo,
+        customer_name: customer.name || 'Unknown Customer',
+        telephone_number: wo.telephone_number || customer.phone || '',
+        vehicle_label: [wo.car_brand || vehicle.make, wo.car_model || vehicle.model, wo.plate_number || vehicle.license_plate].filter(Boolean).join(' '),
+        ageHours,
+        ageDays: Math.floor(ageHours / 24),
+        total: getWorkOrderTotal(wo),
+      };
+    })
+    .sort((a, b) => b.ageHours - a.ageHours);
+
+  return res.render('gm/aging-details', {
+    bucket,
+    bucketLabel: bucketLabels[bucket],
+    agingWorkOrders,
+  });
+});
+
+app.post('/api/admin/restart-tunnel', requireRole(ROLE_STM), (req, res) => {
+  const { execFile } = require('child_process');
+  const script = path.join(__dirname, 'scripts', 'restart-tunnel.ps1');
+  const powershell = process.env.SystemRoot
+    ? path.join(process.env.SystemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+    : 'powershell.exe';
+
+  execFile(
+    powershell,
+    ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script],
+    { windowsHide: true, timeout: 20000 },
+    (scriptErr, stdout, stderr) => {
+      if (scriptErr) {
+        console.error('POST /api/admin/restart-tunnel failed', scriptErr, stderr);
+        return res.status(500).json({
+          status: 'error',
+          message: scriptErr.message || 'Unable to recycle the Cloudflare tunnel.',
+        });
+      }
+      return res.json({
+        status: 'success',
+        message: 'Tunnel cycled completely.',
+        detail: String(stdout || '').trim(),
+      });
+    }
+  );
+});
+
+app.get('/stm', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_STM), async (req, res) => {
+  const [workOrders, customers, vehicles, transactionRecords, partsInventory] = await Promise.all([
+    store.getAll('work_orders'),
+    store.getAll('customers'),
+    store.getAll('vehicles'),
+    store.getAll('transaction_records'),
+    store.getAll('parts_inventory'),
+  ]);
+  const pricingSettings = await store.getPricingSettings();
+  const metrics = buildStmMetrics(workOrders, transactionRecords, partsInventory, pricingSettings);
+  res.render('stm/index', {
+    metrics,
+    workOrdersCount: workOrders.length,
+    customersCount: customers.length,
+    vehiclesCount: vehicles.length,
+  });
+});
+
+app.use('/technician', requireRole(ROLE_TECHNICIAN), technicianRouter);
+
+app.use('/admin', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_ADMIN), adminRouter);
+app.use('/hr', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_HR), async (req, res) => {
+  const users = await store.getAll('users');
+  const roleCounts = users.reduce((counts, user) => {
+    const role = String(user.role || '').trim().toLowerCase();
+    counts[role] = (counts[role] || 0) + 1;
+    return counts;
+  }, {
+    service_advisor: 0,
+    service_receptionist: 0,
+    senior_service_receptionist: 0,
+    general_manager: 0,
+    admin: 0,
+    hr: 0,
+    service_technical_manager: 0,
+    parts_manager: 0,
+    technician: 0,
+  });
+
+  res.render('hr/index', {
+    users,
+    roleCounts,
+    totalUsers: users.length,
+  });
+});
+app.use('/employees', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_ADMIN, ROLE_HR), employeesRouter);
+
+app.use('/customers', customersRouter);
+app.use('/vehicles', vehiclesRouter);
+app.use('/work-orders', workOrdersRouter);
+app.use('/work-order-transactions', workOrderTransactionsRouter);
+app.use('/pricing', pricingRouter);
+app.use('/transactions', transactionsRouter);
+app.use('/parts-manager', requirePartsManager, partsManagerRouter);
+app.use('/api/reports', requireAnyRole(
+  ROLE_PARTS_MANAGER,
+  'pm',
+  ROLE_GENERAL_MANAGER,
+  ROLE_ADMIN,
+  ROLE_STM,
+  ROLE_SERVICE_RECEPTIONIST,
+  ROLE_SENIOR_SERVICE_RECEPTIONIST,
+  ROLE_SERVICE_ADVISOR
+), reportsRouter);
+app.use('/parts', requireAnyRole(
+  ROLE_PARTS_MANAGER,
+  'pm',
+  ROLE_GENERAL_MANAGER,
+  ROLE_ADMIN,
+  ROLE_STM,
+  ROLE_SERVICE_RECEPTIONIST,
+  ROLE_SENIOR_SERVICE_RECEPTIONIST,
+  ROLE_SERVICE_ADVISOR
+), partsRouter);
+app.use('/helper', helperRouter);
+app.use('/branch-parts', requireAnyRole(
+  ROLE_SERVICE_ADVISOR,
+  ROLE_SERVICE_RECEPTIONIST,
+  ROLE_SENIOR_SERVICE_RECEPTIONIST
+), branchPartsRouter);
+app.use('/approvals', approvalsRouter);
+app.use('/api/kpi', kpiRouter);
+app.use('/kpi', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_ADMIN, ROLE_STM), kpiRouter);
+
+ensureSeedHrAccount()
+  .catch((error) => {
+    console.error('Failed to seed HR account:', error);
+  })
+  .finally(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running at http://localhost:${PORT}`);
+    });
+  });

@@ -1,0 +1,75 @@
+<%
+  const fteBranchName = typeof fteBranch !== 'undefined' && fteBranch ? String(fteBranch) : 'CebuCity';
+  const fteRows = Array.isArray(typeof fteTransactions !== 'undefined' ? fteTransactions : null)
+    ? fteTransactions
+    : [];
+  const ftePesos = (value) => {
+    const amount = Number(value || 0);
+    return '₱ ' + amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+  const fteStatusTone = (status) => {
+    const key = String(status || '').toLowerCase();
+    if (key.indexOf('pending') >= 0) return 'out';
+    if (key.indexOf('void') >= 0 || key.indexOf('reject') >= 0) return 'fail';
+    return 'pass';
+  };
+%>
+
+<article class="dashboard-card gm-panel fte-panel fte-ledger-panel" style="margin-top:12px;" id="fte-branch-section">
+  <div class="dashboard-card__header gm-panel-header fte-ledger-header">
+    <span>FTE Tracking (<%= fteBranchName %>)</span>
+    <a class="btn fte-log-btn" href="/gm/fte?log=1" aria-label="Log FTE Issue">+ LOG FTE ISSUE</a>
+  </div>
+  <p class="dashboard-note" style="margin:0 0 10px;">
+    Branch-locked ledger for <strong><%= fteBranchName %></strong> only. Core work-order tools above are unchanged.
+  </p>
+  <div class="dashboard-card__header gm-panel-header fte-ledger-header" style="margin-bottom:8px;">
+    <span>FTE Transaction Ledger History</span>
+    <small><%= fteRows.length %> record<%= fteRows.length === 1 ? '' : 's' %> · <%= fteBranchName %> · Branch-locked</small>
+  </div>
+  <div class="fte-ledger-scroll table-scroll">
+    <table class="list gm-table fte-table fte-ledger-table">
+      <thead>
+        <tr>
+          <th>TRANSACTION ID</th>
+          <th>DATE</th>
+          <th>TIME</th>
+          <th>BRANCH</th>
+          <th>ASSET ID</th>
+          <th>ASSET NAME</th>
+          <th>TYPE</th>
+          <th>SERVICE BY</th>
+          <th>LABOR</th>
+          <th>PARTS</th>
+          <th>TOTAL</th>
+          <th>STATUS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!fteRows.length) { %>
+          <tr>
+            <td colspan="12" style="text-align:center;">No FTE transactions for <%= fteBranchName %>.</td>
+          </tr>
+        <% } %>
+        <% fteRows.forEach((row) => { %>
+          <tr>
+            <td><%= row.Transaction_ID %></td>
+            <td><%= row.Transaction_Date %></td>
+            <td><%= row.Transaction_Time %></td>
+            <td><%= row.Branch_Name %></td>
+            <td><%= row.Asset_ID %></td>
+            <td><%= row.Asset_Name %></td>
+            <td><%= row.Transaction_Type %></td>
+            <td><%= row.serviceRenderedBy %></td>
+            <td class="fte-money"><%= ftePesos(row.laborPrice) %></td>
+            <td class="fte-money"><%= ftePesos(row.partsPrice) %></td>
+            <td class="fte-money"><%= ftePesos(row.total) %></td>
+            <td>
+              <span class="fte-pill fte-pill--<%= fteStatusTone(row.Status) %>"><%= row.Status %></span>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</article>

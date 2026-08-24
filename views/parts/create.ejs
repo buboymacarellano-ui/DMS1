@@ -1,0 +1,99 @@
+<%- include('../partials/header') %>
+
+<%
+  const createdRows = Array.isArray(typeof createdParts !== 'undefined' ? createdParts : null) ? createdParts : [];
+  const branches = Array.isArray(typeof branchOptions !== 'undefined' ? branchOptions : null) ? branchOptions : [];
+  const form = (typeof prefill !== 'undefined' && prefill) ? prefill : {};
+  const warehouse = (typeof warehouseLocation !== 'undefined' && warehouseLocation) ? warehouseLocation : 'Warehouse 1';
+%>
+
+<section class="labor-charge-page">
+  <h2>Create Parts</h2>
+  <% if (typeof error !== 'undefined' && error) { %><p class="error"><%= error %></p><% } %>
+  <% if (typeof success !== 'undefined' && success) { %><p class="success"><%= success %></p><% } %>
+
+  <form method="post" action="/parts/create" class="form" id="create-parts-form">
+    <label>Date
+      <input type="date" name="transaction_date" value="<%= form.transaction_date || new Date().toISOString().slice(0, 10) %>" required />
+    </label>
+    <label>Branch
+      <select name="created_branch" required>
+        <% branches.forEach((name) => { %>
+          <option value="<%= name %>" <%= String(form.created_branch || actorBranch || '') === name ? 'selected' : '' %>><%= name %></option>
+        <% }) %>
+      </select>
+    </label>
+    <small>Physical stock stays at the selected branch. Warehouse 1 and Parts Manager keep the transaction log for this part.</small>
+    <label>Part Name <input name="part_name" value="<%= form.part_name || '' %>" required placeholder="e.g. Oil Filter"></label>
+    <label>Part Number <input name="part_number" value="<%= form.part_number || '' %>" placeholder="Leave blank to auto-create"></label>
+    <small>If Part Number is empty, the system assigns the next AEP-###### number on save.</small>
+    <label>Sub-ID <input name="sub_id" value="<%= form.sub_id || '' %>" placeholder="Optional"></label>
+    <label>Generic / Description <input name="generic" value="<%= form.generic || '' %>"></label>
+    <label>Supplier <input name="supplier" value="<%= form.supplier || '' %>"></label>
+    <label>Unit <input name="unit" value="<%= form.unit || '' %>" placeholder="pcs, set, liter"></label>
+    <label>Qty <input name="qty" type="number" step="any" min="0" value="<%= form.qty != null ? form.qty : '' %>" placeholder="0"></label>
+    <label>Cost Price (₱) <input name="cost_price" id="create-cost" type="number" step="0.01" min="0" value="<%= form.cost_price != null ? form.cost_price : '' %>" oninput="computeCreateRetail()"></label>
+    <label>Markup (%) <input name="markup" id="create-markup" type="number" step="0.01" min="0" value="<%= form.markup != null ? form.markup : '' %>" oninput="computeCreateRetail()"></label>
+    <label>Retail Price (₱) <input name="retail_price" id="create-retail" type="number" step="0.01" min="0" value="<%= form.retail_price != null ? form.retail_price : '' %>"></label>
+    <button type="submit">Save Part</button>
+    <a href="/work-order-transactions">Cancel</a>
+  </form>
+
+  <article class="dashboard-card labor-charge-db" id="created-parts-db">
+    <div class="dashboard-card__header admin-panel-header">Central Created Parts Database</div>
+    <p class="dashboard-note">Live for every SA, SR, and SSR branch. Physical stock stays at the creating branch. Warehouse 1 and Parts Manager log the transaction so later movements on this part stay in the main parts database. The part is available immediately on work-order service selection.</p>
+    <p class="dashboard-note"><strong><%= createdRows.length %></strong> created part<%= createdRows.length === 1 ? '' : 's' %></p>
+    <div class="table-scroll labor-charge-db__scroll">
+      <table class="list">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Created Branch</th>
+            <th>Location</th>
+            <th>Part Number</th>
+            <th>Part Name</th>
+            <th>Sub-ID</th>
+            <th>Supplier</th>
+            <th>Qty</th>
+            <th>Retail</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% createdRows.forEach((row) => { %>
+            <tr>
+              <td><%= row.transaction_date || '' %></td>
+              <td><%= row.created_branch || '—' %></td>
+              <td><%= row.present_location || warehouse %></td>
+              <td><%= row.part_number || '' %></td>
+              <td><%= row.part_name || '' %></td>
+              <td><%= row.sub_id || '' %></td>
+              <td><%= row.supplier || '' %></td>
+              <td><%= row.qty != null ? row.qty : '' %></td>
+              <td>₱<%= Number(row.retail_price || 0).toFixed(2) %></td>
+              <td class="actions">
+                <a class="btn" href="/parts/create/<%= row.id %>/edit">Edit</a>
+              </td>
+            </tr>
+          <% }) %>
+          <% if (!createdRows.length) { %>
+            <tr>
+              <td colspan="10">No parts created yet. Saved parts appear here for all branches immediately.</td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+
+<script>
+  function computeCreateRetail() {
+    const cost = parseFloat(document.getElementById('create-cost').value) || 0;
+    const markup = parseFloat(document.getElementById('create-markup').value) || 0;
+    const retail = cost + cost * (markup / 100);
+    document.getElementById('create-retail').value = retail > 0 ? retail.toFixed(2) : '';
+  }
+</script>
+
+<%- include('../partials/footer') %>

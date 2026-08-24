@@ -1,0 +1,57 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell pm-shell">
+  <div class="dashboard-title admin-title role-dashboard-title"><span>Parts Manager</span> <span class="role-dashboard-title__suffix">Transfer Wizard</span></div>
+  <%- include('./_nav') %>
+
+  <% if (error) { %><p class="error"><%= error %></p><% } %>
+  <% if (success) { %><p class="success"><%= success %></p><% } %>
+
+  <ol class="pm-steps">
+    <li class="<%= step >= 1 ? 'pm-steps__item--active' : '' %>">Select Branches</li>
+    <li class="<%= step >= 2 ? 'pm-steps__item--active' : '' %>">Part Details</li>
+    <li class="<%= step >= 3 ? 'pm-steps__item--active' : '' %>">Confirm</li>
+  </ol>
+
+  <% if (step === 1) { %>
+    <form method="get" action="/parts-manager/transfer" class="form pm-form">
+      <input type="hidden" name="step" value="2" />
+      <label>From Branch
+        <select name="from" required>
+          <option value="">Select branch</option>
+          <% branches.forEach((branch) => { %>
+            <option value="<%= branch %>" <%= fromBranch === branch ? 'selected' : '' %>><%= branch %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>To Branch
+        <select name="to" required>
+          <option value="">Select branch</option>
+          <% branches.forEach((branch) => { %>
+            <option value="<%= branch %>" <%= toBranch === branch ? 'selected' : '' %>><%= branch %></option>
+          <% }) %>
+        </select>
+      </label>
+      <button type="submit">Next</button>
+    </form>
+  <% } else if (step === 2) { %>
+    <form method="post" action="/parts-manager/transfer" class="form pm-form">
+      <input type="hidden" name="from_branch" value="<%= fromBranch %>" />
+      <input type="hidden" name="to_branch" value="<%= toBranch %>" />
+      <p class="dashboard-note admin-note">Route: <strong><%= fromBranch %></strong> → <strong><%= toBranch %></strong></p>
+      <label>Part Number <input name="part_number" required /></label>
+      <label>Part Name <input name="part_name" /></label>
+      <label>Sub-ID <input name="sub_id" /></label>
+      <label>Quantity <input name="qty" type="number" min="1" step="1" required /></label>
+      <button type="submit">Submit Transfer</button>
+    </form>
+  <% } else { %>
+    <article class="dashboard-card admin-panel pm-panel">
+      <div class="dashboard-card__header admin-panel-header">Transfer Submitted</div>
+      <a class="dashboard-button" href="/parts-manager/inventory">Back to Inventory</a>
+      <a class="dashboard-button" href="/parts-manager/transfer">New Transfer</a>
+    </article>
+  <% } %>
+</section>
+
+<%- include('../partials/footer') %>

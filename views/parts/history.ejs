@@ -1,0 +1,90 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell">
+  <div class="dashboard-title admin-title">Part History — <%= partNumber %></div>
+  <p class="dashboard-note admin-note">
+    Permanent audit log. These records are never deleted.
+    Current on-hand: <strong><%= onHand %></strong>
+    <% if (part && part.part_name) { %> · <%= part.part_name %><% } %>
+  </p>
+
+  <% const view = typeof partsView !== 'undefined' && partsView ? partsView : { scope: 'all' }; %>
+  <form method="get" action="/parts/history/<%= encodeURIComponent(partNumber) %>" class="form" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;">
+    <% if (view.scope === 'warehouse1') { %><input type="hidden" name="scope" value="warehouse1" /><% } %>
+    <label style="margin:0;">Start Date
+      <input type="date" name="startDate" value="<%= startDate || '' %>" />
+    </label>
+    <label style="margin:0;">End Date
+      <input type="date" name="endDate" value="<%= endDate || '' %>" />
+    </label>
+    <label style="margin:0;">Sort
+      <select name="sort">
+        <option value="asc" <%= sort === 'asc' ? 'selected' : '' %>>Chronological</option>
+        <option value="desc" <%= sort === 'desc' ? 'selected' : '' %>>Newest first</option>
+      </select>
+    </label>
+    <label style="margin:0;">Group
+      <select name="groupBy">
+        <option value="" <%= !groupBy ? 'selected' : '' %>>None</option>
+        <option value="month" <%= groupBy === 'month' ? 'selected' : '' %>>By month</option>
+      </select>
+    </label>
+    <button type="submit">Apply</button>
+    <a class="btn" href="/parts/history/<%= encodeURIComponent(partNumber) %><%= view.scope === 'warehouse1' ? '?scope=warehouse1' : '' %>">Clear</a>
+    <a class="btn" href="<%= view.scope === 'warehouse1' ? '/parts?scope=warehouse1' : '/parts' %>">Back to Parts DB</a>
+    <button type="button" class="btn" onclick="window.print()">Print</button>
+  </form>
+
+  <% const months = (grouped && grouped.length) ? grouped : [{ month: '', rows: history }]; %>
+  <% months.forEach((group) => { %>
+    <% if (group.month) { %>
+      <h3 class="dashboard-card__header admin-panel-header" style="margin:16px 0 8px;"><%= group.month %></h3>
+    <% } %>
+    <div class="table-scroll" style="overflow-x:auto;margin-bottom:16px;">
+      <table class="list" style="min-width:max-content;font-size:12px;">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Qty</th>
+            <th>Location</th>
+            <th>Editor</th>
+            <th>Part Name</th>
+            <th>Sub-ID</th>
+            <th>Supplier</th>
+            <th>Cost</th>
+            <th>Retail</th>
+            <th>Sold To</th>
+            <th>Txn #</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!group.rows.length) { %>
+            <tr><td colspan="13" style="text-align:center;padding:20px;">No history in this range.</td></tr>
+          <% } %>
+          <% group.rows.forEach((row, i) => { %>
+            <tr>
+              <td><%= i + 1 %></td>
+              <td><%= row.transaction_date || (row.created_at || '').slice(0, 10) %></td>
+              <td><strong><%= displayPartsTransactionType(row.transaction_type) %></strong></td>
+              <td style="text-align:right;"><%= row.qty != null ? row.qty : '' %></td>
+              <td><%= row.present_location || row.branch || row.requesting_branch || '—' %></td>
+              <td><%= row.editor || '' %></td>
+              <td><%= row.part_name || '' %></td>
+              <td><%= row.sub_id || '' %></td>
+              <td><%= row.supplier || '' %></td>
+              <td style="text-align:right;"><%= row.cost_price != null && row.cost_price !== '' ? Number(row.cost_price).toFixed(2) : '' %></td>
+              <td style="text-align:right;"><%= row.retail_price != null && row.retail_price !== '' ? Number(row.retail_price).toFixed(2) : '' %></td>
+              <td><%= row.sold_to || '' %></td>
+              <td><%= row.transaction_number || '' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% }) %>
+  <p class="dashboard-note admin-note">Total audit rows in view: <strong><%= history.length %></strong></p>
+</section>
+
+<%- include('../partials/footer') %>

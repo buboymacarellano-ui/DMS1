@@ -1,0 +1,139 @@
+<%- include('../partials/header') %>
+
+<div class="invoice customer-invoice">
+  <header class="customer-invoice__header">
+    <div class="customer-invoice__seller">
+      <h1><%= seller.registeredName %></h1>
+      <strong><%= seller.businessName %></strong>
+      <div><%= seller.address %></div>
+      <div>VAT REG TIN: <%= seller.tin %><%= seller.branchCode ? ` | Branch: ${seller.branchCode}` : '' %></div>
+      <div>Tel: <%= seller.phone %></div>
+    </div>
+    <div class="customer-invoice__identity">
+      <h2>SALES INVOICE</h2>
+      <div>Invoice No.: <strong><%= invoiceNumber %></strong></div>
+      <div>Date: <strong><%= invoiceDate ? new Date(invoiceDate).toLocaleDateString('en-PH') : '' %></strong></div>
+      <div>Work Order: <strong><%= wo.work_order_number || wo.id %></strong></div>
+    </div>
+  </header>
+
+  <section class="customer-invoice__details">
+    <div>
+      <h3>Sold To</h3>
+      <div><strong><%= customer.name || '—' %></strong></div>
+      <div>Address: <%= customer.address || '—' %></div>
+      <div>TIN: <%= customer.tin || '—' %></div>
+      <div>Business Style: <%= customer.business_style || '—' %></div>
+      <div>Phone: <%= wo.telephone_number || customer.phone || '—' %></div>
+    </div>
+    <div>
+      <h3>Vehicle / Service Details</h3>
+      <div><strong><%= wo.car_brand || vehicle.make || '—' %> <%= wo.car_model || vehicle.model || '' %></strong></div>
+      <div>Year: <%= wo.car_year || vehicle.year || '—' %></div>
+      <div>VIN: <%= vehicle.vin || '—' %></div>
+      <div>Plate: <%= wo.plate_number || vehicle.license_plate || '—' %></div>
+      <div>SR: <%= wo.service_advisor || '—' %></div>
+    </div>
+  </section>
+
+  <table class="customer-invoice__table">
+    <thead>
+      <tr>
+        <th>Qty.</th>
+        <th>Unit</th>
+        <th>Description</th>
+        <th>Unit Price</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% invoiceLines.forEach(line => { %>
+        <tr>
+          <td class="number"><%= line.quantity %></td>
+          <td><%= line.unit %></td>
+          <td><%= line.description %></td>
+          <td class="money">₱<%= Number(line.unitPrice).toFixed(2) %></td>
+          <td class="money">₱<%= Number(line.amount).toFixed(2) %></td>
+        </tr>
+      <% }) %>
+      <% if (!invoiceLines.length) { %>
+        <tr><td colspan="5" class="customer-invoice__empty">No billable service or parts lines.</td></tr>
+      <% } %>
+    </tbody>
+  </table>
+
+  <p class="customer-invoice__warranty"><%= warrantyNote %></p>
+
+  <div class="customer-invoice__summary">
+    <div><span>Labor Sales</span><strong>₱<%= Number(labor_total).toFixed(2) %></strong></div>
+    <div><span>Parts Sales</span><strong>₱<%= Number(parts_total).toFixed(2) %></strong></div>
+    <div><span>VATable Sales</span><strong>₱<%= Number(subtotal).toFixed(2) %></strong></div>
+    <div><span>VAT-Exempt Sales</span><strong>₱0.00</strong></div>
+    <div><span>Zero-Rated Sales</span><strong>₱0.00</strong></div>
+    <div><span>VAT 12%</span><strong>₱<%= Number(tax).toFixed(2) %></strong></div>
+    <div class="customer-invoice__total"><span>Total Amount Due</span><strong>₱<%= Number(total).toFixed(2) %></strong></div>
+  </div>
+
+  <section class="customer-invoice__signatures">
+    <div><span>Prepared by</span><strong><%= wo.service_advisor || '' %></strong></div>
+    <div><span>Customer signature over printed name</span><strong>&nbsp;</strong></div>
+  </section>
+
+  <footer class="customer-invoice__footer">
+    <div>
+      <% if (seller.atpNumber) { %><span>ATP No.: <%= seller.atpNumber %></span><% } %>
+      <% if (seller.printerAccreditation) { %><span>Printer Accreditation: <%= seller.printerAccreditation %></span><% } %>
+      <span>This invoice is valid only when issued using the seller's registered BIR invoicing authority and actual legal details.</span>
+    </div>
+    <div class="customer-invoice__actions">
+      <% if (contactError) { %><p class="error"><%= contactError %></p><% } %>
+      <% if (typeof pdfSaved !== 'undefined' && pdfSaved) { %>
+        <p class="dashboard-note">Saved to Documents as <strong><%= pdfSaved %></strong></p>
+      <% } %>
+      <% if (typeof pdfError !== 'undefined' && pdfError) { %>
+        <p class="error"><%= pdfError %></p>
+      <% } %>
+      <small>Print and Save PDF store a copy in this PC Documents folder using the customer name. A matching name gets +1, +2, and so on.</small>
+      <form method="post" action="/work-orders/<%= wo.id %>/billing/save-pdf" style="display:inline">
+        <button type="submit" class="btn">Save PDF</button>
+      </form>
+      <form method="post" action="/work-orders/<%= wo.id %>/billing/final-print" onsubmit="return confirmFinalPrint();" style="display:inline">
+        <button type="submit" name="next_action" value="print" class="btn">Print</button>
+        <button type="submit" name="next_action" value="viber" class="btn" <%= viberNumber ? '' : 'disabled title="Customer phone number is required"' %>>Send via Viber</button>
+        <button type="submit" name="next_action" value="email" class="btn" <%= customerEmail ? '' : 'disabled title="Customer email address is required"' %>>Send via Email</button>
+      </form>
+    </div>
+  </footer>
+</div>
+
+<script>
+  function confirmFinalPrint() {
+    return window.confirm('Finalize this invoice and continue with the selected action?');
+  }
+
+  (function continueFinalBillingAction() {
+    const finalAction = '<%= finalAction %>';
+    if (finalAction === 'print') {
+      window.print();
+      return;
+    }
+
+    const invoiceNumber = '<%- JSON.stringify(invoiceNumber).slice(1, -1) %>';
+    const customerName = '<%- JSON.stringify(customer.name || '').slice(1, -1) %>';
+    const amountDue = '<%= Number(total).toFixed(2) %>';
+    const message = `Sales Invoice ${invoiceNumber}\nCustomer: ${customerName}\nTotal Amount Due: PHP ${amountDue}\nPlease contact <%= seller.businessName %> for the official invoice copy.`;
+
+    if (finalAction === 'viber' && '<%= viberNumber %>') {
+      window.location.href = 'viber://chat?number=<%= encodeURIComponent(viberNumber) %>';
+      return;
+    }
+
+    if (finalAction === 'email' && '<%= customerEmail %>') {
+      const subject = encodeURIComponent(`Sales Invoice ${invoiceNumber}`);
+      const body = encodeURIComponent(message);
+      window.location.href = `mailto:<%= encodeURIComponent(customerEmail) %>?subject=${subject}&body=${body}`;
+    }
+  })();
+</script>
+
+<%- include('../partials/footer') %>

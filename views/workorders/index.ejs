@@ -1,0 +1,273 @@
+<%- include('../partials/header') %>
+
+<h2>Work Orders</h2>
+<a class="btn" href="/work-orders/new">+ Create Work Order</a>
+
+<%
+  const vehicleSearchEntries = [];
+  function toViberNumber(value) {
+    const digits = String(value || '').replace(/\D/g, '');
+    if (!digits) return '';
+    if (digits.startsWith('63') && digits.length >= 12) return `+${digits}`;
+    if (digits.startsWith('0') && digits.length >= 11) return `+63${digits.slice(1)}`;
+    if (digits.length === 10 && digits.startsWith('9')) return `+63${digits}`;
+    return `+${digits}`;
+  }
+%>
+
+<div class="wo-vehicle-finder" id="wo-vehicle-finder">
+  <div class="wo-vehicle-finder__cell wo-vehicle-finder__cell--spacer"></div>
+  <div class="wo-vehicle-finder__cell wo-vehicle-finder__cell--spacer"></div>
+  <div class="wo-vehicle-finder__cell wo-vehicle-finder__cell--spacer"></div>
+  <div class="wo-vehicle-finder__cell wo-vehicle-finder__search">
+    <input
+      id="wo-vehicle-search"
+      type="search"
+      autocomplete="off"
+      spellcheck="false"
+      placeholder="Search vehicle"
+      aria-label="Search work order vehicles"
+    />
+    <ul id="wo-vehicle-suggest" class="wo-vehicle-finder__suggest"></ul>
+  </div>
+  <div class="wo-vehicle-finder__cell" id="wo-vehicle-tech"><span class="wo-vehicle-finder__placeholder">Technician</span></div>
+  <div class="wo-vehicle-finder__cell" id="wo-vehicle-status"><span class="wo-vehicle-finder__placeholder">Status</span></div>
+  <div class="wo-vehicle-finder__cell wo-vehicle-finder__actions" id="wo-vehicle-actions">
+    <span class="wo-vehicle-finder__placeholder">Edit Entry · Services · Print WO · Billing</span>
+  </div>
+</div>
+
+<div class="table-scroll">
+<table class="list">
+  <thead><tr><th>#</th><th>Customer</th><th>Telephone Number</th><th>Vehicle</th><th>Technician</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+    <% work_orders.forEach((w, i) => { 
+         const cust = customers.find(c => c.id === w.customer_id) || {};
+          const viberNumber = toViberNumber(w.telephone_number || cust.phone);
+         const veh = vehicles.find(v => v.id === w.vehicle_id) || {};
+         const serviceItems = Array.isArray(w.service_items) ? w.service_items : [];
+         const runningBill = serviceItems.reduce((sum, item) => {
+           const labor = Number(item && item.labor_price) || 0;
+           const serviceQty = Math.max(1, Number(item && item.service_qty) || 1);
+           const qtyRaw = Number(item && item.parts_qty);
+           const qty = Number.isFinite(qtyRaw) && qtyRaw > 0 ? qtyRaw : 0;
+           const partsUnitPrice = Number(item && item.parts_price) || 0;
+           const fallbackTotal = (labor * serviceQty) + (qty * partsUnitPrice);
+           const lineTotal = Number(item && item.total_price);
+           return sum + (Number.isFinite(lineTotal) && lineTotal > 0 ? lineTotal : fallbackTotal);
+         }, 0);
+         const make = (w.car_brand || veh.make || '').trim();
+         const model = (w.car_model || veh.model || '').trim();
+         const plate = (w.plate_number || veh.license_plate || '').trim();
+         const vehicleLabel = [make, model].filter(Boolean).join(' ').trim();
+         const vehicleWithPlate = [vehicleLabel, plate].filter(Boolean).join(' ').trim();
+         vehicleSearchEntries.push({
+           id: w.id,
+           vehicle: vehicleWithPlate || 'Unknown Vehicle',
+           make: make,
+           model: model,
+           plate: plate,
+           technician: w.technician || '—',
+           status: w.status || '—',
+         });
+         const isClosed = String(w.status || '').trim().toLowerCase() === 'closed';
+         const hasTechnician = Boolean(String(w.technician || '').trim());
+         const activeRole = String(currentUser && currentUser.role || '').trim().toLowerCase();
+         const canApproveRemoval = ['admin', 'hr', 'general_manager', 'service_technical_manager'].includes(activeRole);
+    %>
+      <tr
+        class="work-order-row <%= isClosed ? 'work-order-row--closed' : '' %> <%= !hasTechnician ? 'work-order-row--no-technician' : '' %>"
+        data-status="<%= String(w.status || '').toLowerCase() %>"
+        data-created-at="<%= w.created_at || '' %>"
+        data-wo-number="<%= w.work_order_number || '' %>"
+        data-wo-id="<%= w.id %>"
+      >
+        <td><%= i + 1 %></td>
+        <td><%= cust.name || '—' %></td>
+        <td>
+          <% if (viberNumber) { %>
+            <a href="viber://chat?number=<%= encodeURIComponent(viberNumber) %>" title="Open Viber chat"><%= viberNumber %></a>
+          <% } else { %>
+            —
+          <% } %>
+        </td>
+        <td><%= vehicleWithPlate || '—' %></td>
+        <td><%= w.technician || '—' %></td>
+        <td><%= w.status %></td>
+        <td class="actions">
+          <a href="/work-orders/<%= w.id %>/edit">Edit Entry</a>
+          <a href="/work-orders/<%= w.id %>/service">Services</a>
+          <a href="/work-orders/<%= w.id %>/technician-print" target="_blank">Print WO</a>
+          <a href="/work-orders/<%= w.id %>/billing">Billing</a>
+          <span>₱<%= runningBill.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></span>
+          <% if (canApproveRemoval) { %>
+            <form method="post" action="/work-orders/<%= w.id %>/delete" onsubmit="return confirm('Remove this work order?');" style="display:inline">
+              <button type="submit">Remove</button>
+            </form>
+          <% } else { %>
+            <form method="post" action="/approvals/request/rwo" onsubmit="return confirm('Submit a Remove Work Order approval request?');" style="display:inline">
+              <input type="hidden" name="work_order_id" value="<%= w.id %>">
+              <button type="submit">Request Removal</button>
+            </form>
+          <% } %>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+</div>
+
+<script>
+  (function bindVehicleFinder() {
+    const entries = <%- JSON.stringify(vehicleSearchEntries) %>;
+    const input = document.getElementById('wo-vehicle-search');
+    const suggest = document.getElementById('wo-vehicle-suggest');
+    const techEl = document.getElementById('wo-vehicle-tech');
+    const statusEl = document.getElementById('wo-vehicle-status');
+    const actionsEl = document.getElementById('wo-vehicle-actions');
+    if (!input || !suggest || !techEl || !statusEl || !actionsEl) return;
+
+    let activeIndex = -1;
+    let visible = [];
+
+    function escapeHtml(value) {
+      return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function searchHaystack(entry) {
+      return [entry.vehicle, entry.make, entry.model, entry.plate]
+        .map((part) => String(part || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim())
+        .join(' ');
+    }
+
+    function matchEntries(query) {
+      const tokens = String(query || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean);
+      if (!tokens.length) return [];
+      return entries.filter((entry) => {
+        const hay = searchHaystack(entry);
+        return tokens.every((token) => hay.indexOf(token) !== -1);
+      }).slice(0, 20);
+    }
+
+    function closeSuggest() {
+      suggest.classList.remove('is-open');
+      suggest.innerHTML = '';
+      activeIndex = -1;
+      visible = [];
+    }
+
+    function renderSuggest(items, keepIndex) {
+      visible = items;
+      if (!items.length) {
+        closeSuggest();
+        return;
+      }
+      if (!keepIndex || activeIndex < 0 || activeIndex >= items.length) {
+        activeIndex = 0;
+      }
+      suggest.innerHTML = items.map((entry, index) => (
+        '<li><button type="button" data-index="' + index + '"' +
+        (index === activeIndex ? ' class="is-active"' : '') +
+        '>' + escapeHtml(entry.vehicle) +
+        ' — ' + escapeHtml(entry.technician) +
+        ' · ' + escapeHtml(entry.status) +
+        '</button></li>'
+      )).join('');
+      suggest.classList.add('is-open');
+    }
+
+    function highlightRow(id) {
+      document.querySelectorAll('tr.work-order-row.is-vehicle-hit').forEach((row) => {
+        row.classList.remove('is-vehicle-hit');
+      });
+      const row = document.querySelector('tr.work-order-row[data-wo-id="' + id + '"]');
+      if (!row) return;
+      row.classList.add('is-vehicle-hit');
+      row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    function selectEntry(entry) {
+      if (!entry) return;
+      input.value = entry.vehicle;
+      techEl.textContent = entry.technician || '—';
+      statusEl.textContent = entry.status || '—';
+      const id = encodeURIComponent(entry.id);
+      actionsEl.innerHTML =
+        '<a href="/work-orders/' + id + '/edit">Edit Entry</a>' +
+        '<a href="/work-orders/' + id + '/service">Services</a>' +
+        '<a href="/work-orders/' + id + '/technician-print" target="_blank">Print WO</a>' +
+        '<a href="/work-orders/' + id + '/billing">Billing</a>';
+      highlightRow(entry.id);
+      closeSuggest();
+    }
+
+    input.addEventListener('input', () => {
+      renderSuggest(matchEntries(input.value));
+    });
+
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowDown' && visible.length) {
+        event.preventDefault();
+        activeIndex = (activeIndex + 1) % visible.length;
+        renderSuggest(visible, true);
+      } else if (event.key === 'ArrowUp' && visible.length) {
+        event.preventDefault();
+        activeIndex = (activeIndex - 1 + visible.length) % visible.length;
+        renderSuggest(visible, true);
+      } else if (event.key === 'Enter' && visible[activeIndex]) {
+        event.preventDefault();
+        selectEntry(visible[activeIndex]);
+      } else if (event.key === 'Escape') {
+        closeSuggest();
+      }
+    });
+
+    suggest.addEventListener('mousedown', (event) => {
+      const button = event.target.closest('button[data-index]');
+      if (!button) return;
+      event.preventDefault();
+      selectEntry(visible[Number(button.getAttribute('data-index'))]);
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('#wo-vehicle-finder')) closeSuggest();
+    });
+  })();
+
+  (function enforceWorkOrderOrder() {
+    const tbody = document.querySelector('table.list tbody');
+    if (!tbody) return;
+
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    function sortValue(row) {
+      const createdAtRaw = String(row.getAttribute('data-created-at') || '').trim();
+      const createdAtMs = createdAtRaw ? new Date(createdAtRaw).getTime() : NaN;
+      if (Number.isFinite(createdAtMs) && createdAtMs > 0) return createdAtMs;
+
+      const woNumberRaw = String(row.getAttribute('data-wo-number') || '').replace(/\D/g, '');
+      const woNumber = Number(woNumberRaw);
+      return Number.isFinite(woNumber) ? woNumber : 0;
+    }
+
+    rows.sort((a, b) => {
+      const aClosed = String(a.getAttribute('data-status') || '').trim().toLowerCase() === 'closed' ? 1 : 0;
+      const bClosed = String(b.getAttribute('data-status') || '').trim().toLowerCase() === 'closed' ? 1 : 0;
+      if (aClosed !== bClosed) return aClosed - bClosed;
+
+      return sortValue(b) - sortValue(a);
+    });
+
+    rows.forEach((row, idx) => {
+      tbody.appendChild(row);
+      const indexCell = row.querySelector('td');
+      if (indexCell) indexCell.textContent = String(idx + 1);
+    });
+  })();
+</script>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,57 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell pm-shell">
+  <div class="dashboard-title admin-title role-dashboard-title"><span>Parts Manager</span> <span class="role-dashboard-title__suffix">Suppliers &amp; Billing</span></div>
+  <%- include('./_nav') %>
+
+  <div class="pm-grid">
+    <article class="dashboard-card admin-panel pm-panel">
+      <div class="dashboard-card__header admin-panel-header">Supplier Profiles</div>
+      <div class="table-scroll">
+        <table class="list">
+          <thead><tr><th>Name</th><th>Contact</th><th>Phone</th></tr></thead>
+          <tbody>
+            <% if (!suppliers.length) { %>
+              <tr><td colspan="3">No supplier profiles yet.</td></tr>
+            <% } %>
+            <% suppliers.forEach((s) => { %>
+              <tr><td><%= s.name || '-' %></td><td><%= s.contact || '-' %></td><td><%= s.phone || '-' %></td></tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="dashboard-card admin-panel pm-panel">
+      <div class="dashboard-card__header admin-panel-header">Purchase Orders</div>
+      <div class="table-scroll">
+        <table class="list">
+          <thead><tr><th>Supplier</th><th>Branch</th><th>Status</th><th>Created</th></tr></thead>
+          <tbody>
+            <% if (!purchaseOrders.length) { %>
+              <tr><td colspan="4">No purchase orders yet.</td></tr>
+            <% } %>
+            <% purchaseOrders.forEach((po) => { %>
+              <tr>
+                <td><%= po.supplier || '-' %></td>
+                <td><%= po.branch || '-' %></td>
+                <td><%= po.status || '-' %></td>
+                <td><%= po.created_at ? new Date(po.created_at).toLocaleDateString() : '' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="dashboard-card admin-panel pm-panel pm-panel--wide">
+      <div class="dashboard-card__header admin-panel-header">Billing / Transaction History</div>
+      <div id="pm-billing-history" class="table-scroll">
+        <p class="dashboard-note admin-note">Loading billing history...</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<script src="/js/parts-manager-nav.js"></script>
+<%- include('../partials/footer') %>

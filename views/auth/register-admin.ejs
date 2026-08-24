@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Create Admin Account</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <%- include('../partials/back-button') %>
+  <main class="auth-shell">
+    <section class="auth-card">
+      <h1>ADMIN SIGN UP</h1>
+      <p class="auth-subtitle">Create an administrator account for database management.</p>
+
+      <% if (error) { %>
+        <p class="error"><%= error %></p>
+      <% } %>
+
+      <form method="post" action="/auth/register-admin" class="form auth-form">
+        <label>
+          Username
+          <input type="text" name="username" value="<%= username %>" autocomplete="username" required />
+        </label>
+        <label>
+          Password
+          <input type="password" name="password" autocomplete="new-password" minlength="6" required />
+        </label>
+        <label>
+          Confirm Password
+          <input type="password" name="confirm_password" autocomplete="new-password" minlength="6" required />
+        </label>
+        <button type="submit">Create Admin Account</button>
+      </form>
+
+      <p class="auth-hint">Back to <a href="/auth/login?level=admin">Admin login</a>.</p>
+      <p class="auth-hint">Need GM access? <a href="/auth/register-gm">Create GM account</a>.</p>
+      <p class="auth-hint">Need Technician access? <a href="/auth/register-technician">Create Technician account</a>.</p>
+      <p class="auth-hint">Need STM access? <a href="/auth/register-stm">Create STM account</a>.</p>
+      <p class="auth-hint">Need HR access? <a href="/auth/register-hr">Create HR account</a>.</p>
+      <p class="auth-hint">Need an SR account? <a href="/auth/register">Create SR account</a>.</p>
+      <p class="auth-hint">Need Parts Manager access? <a href="/auth/register-parts-manager">Create Parts Manager account</a>.</p>
+    </section>
+  </main>
+</body>
+</html>

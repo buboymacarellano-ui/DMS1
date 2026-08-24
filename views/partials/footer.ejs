@@ -1,0 +1,260 @@
+  </main>
+  <footer class="site-footer">
+    <small>Auto Shop Manager — local prototype</small>
+  </footer>
+  <% if (deletePasswordEnabled) { %>
+  <dialog id="delete-password-dialog" class="delete-password-dialog">
+    <form method="dialog" id="delete-password-dialog-form" class="delete-password-dialog__form">
+      <h3>Admin Authorization Required</h3>
+      <p>Enter the Admin-assigned delete password to continue.</p>
+      <label>
+        Delete Password
+        <input id="delete-password-dialog-input" type="password" autocomplete="off" required />
+      </label>
+      <p id="delete-password-dialog-error" class="error" hidden></p>
+      <div class="delete-password-dialog__actions">
+        <button type="button" class="btn btn-secondary" id="delete-password-dialog-cancel">Cancel</button>
+        <button type="submit" class="btn">Authorize</button>
+      </div>
+    </form>
+  </dialog>
+  <% } %>
+  <script>
+    <% if (deletePasswordEnabled) { %>
+    (function initDeletePasswordProtection() {
+      const dialog = document.getElementById('delete-password-dialog');
+      const dialogForm = document.getElementById('delete-password-dialog-form');
+      const passwordInput = document.getElementById('delete-password-dialog-input');
+      const errorText = document.getElementById('delete-password-dialog-error');
+      const cancelButton = document.getElementById('delete-password-dialog-cancel');
+      if (!dialog || !dialogForm || !passwordInput || !errorText || !cancelButton) return;
+
+      let resolvePassword = null;
+
+      function closePasswordDialog(password) {
+        const resolver = resolvePassword;
+        resolvePassword = null;
+        if (dialog.open) dialog.close();
+        if (resolver) resolver(password);
+      }
+
+      function requestDeletePassword() {
+        if (resolvePassword) return Promise.resolve(null);
+        passwordInput.value = '';
+        errorText.hidden = true;
+        errorText.textContent = '';
+        dialog.showModal();
+        passwordInput.focus();
+        return new Promise((resolve) => {
+          resolvePassword = resolve;
+        });
+      }
+
+      dialogForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const password = String(passwordInput.value || '');
+        if (!password) {
+          errorText.textContent = 'Password is required.';
+          errorText.hidden = false;
+          return;
+        }
+        closePasswordDialog(password);
+      });
+
+      cancelButton.addEventListener('click', () => closePasswordDialog(null));
+      dialog.addEventListener('cancel', (event) => {
+        event.preventDefault();
+        closePasswordDialog(null);
+      });
+
+      document.addEventListener('submit', async (event) => {
+        if (event.defaultPrevented) return;
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        const pathname = new URL(form.action, window.location.href).pathname;
+        if (!/\/delete\/?$/i.test(pathname)) return;
+
+        event.preventDefault();
+        const password = await requestDeletePassword();
+        if (!password) return;
+
+        let hiddenInput = form.querySelector('input[name="delete_password"]');
+        if (!hiddenInput) {
+          hiddenInput = document.createElement('input');
+          hiddenInput.type = 'hidden';
+          hiddenInput.name = 'delete_password';
+          form.appendChild(hiddenInput);
+        }
+        hiddenInput.value = password;
+        HTMLFormElement.prototype.submit.call(form);
+      });
+
+      document.addEventListener('click', async (event) => {
+        const button = event.target.closest('.remove-row');
+        if (!button || button.dataset.deleteAuthorized === '1') return;
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const password = await requestDeletePassword();
+        if (!password) return;
+
+        try {
+          const response = await fetch('/auth/verify-delete-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ delete_password: password }),
+          });
+          const result = await response.json();
+          if (!response.ok || !result.ok) {
+            window.alert(result.message || 'Delete password verification failed.');
+            return;
+          }
+          button.dataset.deleteAuthorized = '1';
+          button.click();
+          delete button.dataset.deleteAuthorized;
+        } catch (error) {
+          window.alert('Unable to verify the delete password. Please try again.');
+        }
+      }, true);
+    })();
+    <% } %>
+
+    (function initFullscreenToggle() {
+      const button = document.getElementById('fullscreen-toggle');
+      if (!button) return;
+      const STORAGE_KEY = 'ae_app_full_mode';
+
+      function isFullscreen() {
+        return Boolean(document.fullscreenElement);
+      }
+
+      function getPreferredFullMode() {
+        try {
+          return window.localStorage.getItem(STORAGE_KEY) === '1';
+        } catch (error) {
+          return false;
+        }
+      }
+
+      function setPreferredFullMode(enabled) {
+        try {
+          window.localStorage.setItem(STORAGE_KEY, enabled ? '1' : '0');
+        } catch (error) {
+          // Ignore storage failures and keep runtime state only.
+        }
+      }
+
+      function applyState() {
+        const active = getPreferredFullMode();
+        document.body.classList.toggle('app-fullscreen', active);
+        button.textContent = active ? 'Exit Full Screen' : 'Full Screen';
+      }
+
+      button.addEventListener('click', async () => {
+        const shouldEnable = !getPreferredFullMode();
+        setPreferredFullMode(shouldEnable);
+        applyState();
+        try {
+          if (shouldEnable && !isFullscreen()) {
+            await document.documentElement.requestFullscreen();
+          } else if (!shouldEnable && isFullscreen()) {
+            await document.exitFullscreen();
+          }
+        } catch (error) {
+          if (shouldEnable) {
+            window.alert('Browser fullscreen was blocked. App will stay in full mode layout. Press F11 for full browser fullscreen.');
+          }
+        } finally {
+          applyState();
+        }
+      });
+
+      document.addEventListener('fullscreenchange', () => {
+        if (!isFullscreen() && getPreferredFullMode()) {
+          document.body.classList.add('app-fullscreen');
+          button.textContent = 'Exit Full Screen';
+          return;
+        }
+        applyState();
+      });
+
+      if (getPreferredFullMode()) {
+        document.body.classList.add('app-fullscreen');
+      }
+      applyState();
+    })();
+
+    (function initEscBackNavigation() {
+      document.addEventListener('keydown', function(event) {
+        if (event.defaultPrevented) return;
+        if (event.key !== 'Escape') return;
+        if (event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) return;
+
+        // Use browser history so ESC consistently returns to the previous app page.
+        if (window.history.length > 1) {
+          window.history.back();
+        }
+      });
+    })();
+  </script>
+
+  <!-- KPI: unassigned technician warning, polls every 30 seconds -->
+  <style>
+    #kpi-warn-overlay {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      max-width: 360px;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .kpi-warn-toast {
+      background: #c0392b;
+      color: #fff;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+      animation: kpiSlideIn 0.3s ease;
+    }
+    @keyframes kpiSlideIn {
+      from { opacity: 0; transform: translateX(40px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+  </style>
+  <div id="kpi-warn-overlay"></div>
+  <script>
+    (function startKpiWarningPoller() {
+      const activeRole = '<%= currentUser ? String(currentUser.role || '').toLowerCase() : '' %>';
+      if (activeRole !== 'service_receptionist' && activeRole !== 'senior_service_receptionist' && activeRole !== 'service_advisor') return;
+
+      const overlay = document.getElementById('kpi-warn-overlay');
+      if (!overlay) return;
+
+      function render(items) {
+        overlay.innerHTML = '';
+        items.forEach(function(wo) {
+          const el = document.createElement('div');
+          el.className = 'kpi-warn-toast';
+          el.textContent = '⚠ Assign a Technician — ' + wo.plate_number + ' · ' + wo.customer_name;
+          overlay.appendChild(el);
+        });
+      }
+
+      function poll() {
+        fetch('/api/kpi/unassigned')
+          .then(function(r) { return r.ok ? r.json() : []; })
+          .then(render)
+          .catch(function() {});
+      }
+
+      poll();
+      setInterval(poll, 30000);
+    })();
+  </script>
+</body>
+</html>

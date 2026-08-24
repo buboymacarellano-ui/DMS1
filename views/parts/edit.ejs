@@ -1,0 +1,185 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell">
+  <div class="dashboard-title admin-title">Parts Database — Edit Entry</div>
+
+  <% if (error) { %><p class="error" style="font-weight:700;margin-bottom:10px;"><%= error %></p><% } %>
+  <% if (success) { %><p class="success" style="font-weight:700;margin-bottom:10px;"><%= success %></p><% } %>
+
+  <article class="dashboard-card admin-panel" style="max-width:700px;margin-bottom:14px;">
+    <form method="post" action="/parts/<%= part.id %>/edit" class="form admin-form">
+
+      <label>Transaction Date
+        <input type="date" name="transaction_date" value="<%= part.transaction_date || '' %>" required />
+      </label>
+
+      <label>Transaction Number
+        <input type="text" value="<%= part.transaction_number || 'Auto-assigned on save' %>" readonly />
+      </label>
+
+      <label>Transaction Type
+        <select name="transaction_type" required>
+          <% transactionTypes.forEach(t => { %>
+            <option value="<%= t %>" <%= (typeof normalizePartsTransactionType === 'function' ? normalizePartsTransactionType(part.transaction_type) : part.transaction_type) === t ? 'selected' : '' %>><%= typeof displayPartsTransactionType === 'function' ? displayPartsTransactionType(t) : t %></option>
+          <% }) %>
+        </select>
+      </label>
+
+      <label>Present Location
+        <input type="text" value="<%= part.present_location || part.branch || part.requesting_branch || '—' %>" readonly />
+        <small style="opacity:.75;">Locked to the branch of the user who created this transaction.</small>
+      </label>
+
+      <label>Part Number
+        <input type="text" name="part_number" value="<%= part.part_number || '' %>" required placeholder="e.g. PN-00123" />
+      </label>
+
+      <label>Part Name
+        <input type="text" name="part_name" value="<%= part.part_name || '' %>" required placeholder="e.g. Oil Filter" />
+      </label>
+
+      <label>Sub-ID
+        <input type="text" name="sub_id" value="<%= part.sub_id || '' %>" placeholder="e.g. variant, bin, or alternate ID" />
+      </label>
+
+      <label>Generic / Description
+        <input type="text" name="generic" class="description-faded" value="<%= part.generic || '' %>" placeholder="Generic name or description" />
+      </label>
+
+      <label>Supplier
+        <input type="text" name="supplier" value="<%= part.supplier || '' %>" placeholder="Supplier name" />
+      </label>
+
+      <label>Unit
+        <input type="text" name="unit" value="<%= part.unit || '' %>" placeholder="e.g. pcs, set, liter" />
+      </label>
+
+      <label>Qty
+        <input type="number" name="qty" value="<%= part.qty != null ? part.qty : '' %>" required placeholder="0" step="any" />
+      </label>
+
+      <label>Cost Price (₱)
+        <input type="number" name="cost_price" value="<%= part.cost_price != null ? part.cost_price : '' %>" placeholder="0.00" step="0.01" min="0"
+          oninput="computeRetail()" id="cost_price" />
+      </label>
+
+      <label>Markup (%)
+        <input type="number" name="markup" value="<%= part.markup != null ? part.markup : '' %>" placeholder="0" step="0.01" min="0"
+          oninput="computeRetail()" id="markup" />
+      </label>
+
+      <label>Retail Price (₱) <small style="opacity:.7;">(auto-computed from cost + markup; override if needed)</small>
+        <input type="number" name="retail_price" id="retail_price" value="<%= part.retail_price != null ? part.retail_price : '' %>" placeholder="0.00" step="0.01" min="0" />
+      </label>
+
+      <label>Sold To — Work Order #
+        <input type="text" name="sold_to" value="<%= part.sold_to || '' %>" placeholder="7-digit work order number (if Sold or Parts Request)" />
+      </label>
+
+      <div id="parts-request-fields" class="parts-request-fields" hidden>
+        <label>Requesting Branch
+          <input type="text" name="requesting_branch" value="<%= part.requesting_branch || (currentUser && currentUser.branch) || '' %>" placeholder="Branch requesting the part" />
+        </label>
+        <label>Fulfilling Branch
+          <input type="text" name="branch" value="<%= part.branch || '' %>" placeholder="e.g. Warehouse 1" />
+        </label>
+        <% if (part.request_status) { %>
+          <p class="dashboard-note admin-note">Request Status: <strong><%= part.request_status %></strong></p>
+        <% } %>
+      </div>
+
+      <p class="dashboard-note admin-note" style="margin-top:4px;">
+        Editor at creation: <strong><%= part.editor || '—' %></strong>
+        · Current on-hand for this part number: <strong><%= typeof onHand !== 'undefined' ? onHand : '—' %></strong>
+        · <a href="/parts/history/<%= encodeURIComponent(part.part_number || '') %>">Open printable history</a>
+      </p>
+
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button type="submit" style="background:#1a6bbf;">Update Entry</button>
+        <a class="btn" href="/parts">Cancel</a>
+      </div>
+    </form>
+  </article>
+
+  <article class="dashboard-card admin-panel" style="max-width:700px;">
+    <div class="dashboard-card__header admin-panel-header">Restock Same Part Number</div>
+    <p class="dashboard-note admin-note">Writes an immutable <strong>restock</strong> audit row and adds the quantity to the active on-hand stock for this Part Number.</p>
+
+    <form method="post" action="/parts/<%= part.id %>/restock" class="form admin-form">
+      <label>Transaction Date
+        <input type="date" name="restock_date" value="<%= new Date().toISOString().slice(0,10) %>" required />
+      </label>
+
+      <label>Transaction Type
+        <input type="text" value="Restock" readonly />
+      </label>
+
+      <label>Part Number
+        <input type="text" value="<%= part.part_number || '' %>" readonly />
+      </label>
+
+      <label>Part Name
+        <input type="text" value="<%= part.part_name || '' %>" readonly />
+      </label>
+
+      <label>Sub-ID
+        <input type="text" value="<%= part.sub_id || '' %>" readonly />
+      </label>
+
+      <label>Supplier
+        <input type="text" value="<%= part.supplier || '' %>" readonly />
+      </label>
+
+      <label>Qty to Add
+        <input type="number" name="restock_qty" min="1" step="1" placeholder="Enter qty to load" required />
+      </label>
+
+      <label>Cost Price (₱)
+        <input type="number" name="cost_price" value="<%= part.cost_price != null ? part.cost_price : '' %>" placeholder="0.00" step="0.01" min="0"
+          oninput="computeRestockRetail()" id="restock_cost_price" />
+      </label>
+
+      <label>Markup (%)
+        <input type="number" name="markup" value="<%= part.markup != null ? part.markup : '' %>" placeholder="0" step="0.01" min="0"
+          oninput="computeRestockRetail()" id="restock_markup" />
+      </label>
+
+      <label>Retail Price (₱)
+        <input type="number" name="retail_price" id="restock_retail_price" value="<%= part.retail_price != null ? part.retail_price : '' %>" placeholder="0.00" step="0.01" min="0" />
+      </label>
+
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button type="submit" style="background:#1f8f53;">Save Restock</button>
+        <a class="btn" href="/parts">Back to Parts DB</a>
+      </div>
+    </form>
+  </article>
+</section>
+
+<%- include('../partials/footer') %>
+<script>
+  function computeRetail() {
+    const cost = parseFloat(document.getElementById('cost_price').value) || 0;
+    const markup = parseFloat(document.getElementById('markup').value) || 0;
+    const retail = cost + cost * (markup / 100);
+    document.getElementById('retail_price').value = retail > 0 ? retail.toFixed(2) : '';
+  }
+
+  function computeRestockRetail() {
+    const cost = parseFloat(document.getElementById('restock_cost_price').value) || 0;
+    const markup = parseFloat(document.getElementById('restock_markup').value) || 0;
+    const retail = cost + cost * (markup / 100);
+    document.getElementById('restock_retail_price').value = retail > 0 ? retail.toFixed(2) : '';
+  }
+
+  function togglePartsRequestFields() {
+    const select = document.querySelector('select[name="transaction_type"]');
+    const fields = document.getElementById('parts-request-fields');
+    if (!select || !fields) return;
+    const type = String(select.value || '').toLowerCase();
+    fields.hidden = type !== 'parts request' && type !== 'transfer request';
+  }
+
+  document.querySelector('select[name="transaction_type"]')?.addEventListener('change', togglePartsRequestFields);
+  togglePartsRequestFields();
+</script>

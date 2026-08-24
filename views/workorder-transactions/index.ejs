@@ -1,0 +1,310 @@
+<%- include('../partials/header') %>
+
+<style>
+  #sa-reminder {
+    position: fixed;
+    top: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1f6ae0;
+    color: #fff;
+    padding: 16px 32px;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: 600;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.28);
+    z-index: 9999;
+    opacity: 1;
+    transition: opacity 1s ease;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  #sa-reminder.fade-out {
+    opacity: 0;
+  }
+  .customer-row-priority {
+    background: #eef6ff;
+  }
+</style>
+
+<div id="sa-reminder" style="display:none"></div>
+
+<script>
+  (function showSAReminder() {
+    const reminders = [
+      'Do You have a pending call?',
+      'Did You check your pending confirmations?',
+      'Check Your pending approvals'
+    ];
+    const key = 'sa_reminder_index';
+    const idx = Number(localStorage.getItem(key) || 0) % reminders.length;
+    localStorage.setItem(key, (idx + 1) % reminders.length);
+
+    const el = document.getElementById('sa-reminder');
+    el.textContent = reminders[idx];
+    el.style.display = 'block';
+
+    setTimeout(() => el.classList.add('fade-out'), 4000);
+    setTimeout(() => el.style.display = 'none', 5000);
+  })();
+</script>
+
+<h2>Work Order Transactions</h2>
+<p>Access branch work order operations and related customer and pricing data here.</p>
+<% if (currentUser && (currentUser.role === 'general_manager' || currentUser.role === 'admin')) { %>
+  <p><a class="btn" href="/kpi/export.csv" style="background:#1f8f53">&#x2B07; Download KPI Report (CSV)</a></p>
+  <p><a class="btn" href="/transactions/export.csv" style="background:#0f6d8c">&#x2B07; Download Workorder Transactions (CSV)</a></p>
+<% } %>
+<% const safeTechStats = (typeof technicianStats !== 'undefined' && technicianStats) ? technicianStats : []; %>
+<% const safeCustomerContacts = (typeof customerContacts !== 'undefined' && customerContacts) ? customerContacts : []; %>
+
+<div class="workorder-nav-grid">
+  <a class="workorder-nav-card workorder-nav-card--blue" href="/work-orders">
+    <div class="workorder-nav-card__icon">&#9881;</div>
+    <div class="workorder-nav-card__body">
+      <h3>Work Orders</h3>
+      <p><%= workOrdersCount %></p>
+      <span>Open Work Orders</span>
+    </div>
+  </a>
+  <a class="workorder-nav-card workorder-nav-card--orange" href="/customers">
+    <div class="workorder-nav-card__icon">&#128101;</div>
+    <div class="workorder-nav-card__body">
+      <h3>Customers</h3>
+      <p><%= customersCount %></p>
+      <span>Open Customers</span>
+    </div>
+  </a>
+  <a class="workorder-nav-card workorder-nav-card--blue" href="/work-order-transactions/technicians">
+    <div class="workorder-nav-card__icon">&#128295;</div>
+    <div class="workorder-nav-card__body">
+      <h3>Technician Portal</h3>
+      <p><%= safeTechStats.length %></p>
+      <span>Activity, pending work and KPI monitoring</span>
+    </div>
+  </a>
+  <a class="workorder-nav-card workorder-nav-card--yellow" href="/transactions">
+    <div class="workorder-nav-card__icon">&#128269;</div>
+    <div class="workorder-nav-card__body">
+      <h3>Closed WO Search</h3>
+      <p>Find &amp; print billing for any closed work order.</p>
+      <span>Open Search</span>
+    </div>
+  </a>
+  <a class="workorder-nav-card workorder-nav-card--brown" href="/pricing/new" aria-label="Create Labor Charge">
+    <div class="workorder-nav-card__icon">&#128179;</div>
+    <div class="workorder-nav-card__body">
+      <h3>Create Labor Charge</h3>
+      <p>Add a labor charge by unit type and service hours</p>
+      <span>Open Form</span>
+    </div>
+  </a>
+  <a class="workorder-nav-card workorder-nav-card--orange" href="/parts/create" aria-label="Create Parts">
+    <div class="workorder-nav-card__icon">&#128230;</div>
+    <div class="workorder-nav-card__body">
+      <h3>Create Parts</h3>
+      <p>Add a part with date and branch. Empty part number is auto-created</p>
+      <span>Open Form</span>
+    </div>
+  </a>
+  <a class="workorder-nav-card workorder-nav-card--blue" href="/parts" aria-label="Open branch Parts Database">
+    <div class="workorder-nav-card__icon">&#128230;</div>
+    <div class="workorder-nav-card__body">
+      <h3>Parts Database</h3>
+      <p>This branch parts and transactions only</p>
+      <span>Default view</span>
+    </div>
+  </a>
+  <a class="workorder-nav-card workorder-nav-card--yellow" href="/parts?scope=warehouse1" aria-label="Open Warehouse 1 Parts Database">
+    <div class="workorder-nav-card__icon">&#127970;</div>
+    <div class="workorder-nav-card__body">
+      <h3>Warehouse 1</h3>
+      <p>View Warehouse 1 parts database</p>
+      <span>Read-only lookup</span>
+    </div>
+  </a>
+  <a class="workorder-nav-card workorder-nav-card--orange" href="/branch-parts" aria-label="Open Branch Parts DB">
+    <div class="workorder-nav-card__icon">&#128230;</div>
+    <div class="workorder-nav-card__body">
+      <h3>Branch Parts Orders</h3>
+      <p>Branch stock, low-stock monitor, Warehouse 1 orders</p>
+      <span>Open Panel</span>
+    </div>
+  </a>
+  <a class="workorder-nav-card workorder-nav-card--blue" href="/gm/fte" aria-label="Open FTE Tracking Panel">
+    <div class="workorder-nav-card__icon">&#128736;</div>
+    <div class="workorder-nav-card__body">
+      <h3>FTE WORKSPACE</h3>
+      <p>Transaction &amp; Record Center</p>
+      <span>Real-time Branch Logging: [CebuCity] · OPEN PANEL</span>
+    </div>
+  </a>
+</div>
+
+<div class="card" style="margin-top:12px">
+  <h3>Customer Contact (Viber)</h3>
+  <p>Use the links below to message in Viber or call directly.</p>
+  <% if (!safeCustomerContacts.length) { %>
+    <p>No customer phone numbers saved yet.</p>
+  <% } else { %>
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;">
+      <label style="min-width:280px;">
+        Quick Search Customer
+        <input id="customer-quick-search" type="text" list="customer-contact-options" placeholder="Type customer name" autocomplete="off" />
+      </label>
+      <datalist id="customer-contact-options">
+        <% safeCustomerContacts.forEach(contact => { %>
+          <option value="<%= contact.name %>"></option>
+        <% }) %>
+      </datalist>
+      <button type="button" class="btn" id="customer-focus-btn">Find and Pin Top</button>
+      <button type="button" class="btn" id="customer-reset-btn" style="background:#5f6c80;">Reset</button>
+    </div>
+    <div class="table-scroll">
+      <table class="list" id="customer-contact-table">
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th>Telephone (Viber Format)</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="customer-contact-tbody">
+          <% safeCustomerContacts.forEach(contact => { %>
+            <tr data-customer-name="<%= contact.name.toLowerCase() %>">
+              <td><%= contact.name %></td>
+              <td><%= contact.viberNumber || contact.rawPhone %></td>
+              <td>
+                <% if (contact.viberLink) { %>
+                  <a class="btn" href="<%= contact.viberLink %>">Viber Message</a>
+                <% } %>
+                <% if (contact.callLink) { %>
+                  <a class="btn" href="<%= contact.callLink %>" style="margin-left:6px;background:#1f8f53;">Call</a>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>
+
+<script>
+  (function customerQuickSearch() {
+    const searchInput = document.getElementById('customer-quick-search');
+    const focusButton = document.getElementById('customer-focus-btn');
+    const resetButton = document.getElementById('customer-reset-btn');
+    const tbody = document.getElementById('customer-contact-tbody');
+    if (!searchInput || !focusButton || !resetButton || !tbody) return;
+
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    function normalize(value) {
+      return String(value || '').trim().toLowerCase();
+    }
+
+    function clearPriority() {
+      rows.forEach((row) => row.classList.remove('customer-row-priority'));
+    }
+
+    function resetRows() {
+      rows.forEach((row) => {
+        row.style.display = '';
+        tbody.appendChild(row);
+      });
+      clearPriority();
+    }
+
+    function findExactOrPartial(query) {
+      const exact = rows.find((row) => normalize(row.dataset.customerName) === query);
+      if (exact) return exact;
+      return rows.find((row) => normalize(row.dataset.customerName).includes(query));
+    }
+
+    function pinToTop(row) {
+      clearPriority();
+      row.classList.add('customer-row-priority');
+      tbody.insertBefore(row, tbody.firstChild);
+    }
+
+    function filterRows(query) {
+      rows.forEach((row) => {
+        const name = normalize(row.dataset.customerName);
+        row.style.display = !query || name.includes(query) ? '' : 'none';
+      });
+    }
+
+    focusButton.addEventListener('click', () => {
+      const query = normalize(searchInput.value);
+      if (!query) {
+        resetRows();
+        return;
+      }
+
+      filterRows(query);
+      const matched = findExactOrPartial(query);
+      if (matched) {
+        matched.style.display = '';
+        pinToTop(matched);
+      }
+    });
+
+    searchInput.addEventListener('input', () => {
+      const query = normalize(searchInput.value);
+      filterRows(query);
+      if (!query) clearPriority();
+    });
+
+    searchInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        focusButton.click();
+      }
+    });
+
+    resetButton.addEventListener('click', () => {
+      searchInput.value = '';
+      resetRows();
+    });
+  })();
+</script>
+
+<div class="card" style="margin-top:12px">
+  <h3>Technician</h3>
+  <p>Current assignments and month-to-date performance.</p>
+  <% if (!safeTechStats.length) { %>
+    <p>No technician assignments yet.</p>
+  <% } else { %>
+    <div class="table-scroll">
+      <table class="list">
+        <thead>
+          <tr>
+            <th>Technician</th>
+            <th>Live Status</th>
+            <th>Assigned Car (Current)</th>
+            <th>Time Spent (Present Job)</th>
+            <th>Total Labor (Accumulated)</th>
+            <th>Total Labor Price MTD</th>
+            <th>Work Orders Handled MTD</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% safeTechStats.forEach(stat => { %>
+            <tr>
+              <td><%= stat.technician %></td>
+              <td><%= stat.live_status || 'Working' %></td>
+              <td><%= stat.current_car %></td>
+              <td><%= stat.current_job_time %></td>
+              <td>₱<%= Number(stat.total_labor_accumulated || 0).toFixed(2) %></td>
+              <td>₱<%= Number(stat.total_labor_mtd || 0).toFixed(2) %></td>
+              <td><%= stat.work_orders_mtd %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>
+
+<%- include('../partials/footer') %>

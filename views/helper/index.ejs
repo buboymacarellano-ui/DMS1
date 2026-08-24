@@ -1,0 +1,114 @@
+<%- include('../partials/header') %>
+
+<h2>Helper</h2>
+<p>Search any data in this app: parts availability, customer info, technician names, work orders, and inventory records.</p>
+
+<form method="get" action="/helper" class="form">
+  <label>Search
+    <input name="q" value="<%= q %>" placeholder="Type customer, part, technician, work order number, brand..." />
+  </label>
+  <label>Sort Results
+    <select name="sort_by">
+      <option value="relevance" <%= sortBy === 'relevance' ? 'selected' : '' %>>Relevance</option>
+      <option value="date_desc" <%= sortBy === 'date_desc' ? 'selected' : '' %>>By Date (Newest First)</option>
+      <option value="date_asc" <%= sortBy === 'date_asc' ? 'selected' : '' %>>By Date (Oldest First)</option>
+      <option value="az" <%= sortBy === 'az' ? 'selected' : '' %>>A-Z</option>
+      <option value="za" <%= sortBy === 'za' ? 'selected' : '' %>>Z-A</option>
+    </select>
+  </label>
+  <button type="submit">Search</button>
+</form>
+
+<% if (q) { %>
+  <h3>Customer Info (<%= customerResults.length %>)</h3>
+  <div class="table-scroll">
+  <table class="list">
+    <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Address</th></tr></thead>
+    <tbody>
+      <% customerResults.forEach(c => { %>
+        <tr><td><%= c.name %></td><td><%= c.phone %></td><td><%= c.email %></td><td><%= c.address %></td></tr>
+      <% }) %>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Parts Availability / Usage (<%= partResults.length %>)</h3>
+  <div class="table-scroll">
+  <table class="list">
+    <thead><tr><th>Work Order</th><th>Part</th><th>Part Price</th><th>Service</th></tr></thead>
+    <tbody>
+      <% partResults.forEach(p => { %>
+        <tr><td><%= p.work_order_number %></td><td><%= p.part_name %></td><td><%= p.part_price %></td><td><%= p.service_type %></td></tr>
+      <% }) %>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Technicians / Advisors (<%= technicianResults.length %>)</h3>
+  <div class="table-scroll">
+  <table class="list">
+    <thead><tr><th>Work Order</th><th>Technician</th><th>SA</th><th>Branch</th></tr></thead>
+    <tbody>
+      <% technicianResults.forEach(t => { %>
+        <tr><td><%= t.work_order_number %></td><td><%= t.technician %></td><td><%= t.service_advisor %></td><td><%= t.branch %></td></tr>
+      <% }) %>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Vehicles (<%= vehicleResults.length %>)</h3>
+  <div class="table-scroll">
+  <table class="list">
+    <thead><tr><th>Brand</th><th>Model</th><th>Year</th><th>Plate</th><th>Type</th></tr></thead>
+    <tbody>
+      <% vehicleResults.forEach(v => { %>
+        <tr><td><%= v.make %></td><td><%= v.model %></td><td><%= v.year %></td><td><%= v.license_plate %></td><td><%= v.vehicle_type %></td></tr>
+      <% }) %>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Work Orders (<%= workOrderResults.length %>)</h3>
+  <div class="table-scroll">
+  <table class="list">
+    <thead><tr><th>Work Order</th><th>Status</th><th>Branch</th><th>Description</th></tr></thead>
+    <tbody>
+      <% workOrderResults.forEach(w => { %>
+        <tr><td><%= w.work_order_number || w.id %></td><td><%= w.status %></td><td><%= w.branch || '' %></td><td class="description-cell"><%= w.description || '' %></td></tr>
+      <% }) %>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Pricing Rules (<%= pricingResults.length %>)</h3>
+  <div class="table-scroll">
+  <table class="list">
+    <thead><tr><th>Unit Type</th><th>Service Type</th><th>Price</th></tr></thead>
+    <tbody>
+      <% pricingResults.forEach(r => { %>
+        <tr><td><%= r.vehicle_type %></td><td><%= r.service_type %></td><td><%= r.price %></td></tr>
+      <% }) %>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Data Base &amp; Inventory Records (<%= transactionResults.length %>)</h3>
+  <div class="table-scroll">
+  <table class="list">
+    <thead><tr><th>Transaction Date</th><th>Work Order</th><th>Customer</th><th>Car</th><th>Tecnician</th></tr></thead>
+    <tbody>
+      <% transactionResults.forEach(t => { %>
+        <tr>
+          <td><%= t['Transaction date'] %></td>
+          <td><%= t['work order Number'] %></td>
+          <td><%= t['Customer name'] %></td>
+          <td><%= t['Car Brand'] %> <%= t['Model'] %></td>
+          <td><%= t['Tecnician'] %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  </div>
+<% } %>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">A&amp;E Login</title>
+  <desc id="desc">A&amp;E company login shortcut icon</desc>
+  <defs>
+    <linearGradient id="shortcut-bg" x1="40" y1="28" x2="472" y2="484" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#65717C"/>
+      <stop offset="0.55" stop-color="#303941"/>
+      <stop offset="1" stop-color="#151A1E"/>
+    </linearGradient>
+    <linearGradient id="shortcut-steel" x1="128" y1="100" x2="370" y2="330" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F5F7F9"/>
+      <stop offset="1" stop-color="#9EABB7"/>
+    </linearGradient>
+  </defs>
+  <rect x="18" y="18" width="476" height="476" rx="72" fill="url(#shortcut-bg)" stroke="#8794A0" stroke-width="12"/>
+  <rect x="54" y="54" width="404" height="330" rx="42" fill="#FFFFFF" fill-opacity="0.035" stroke="#AAB4BE" stroke-opacity="0.7" stroke-width="7"/>
+  <path d="M112 326L188 112H241L316 326H267L251 276H176L160 326H112ZM190 234H237L214 164L190 234Z" fill="#F5F7F9"/>
+  <path d="M323 132H410V174H367V211H403V251H367V287H412V329H323V132Z" fill="url(#shortcut-steel)"/>
+  <circle cx="133" cy="93" r="12" fill="#8F2525"/>
+  <circle cx="256" cy="93" r="12" fill="#8F2525"/>
+  <circle cx="379" cy="93" r="12" fill="#8F2525"/>
+  <path d="M149 93H363" stroke="#8F2525" stroke-width="9" stroke-linecap="round"/>
+  <text x="256" y="451" text-anchor="middle" fill="#F5F7F9" font-family="Bahnschrift, Segoe UI, sans-serif" font-size="62" font-weight="900">A&amp;E</text>
+</svg>

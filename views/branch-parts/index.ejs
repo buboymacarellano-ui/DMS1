@@ -1,0 +1,370 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell branch-parts-shell">
+  <div class="dashboard-title admin-title role-dashboard-title">
+    <span>Branch Parts DB</span>
+    <span class="role-dashboard-title__suffix"><%= roleLabel %> · <%= branch %></span>
+  </div>
+  <p class="dashboard-note admin-note">This is <%= branch %>'s live Parts Database. Order replenishment from Warehouse 1, then Save as a draft or Send to Parts Manager.</p>
+
+  <% if (error) { %><p class="error" style="font-weight:700;margin-bottom:10px;"><%= error %></p><% } %>
+  <% if (success) { %><p class="success" style="font-weight:700;margin-bottom:10px;"><%= success %></p><% } %>
+
+  <div class="branch-parts-actions">
+    <a class="btn" href="<%= homeHref %>">← Dashboard</a>
+    <form method="get" action="/branch-parts" class="form" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:0;">
+      <label style="margin:0;">Search branch parts
+        <input name="q" value="<%= q %>" placeholder="Part #, name, supplier..." />
+      </label>
+      <button type="submit">Filter</button>
+      <a class="btn" href="/branch-parts">Clear</a>
+    </form>
+  </div>
+
+  <div class="pm-grid" style="margin-top:12px;">
+    <article class="dashboard-card admin-panel pm-panel">
+      <div class="dashboard-card__header admin-panel-header pm-panel-header">
+        <span>Warehouse 1 Parts Database</span>
+      </div>
+      <p class="dashboard-note admin-note">Open a separate read-only view of Warehouse 1 parts and transactions. Your default table below stays on <%= branch %> only.</p>
+      <a class="btn" href="/parts?scope=warehouse1" style="background:#0f6d8c;">View Warehouse 1</a>
+    </article>
+    <article class="dashboard-card admin-panel pm-panel">
+      <div class="dashboard-card__header admin-panel-header pm-panel-header">
+        <span>Low Stock Monitor</span>
+        <span class="pm-badge pm-badge--alert"><%= lowStock.length %></span>
+      </div>
+      <p class="dashboard-note admin-note">Parts at this branch with quantity 5 or below.</p>
+      <div class="table-scroll pm-table-wrap">
+        <table class="list">
+          <thead>
+            <tr>
+              <th>Part #</th>
+              <th>Part Name</th>
+              <th>Sub-ID</th>
+              <th>Supplier</th>
+              <th>Qty</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (!lowStock.length) { %>
+              <tr><td colspan="6">No low-stock alerts for <%= branch %>.</td></tr>
+            <% } %>
+            <% lowStock.forEach((row) => { %>
+              <tr>
+                <td><%= row.part_number %></td>
+                <td><%= row.part_name || '—' %></td>
+                <td><%= row.sub_id || '—' %></td>
+                <td><%= row.supplier || '—' %></td>
+                <td><%= row.qty %></td>
+                <td>
+                  <button
+                    type="button"
+                    class="btn branch-parts-add-from-stock"
+                    data-part-number="<%= row.part_number %>"
+                    data-part-name="<%= row.part_name || '' %>"
+                    data-sub-id="<%= row.sub_id || '' %>"
+                    data-generic="<%= row.generic || '' %>"
+                    data-supplier="<%= row.supplier || '' %>"
+                    data-cost="<%= row.cost_price != null ? row.cost_price : '' %>"
+                    data-markup="<%= row.markup != null ? row.markup : '' %>"
+                    data-retail="<%= row.retail_price != null ? row.retail_price : '' %>"
+                  >Add to order</button>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="dashboard-card admin-panel pm-panel">
+      <div class="dashboard-card__header admin-panel-header pm-panel-header">
+        <span>Sent to Warehouse 1</span>
+        <span class="pm-badge"><%= sentOrders.length %></span>
+      </div>
+      <p class="dashboard-note admin-note">Open orders already wired to Parts Manager and Warehouse 1.</p>
+      <div class="table-scroll pm-table-wrap">
+        <table class="list">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Part #</th>
+              <th>Name</th>
+              <th>Qty</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (!sentOrders.length) { %>
+              <tr><td colspan="5">No Warehouse 1 orders sent yet.</td></tr>
+            <% } %>
+            <% sentOrders.forEach((row) => { %>
+              <tr>
+                <td><%= row.transaction_date || '' %></td>
+                <td><%= row.part_number || '' %></td>
+                <td><%= row.part_name || '' %></td>
+                <td><%= row.qty != null ? row.qty : '' %></td>
+                <td><%= row.status || 'Open' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </article>
+  </div>
+
+  <article class="dashboard-card admin-panel" style="margin-top:12px;">
+    <div class="dashboard-card__header admin-panel-header">Warehouse 1 order grid</div>
+    <p class="dashboard-note admin-note">Fill columns from the Parts Database format. Add a line per part, Save to keep a draft, then Send to Parts Manager and Warehouse 1.</p>
+
+    <form method="post" action="/branch-parts/orders" id="branch-parts-order-form">
+      <input type="hidden" name="sent_to" value="<%= warehouse %>" />
+      <div class="table-scroll" style="max-height:min(52vh, calc(100vh - 220px));">
+        <table class="list branch-parts-order-table" id="branch-parts-order-table">
+          <thead>
+            <tr>
+              <th>Part Number</th>
+              <th>Part Name</th>
+              <th>Sub-ID</th>
+              <th>Generic</th>
+              <th>Supplier</th>
+              <th>Qty</th>
+              <th>Cost Price</th>
+              <th>Markup (%)</th>
+              <th>Retail Price</th>
+              <th>Sold To (WO#)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="branch-parts-order-body">
+            <% draftLines.forEach((line) => { %>
+              <tr class="branch-parts-order-row">
+                <td><input name="line_part_number" list="branch-parts-catalog" value="<%= line.part_number || '' %>" /></td>
+                <td><input name="line_part_name" value="<%= line.part_name || '' %>" /></td>
+                <td><input name="line_sub_id" value="<%= line.sub_id || '' %>" /></td>
+                <td><input name="line_generic" value="<%= line.generic || '' %>" /></td>
+                <td><input name="line_supplier" value="<%= line.supplier || '' %>" /></td>
+                <td><input name="line_qty" type="number" step="any" min="0" value="<%= line.qty != null && line.qty !== '' ? line.qty : '' %>" /></td>
+                <td><input name="line_cost_price" type="number" step="0.01" min="0" class="js-cost" value="<%= line.cost_price != null && line.cost_price !== '' ? line.cost_price : '' %>" /></td>
+                <td><input name="line_markup" type="number" step="0.01" min="0" class="js-markup" value="<%= line.markup != null && line.markup !== '' ? line.markup : '' %>" /></td>
+                <td><input name="line_retail_price" type="number" step="0.01" min="0" class="js-retail" value="<%= line.retail_price != null && line.retail_price !== '' ? line.retail_price : '' %>" /></td>
+                <td><input name="line_sold_to" value="<%= line.sold_to || '' %>" /></td>
+                <td><button type="button" class="btn branch-parts-remove-line" style="background:#c0392b;">Remove</button></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <datalist id="branch-parts-catalog">
+        <% catalog.forEach((item) => { %>
+          <option
+            value="<%= item.part_number %>"
+            data-name="<%= item.part_name || '' %>"
+            data-sub-id="<%= item.sub_id || '' %>"
+            data-generic="<%= item.generic || '' %>"
+            data-supplier="<%= item.supplier || '' %>"
+            data-cost="<%= item.cost_price != null ? item.cost_price : '' %>"
+            data-markup="<%= item.markup != null ? item.markup : '' %>"
+            data-retail="<%= item.retail_price != null ? item.retail_price : '' %>"
+          ><%= item.part_name || '' %></option>
+        <% }) %>
+      </datalist>
+
+      <div class="branch-parts-order-buttons">
+        <button type="button" class="btn" id="branch-parts-add-line" style="background:#1a6bbf;">+ Add line</button>
+        <button type="submit" name="intent" value="save" style="background:#5f6c80;">Save draft</button>
+        <button type="submit" name="intent" value="send" style="background:#1f8f53;">Send to Parts Manager &amp; Warehouse 1</button>
+      </div>
+    </form>
+  </article>
+
+  <article class="dashboard-card admin-panel" style="margin-top:12px;">
+    <div class="dashboard-card__header admin-panel-header"><%= branch %> Parts Database <span class="pm-badge"><%= total %></span></div>
+    <div class="table-scroll" style="max-height:min(72vh, calc(100vh - 160px));">
+      <table class="list" style="min-width:max-content;font-size:12px;">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Transaction Date</th>
+            <th>Transaction Type</th>
+            <th>Present Location</th>
+            <th>Editor</th>
+            <th>Part Number</th>
+            <th>Part Name</th>
+            <th>Sub-ID</th>
+            <th>Generic</th>
+            <th>Supplier</th>
+            <th>Qty</th>
+            <th>Cost Price</th>
+            <th>Markup (%)</th>
+            <th>Retail Price</th>
+            <th>Sold To (WO#)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!parts.length) { %>
+            <tr><td colspan="15" style="text-align:center;padding:20px;">No parts records for <%= branch %>.</td></tr>
+          <% } %>
+          <% parts.forEach((p, i) => { %>
+            <tr>
+              <td><%= i + 1 %></td>
+              <td><%= p.transaction_date || '' %></td>
+              <td><%= ({ NewEntry: 'New Stock', Restock: 'Stock' })[p.transaction_type] || p.transaction_type || '' %></td>
+              <td><%= p.present_location || p.branch || p.requesting_branch || '—' %></td>
+              <td><%= p.editor || '' %></td>
+              <td><%= p.part_number || '' %></td>
+              <td><%= p.part_name || '' %></td>
+              <td><%= p.sub_id || '' %></td>
+              <td><%= p.generic || '' %></td>
+              <td><%= p.supplier || '' %></td>
+              <td style="text-align:right;"><%= p.qty != null ? p.qty : '' %></td>
+              <td style="text-align:right;"><%= p.cost_price != null ? Number(p.cost_price).toFixed(2) : '' %></td>
+              <td style="text-align:right;"><%= p.markup != null ? p.markup : '' %></td>
+              <td style="text-align:right;"><%= p.retail_price != null ? Number(p.retail_price).toFixed(2) : '' %></td>
+              <td><%= p.sold_to || '' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+
+<template id="branch-parts-row-template">
+  <tr class="branch-parts-order-row">
+    <td><input name="line_part_number" list="branch-parts-catalog" /></td>
+    <td><input name="line_part_name" /></td>
+    <td><input name="line_sub_id" /></td>
+    <td><input name="line_generic" /></td>
+    <td><input name="line_supplier" /></td>
+    <td><input name="line_qty" type="number" step="any" min="0" /></td>
+    <td><input name="line_cost_price" type="number" step="0.01" min="0" class="js-cost" /></td>
+    <td><input name="line_markup" type="number" step="0.01" min="0" class="js-markup" /></td>
+    <td><input name="line_retail_price" type="number" step="0.01" min="0" class="js-retail" /></td>
+    <td><input name="line_sold_to" /></td>
+    <td><button type="button" class="btn branch-parts-remove-line" style="background:#c0392b;">Remove</button></td>
+  </tr>
+</template>
+
+<script>
+  (function bindBranchPartsOrderGrid() {
+    var body = document.getElementById('branch-parts-order-body');
+    var template = document.getElementById('branch-parts-row-template');
+    var addBtn = document.getElementById('branch-parts-add-line');
+    var catalog = document.getElementById('branch-parts-catalog');
+    if (!body || !template || !addBtn) return;
+
+    function catalogMap() {
+      var map = {};
+      if (!catalog) return map;
+      Array.prototype.forEach.call(catalog.options, function (option) {
+        map[String(option.value || '').toUpperCase()] = option;
+      });
+      return map;
+    }
+
+    function fillFromCatalog(row, partNumber) {
+      var option = catalogMap()[String(partNumber || '').toUpperCase()];
+      if (!option) return;
+      var name = row.querySelector('input[name="line_part_name"]');
+      var subId = row.querySelector('input[name="line_sub_id"]');
+      var generic = row.querySelector('input[name="line_generic"]');
+      var supplier = row.querySelector('input[name="line_supplier"]');
+      var cost = row.querySelector('input[name="line_cost_price"]');
+      var markup = row.querySelector('input[name="line_markup"]');
+      var retail = row.querySelector('input[name="line_retail_price"]');
+      if (name && !name.value) name.value = option.getAttribute('data-name') || '';
+      if (subId && !subId.value) subId.value = option.getAttribute('data-sub-id') || '';
+      if (generic && !generic.value) generic.value = option.getAttribute('data-generic') || '';
+      if (supplier && !supplier.value) supplier.value = option.getAttribute('data-supplier') || '';
+      if (cost && !cost.value) cost.value = option.getAttribute('data-cost') || '';
+      if (markup && !markup.value) markup.value = option.getAttribute('data-markup') || '';
+      if (retail && !retail.value) retail.value = option.getAttribute('data-retail') || '';
+      computeRetail(row);
+    }
+
+    function computeRetail(row) {
+      var cost = parseFloat((row.querySelector('.js-cost') || {}).value) || 0;
+      var markup = parseFloat((row.querySelector('.js-markup') || {}).value) || 0;
+      var retail = row.querySelector('.js-retail');
+      if (!retail) return;
+      var next = cost + cost * (markup / 100);
+      if (next > 0) retail.value = next.toFixed(2);
+    }
+
+    function addRow(values) {
+      var node = template.content.cloneNode(true);
+      var row = node.querySelector('tr');
+      body.appendChild(node);
+      row = body.lastElementChild;
+      if (values) {
+        var fields = {
+          line_part_number: values.part_number,
+          line_part_name: values.part_name,
+          line_sub_id: values.sub_id,
+          line_generic: values.generic,
+          line_supplier: values.supplier,
+          line_qty: values.qty,
+          line_cost_price: values.cost,
+          line_markup: values.markup,
+          line_retail_price: values.retail
+        };
+        Object.keys(fields).forEach(function (name) {
+          var input = row.querySelector('input[name="' + name + '"]');
+          if (input && fields[name] != null && fields[name] !== '') input.value = fields[name];
+        });
+      }
+      return row;
+    }
+
+    addBtn.addEventListener('click', function () {
+      addRow();
+    });
+
+    body.addEventListener('click', function (event) {
+      var btn = event.target.closest('.branch-parts-remove-line');
+      if (!btn) return;
+      var row = btn.closest('tr');
+      if (!row) return;
+      if (body.querySelectorAll('tr').length === 1) {
+        Array.prototype.forEach.call(row.querySelectorAll('input'), function (input) { input.value = ''; });
+        return;
+      }
+      row.remove();
+    });
+
+    body.addEventListener('input', function (event) {
+      var row = event.target.closest('tr');
+      if (!row) return;
+      if (event.target.name === 'line_part_number') fillFromCatalog(row, event.target.value);
+      if (event.target.classList.contains('js-cost') || event.target.classList.contains('js-markup')) computeRetail(row);
+    });
+
+    body.addEventListener('change', function (event) {
+      var row = event.target.closest('tr');
+      if (!row) return;
+      if (event.target.name === 'line_part_number') fillFromCatalog(row, event.target.value);
+    });
+
+    document.querySelectorAll('.branch-parts-add-from-stock').forEach(function (button) {
+      button.addEventListener('click', function () {
+        addRow({
+          part_number: button.getAttribute('data-part-number'),
+          part_name: button.getAttribute('data-part-name'),
+          sub_id: button.getAttribute('data-sub-id'),
+          generic: button.getAttribute('data-generic'),
+          supplier: button.getAttribute('data-supplier'),
+          qty: 1,
+          cost: button.getAttribute('data-cost'),
+          markup: button.getAttribute('data-markup'),
+          retail: button.getAttribute('data-retail')
+        });
+        document.getElementById('branch-parts-order-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  })();
+</script>
+
+<%- include('../partials/footer') %>

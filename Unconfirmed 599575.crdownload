@@ -1,0 +1,43 @@
+const express = require('express');
+const store = require('../data/store');
+const router = express.Router();
+
+router.get('/', async (req, res) => {
+  const work_orders = await store.getAll('work_orders');
+  const customers = await store.getAll('customers');
+  const vehicles = await store.getAll('vehicles');
+  res.render('workorders/index', { work_orders, customers, vehicles });
+});
+
+router.get('/new', async (req, res) => {
+  const customers = await store.getAll('customers');
+  const vehicles = await store.getAll('vehicles');
+  res.render('workorders/new', { customers, vehicles });
+});
+
+router.post('/new', async (req, res) => {
+  const { customer_id, vehicle_id, description, status } = req.body;
+  await store.create('work_orders', { customer_id, vehicle_id, description, status: status || 'open' });
+  res.redirect('/work-orders');
+});
+
+router.get('/:id/edit', async (req, res) => {
+  const wo = await store.getById('work_orders', req.params.id);
+  if (!wo) return res.redirect('/work-orders');
+  const customers = await store.getAll('customers');
+  const vehicles = await store.getAll('vehicles');
+  res.render('workorders/edit', { wo, customers, vehicles });
+});
+
+router.post('/:id/edit', async (req, res) => {
+  const { customer_id, vehicle_id, description, status } = req.body;
+  await store.update('work_orders', req.params.id, { customer_id, vehicle_id, description, status });
+  res.redirect('/work-orders');
+});
+
+router.post('/:id/delete', async (req, res) => {
+  await store.remove('work_orders', req.params.id);
+  res.redirect('/work-orders');
+});
+
+module.exports = router;

@@ -1,0 +1,35 @@
+<%- include('../partials/header') %>
+
+<h2>New Vehicle</h2>
+
+<form method="post" action="/vehicles/new" class="form">
+  <label>Customer
+    <select name="customer_id" required>
+      <option value="">--select--</option>
+      <% customers.forEach(c => { %>
+        <option value="<%= c.id %>"><%= c.name %></option>
+      <% }) %>
+    </select>
+  </label>
+  <label>Make <input name="make"></label>
+  <label>Model <input name="model"></label>
+  <label>Year <input name="year" type="number"></label>
+  <label>Unit Type
+    <select name="vehicle_type">
+      <option value="small">Small</option>
+      <option value="medium">Medium</option>
+      <option value="compactSuv">Compact SUV</option>
+      <option value="suvVanPickUp">SUV / Van / Pickup</option>
+      <option value="largeUnit">Large Unit</option>
+      <option value="equipment">Equipment</option>
+      <option value="facility">Facility</option>
+      <option value="tools">Tools</option>
+    </select>
+  </label>
+  <label>VIN <input name="vin"></label>
+  <label>License plate <input name="license_plate"></label>
+  <button type="submit">Create</button>
+  <a href="/vehicles">Cancel</a>
+</form>
+
+<%- include('../partials/footer') %>

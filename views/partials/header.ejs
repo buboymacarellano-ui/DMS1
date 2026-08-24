@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Auto Shop Manager</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <% const activeRole = currentUser ? String(currentUser.role || '').toLowerCase() : ''; %>
+  <% const pathNow = typeof currentPath !== 'undefined' && currentPath ? String(currentPath) : ''; %>
+  <% const queryScope = typeof currentQuery !== 'undefined' && currentQuery ? String(currentQuery.scope || currentQuery.location || '').toLowerCase() : ''; %>
+  <% const viewingWarehouse1 = pathNow.indexOf('/parts') === 0 && queryScope.indexOf('warehouse') !== -1; %>
+  <% const roleLabel = activeRole === 'general_manager' ? 'GM' : (activeRole === 'technician' ? 'TECH' : (activeRole === 'service_technical_manager' ? 'STM' : ((activeRole === 'parts_manager' || activeRole === 'pm') ? 'PM' : (activeRole === 'admin' ? 'ADMIN' : (activeRole === 'hr' ? 'HR' : (activeRole === 'service_advisor' ? 'SA' : (activeRole === 'senior_service_receptionist' ? 'SSR' : 'SR'))))))); %>
+  <%
+    const roleHomeByRole = {
+      general_manager: '/gm',
+      admin: '/admin',
+      hr: '/hr',
+      service_technical_manager: '/stm',
+      technician: '/technician',
+      parts_manager: '/parts-manager/dashboard',
+      pm: '/parts-manager/dashboard',
+      service_receptionist: '/service-receptionist',
+      senior_service_receptionist: '/service-receptionist',
+      service_advisor: '/service-receptionist',
+    };
+    const roleHomePath = roleHomeByRole[activeRole] || '/';
+    const normalizedPath = String(pathNow || '').replace(/\/+$/, '') || '/';
+    const normalizedHome = String(roleHomePath || '/').replace(/\/+$/, '') || '/';
+    const isHomePage = normalizedPath === '/'
+      || normalizedPath === normalizedHome
+      || ((activeRole === 'parts_manager' || activeRole === 'pm') && normalizedPath === '/parts-manager');
+  %>
+  <header class="site-header<%= activeRole === 'general_manager' ? ' site-header--gm' : '' %>">
+    <% if (activeRole === 'general_manager') { %>
+      <div class="site-header__left site-header__left--gm-stack">
+        <% if (currentUser) { %>
+          <span class="header-user-badge header-user-badge--gm-lead" title="Signed-in General Manager">
+            <%= roleLabel %>: <%= currentUser.username %>
+          </span>
+        <% } else { %>
+          <span class="header-user-badge header-user-badge--gm-lead">GM</span>
+        <% } %>
+        <div class="site-header__logo-wrap">
+          <h1 class="site-header__brand-left">
+            <a href="/" class="brand-heading" aria-label="Return to main page" title="Return to main page">
+              <img src="/icons/ae-tech-logo.svg" alt="A&E Auto Service Group Inc." class="brand-logo" />
+            </a>
+          </h1>
+          <% if (!isHomePage) { %>
+            <%- include('back-button', { backChipMode: 'under-logo' }) %>
+          <% } %>
+        </div>
+      </div>
+
+      <nav class="site-header__nav">
+        <a href="/gm" class="<%= pathNow === '/gm' ? 'nav-link--active' : '' %>">GM Dashboard</a>
+        <a href="/gm/catalog" class="<%= pathNow === '/gm/catalog' ? 'nav-link--active' : '' %>">DX Catalog</a>
+        <a href="/gm/fte" class="<%= pathNow === '/gm/fte' ? 'nav-link--active' : '' %>">FTE Tracking</a>
+        <div class="gm-workspace-nav" role="group" aria-label="Department workspaces">
+          <a
+            href="/parts-manager/dashboard"
+            class="gm-workspace-nav__btn <%= pathNow.indexOf('/parts-manager') === 0 ? 'gm-workspace-nav__btn--active' : '' %>"
+            title="Parts Manager operational workspace"
+          >PM Workspace</a>
+          <a
+            href="/stm"
+            class="gm-workspace-nav__btn <%= pathNow === '/stm' ? 'gm-workspace-nav__btn--active' : '' %>"
+            title="Service &amp; Technical Manager operational workspace"
+          >STM Workspace</a>
+          <a
+            href="/admin"
+            class="gm-workspace-nav__btn <%= pathNow.indexOf('/admin') === 0 ? 'gm-workspace-nav__btn--active' : '' %>"
+            title="Admin operational workspace"
+          >Admin Workspace</a>
+          <a
+            href="/hr"
+            class="gm-workspace-nav__btn <%= pathNow.indexOf('/hr') === 0 ? 'gm-workspace-nav__btn--active' : '' %>"
+            title="Human Resources operational workspace"
+          >HR Workspace</a>
+        </div>
+        <a href="/gm/performance-incentives" class="<%= pathNow.indexOf('/gm/performance-incentives') === 0 ? 'nav-link--active' : '' %>">Performance &amp; Incentives</a>
+        <a href="/employees">Employee DB</a>
+        <% if (canApproveRequests) { %>
+          <a href="/approvals" class="approval-nav <%= pendingApprovalCount > 0 ? 'approval-nav--pending' : '' %>" title="Approval requests">
+            Approvals<% if (pendingApprovalCount > 0) { %> <span class="approval-nav__count"><%= pendingApprovalCount %></span><% } %>
+          </a>
+        <% } else if (currentUser) { %>
+          <a href="/approvals" class="approval-nav" title="Submit or view approval requests">Requests</a>
+        <% } %>
+      </nav>
+
+      <div class="site-header__actions" aria-label="Session actions">
+        <div class="site-header__session-btns">
+          <button type="button" id="fullscreen-toggle" class="btn btn-fullscreen">Full Screen</button>
+          <% if (currentUser) { %>
+            <form method="post" action="/auth/logout" class="header-logout-form">
+              <button type="submit" class="btn btn-fullscreen">Log Out</button>
+            </form>
+          <% } %>
+        </div>
+      </div>
+    <% } else { %>
+      <div class="site-header__logo-wrap">
+        <h1>
+          <a href="/" class="brand-heading" aria-label="Return to main page" title="Return to main page">
+            <img src="/icons/ae-tech-logo.svg" alt="A&E Auto Service Group Inc." class="brand-logo" />
+          </a>
+        </h1>
+        <% if (!isHomePage) { %>
+          <%- include('back-button', { backChipMode: 'under-logo' }) %>
+        <% } %>
+      </div>
+      <nav>
+        <% if (activeRole === 'technician') { %>
+          <a href="/technician">Technician</a>
+        <% } else if (activeRole === 'service_technical_manager') { %>
+          <a href="/stm">STM Dashboard</a>
+          <a href="/gm/fte" class="<%= pathNow === '/gm/fte' ? 'nav-link--active' : '' %>">FTE Tracking</a>
+        <% } else if (activeRole === 'admin') { %>
+          <a href="/admin">Admin Dashboard</a>
+          <a href="/admin/gates/removed-records">Removed Records</a>
+        <% } else if (activeRole === 'hr') { %>
+          <a href="/hr">HR Dashboard</a>
+        <% } else if (['service_receptionist', 'senior_service_receptionist', 'service_advisor'].includes(activeRole)) { %>
+          <a href="/service-receptionist"><%= roleLabel %> Dashboard</a>
+          <a href="/parts/create" class="<%= pathNow.indexOf('/parts/create') === 0 ? 'nav-link--active' : '' %>">Create Parts</a>
+          <a href="/parts" class="<%= pathNow.indexOf('/parts') === 0 && pathNow.indexOf('/parts/create') !== 0 && !viewingWarehouse1 ? 'nav-link--active' : '' %>">Parts Database</a>
+          <a href="/parts?scope=warehouse1" class="<%= viewingWarehouse1 ? 'nav-link--active' : '' %>">Warehouse 1</a>
+          <a href="/branch-parts" class="<%= pathNow.indexOf('/branch-parts') === 0 ? 'nav-link--active' : '' %>">Branch Parts DB</a>
+          <a href="/gm/fte" class="<%= pathNow === '/gm/fte' ? 'nav-link--active' : '' %>">FTE Tracking</a>
+        <% } %>
+        <% if (isPartsManager) { %>
+          <a href="/parts-manager/dashboard">Parts Dashboard</a>
+          <a href="/parts">Parts Database</a>
+        <% } %>
+        <% if (activeRole === 'admin' || activeRole === 'hr') { %>
+          <a href="/employees">Employee DB</a>
+        <% } %>
+        <% if (canApproveRequests) { %>
+          <a href="/approvals" class="approval-nav <%= pendingApprovalCount > 0 ? 'approval-nav--pending' : '' %>" title="Approval requests">
+            Approvals<% if (pendingApprovalCount > 0) { %> <span class="approval-nav__count"><%= pendingApprovalCount %></span><% } %>
+          </a>
+        <% } else if (currentUser) { %>
+          <a href="/approvals" class="approval-nav" title="Submit or view approval requests">Requests</a>
+        <% } %>
+        <% if (currentUser) { %>
+          <span class="header-user-badge"><%= roleLabel %>: <%= currentUser.username %><%= ['service_receptionist', 'senior_service_receptionist', 'service_advisor'].includes(activeRole) && currentUser.branch ? ` | ${currentUser.branch}` : '' %></span>
+        <% } %>
+        <button type="button" id="fullscreen-toggle" class="btn btn-fullscreen">Full Screen</button>
+        <% if (currentUser) { %>
+          <form method="post" action="/auth/logout" class="header-logout-form">
+            <button type="submit" class="btn btn-fullscreen">Log Out</button>
+          </form>
+        <% } %>
+      </nav>
+    <% } %>
+  </header>
+  <main class="container">
+    <% if (typeof globalError !== 'undefined' && globalError) { %>
+      <p class="error global-error-message"><%= globalError %></p>
+    <% } %>

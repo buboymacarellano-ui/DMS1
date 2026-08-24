@@ -1,0 +1,48 @@
+<%- include('../partials/header') %>
+
+<%
+  const branches = Array.isArray(typeof branchOptions !== 'undefined' ? branchOptions : null) ? branchOptions : [];
+  const warehouse = (typeof warehouseLocation !== 'undefined' && warehouseLocation) ? warehouseLocation : 'Warehouse 1';
+%>
+
+<section class="labor-charge-page">
+  <h2>Edit Created Part</h2>
+  <% if (typeof error !== 'undefined' && error) { %><p class="error"><%= error %></p><% } %>
+
+  <form method="post" action="/parts/create/<%= part.id %>/edit" class="form">
+    <label>Date
+      <input type="date" name="transaction_date" value="<%= part.transaction_date || '' %>" required />
+    </label>
+    <label>Branch
+      <select name="created_branch" required>
+        <% branches.forEach((name) => { %>
+          <option value="<%= name %>" <%= String(part.created_branch || '') === name ? 'selected' : '' %>><%= name %></option>
+        <% }) %>
+      </select>
+    </label>
+    <small>Physical location stays at the creating branch. Warehouse 1 / Parts Manager only receive the transaction log.</small>
+    <label>Part Name <input name="part_name" value="<%= part.part_name || '' %>" required></label>
+    <label>Part Number <input name="part_number" value="<%= part.part_number || '' %>"></label>
+    <label>Sub-ID <input name="sub_id" value="<%= part.sub_id || '' %>"></label>
+    <label>Generic / Description <input name="generic" value="<%= part.generic || '' %>"></label>
+    <label>Supplier <input name="supplier" value="<%= part.supplier || '' %>"></label>
+    <label>Unit <input name="unit" value="<%= part.unit || '' %>"></label>
+    <label>Qty <input name="qty" type="number" step="any" min="0" value="<%= part.qty != null ? part.qty : '' %>"></label>
+    <label>Cost Price (₱) <input name="cost_price" id="edit-cost" type="number" step="0.01" min="0" value="<%= part.cost_price != null ? part.cost_price : '' %>" oninput="computeEditRetail()"></label>
+    <label>Markup (%) <input name="markup" id="edit-markup" type="number" step="0.01" min="0" value="<%= part.markup != null ? part.markup : '' %>" oninput="computeEditRetail()"></label>
+    <label>Retail Price (₱) <input name="retail_price" id="edit-retail" type="number" step="0.01" min="0" value="<%= part.retail_price != null ? part.retail_price : '' %>"></label>
+    <button type="submit">Save</button>
+    <a href="/parts/create">Cancel</a>
+  </form>
+</section>
+
+<script>
+  function computeEditRetail() {
+    const cost = parseFloat(document.getElementById('edit-cost').value) || 0;
+    const markup = parseFloat(document.getElementById('edit-markup').value) || 0;
+    const retail = cost + cost * (markup / 100);
+    document.getElementById('edit-retail').value = retail > 0 ? retail.toFixed(2) : '';
+  }
+</script>
+
+<%- include('../partials/footer') %>

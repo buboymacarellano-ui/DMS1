@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Login Interface</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <%- include('../partials/back-button') %>
+  <main class="auth-shell">
+    <section class="auth-card">
+      <div class="auth-brand">
+        <img src="/icons/ae-tech-logo.svg" alt="A&E Auto Service Group Inc." class="auth-brand-logo" />
+        <h1>A&amp;E LogIn</h1>
+      </div>
+      <p class="auth-subtitle">Choose your access level and log in with your employee ID or account password.</p>
+
+      <% if (error) { %>
+        <p class="error"><%= error %></p>
+      <% } %>
+
+      <% if (success) { %>
+        <p class="success"><%= success %></p>
+      <% } %>
+
+      <form method="post" action="/auth/login" class="form auth-form">
+        <label>
+          Access Level
+          <select name="access_level" required>
+            <option value="service_advisor" <%= accessLevel === 'service_advisor' ? 'selected' : '' %>>SA - Service Advisor</option>
+            <option value="service_receptionist" <%= accessLevel === 'service_receptionist' ? 'selected' : '' %>>SR - Service Receptionist</option>
+            <option value="senior_service_receptionist" <%= accessLevel === 'senior_service_receptionist' ? 'selected' : '' %>>SSR - Senior Service Receptionist</option>
+            <option value="technician" <%= accessLevel === 'technician' ? 'selected' : '' %>>Technician</option>
+            <option value="service_technical_manager" <%= accessLevel === 'service_technical_manager' ? 'selected' : '' %>>STM - Service &amp; Technical Manager</option>
+            <option value="parts_manager" <%= accessLevel === 'parts_manager' ? 'selected' : '' %>>Parts Manager</option>
+            <option value="general_manager" <%= accessLevel === 'general_manager' ? 'selected' : '' %>>General Manager</option>
+            <option value="admin" <%= accessLevel === 'admin' ? 'selected' : '' %>>Admin</option>
+            <option value="hr" <%= accessLevel === 'hr' ? 'selected' : '' %>>HR</option>
+          </select>
+        </label>
+        <label>
+          <span id="login-id-label">Username</span>
+          <input id="login-id-input" type="text" name="username" value="<%= username %>" autocomplete="username" required />
+        </label>
+        <label id="login-branch-field">
+          Which branch are you logging in?
+          <select name="branch" id="login-branch-input">
+            <option value="">-- Select your assigned branch --</option>
+            <% (branches || []).forEach(branchOption => { %><option value="<%= branchOption %>" <%= branch === branchOption ? 'selected' : '' %>><%= branchOption %></option><% }) %>
+          </select>
+        </label>
+        <label>
+          Password
+          <input type="password" name="password" autocomplete="current-password" required />
+        </label>
+        <button type="submit">Log In</button>
+      </form>
+
+      <% if (!hasAccounts) { %>
+        <p class="auth-hint">No account found yet.</p>
+      <% } %>
+    </section>
+  </main>
+  <script>
+    (function bindEmployeeIdLoginHint() {
+      const roleSelect = document.querySelector('select[name="access_level"]');
+      const label = document.getElementById('login-id-label');
+      const input = document.getElementById('login-id-input');
+      const branchField = document.getElementById('login-branch-field');
+      const branchInput = document.getElementById('login-branch-input');
+      if (!roleSelect || !label || !input || !branchField || !branchInput) return;
+
+      const hints = {
+        service_advisor: { label: 'SA Employee ID', placeholder: 'Enter employee ID from Employee DB' },
+        service_receptionist: { label: 'SR Employee ID', placeholder: 'Enter employee ID from Employee DB' },
+        senior_service_receptionist: { label: 'Senior SR Employee ID', placeholder: 'Enter employee ID from Employee DB' },
+        technician: { label: 'Technician ID', placeholder: 'Enter Technician ID (example: EMP001)' },
+        service_technical_manager: { label: 'STM Username or Employee ID', placeholder: 'Enter STM username or employee ID' },
+      };
+
+      function sync() {
+        const role = String(roleSelect.value || '').toLowerCase();
+        const hint = hints[role];
+        const usesEmployeeId = Boolean(hint);
+        const needsBranch = role === 'service_advisor'
+          || role === 'service_receptionist'
+          || role === 'senior_service_receptionist';
+        label.textContent = hint ? hint.label : 'Username';
+        input.placeholder = hint ? hint.placeholder : '';
+        input.setAttribute('autocomplete', usesEmployeeId ? 'off' : 'username');
+        branchField.hidden = !needsBranch;
+        branchInput.required = needsBranch;
+      }
+
+      roleSelect.addEventListener('change', sync);
+      sync();
+    })();
+  </script>
+</body>
+</html>

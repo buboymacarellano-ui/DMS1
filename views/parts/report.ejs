@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Parts Database Report</title>
+  <style>
+    body{margin:24px;font-family:"Segoe UI",Calibri,Arial,sans-serif;color:#10243d;background:#fff;}
+    h1{margin:0 0 6px;font-size:22px;}
+    .meta{margin:0 0 16px;color:#4b6075;font-size:13px;}
+    table{width:100%;border-collapse:collapse;font-size:11px;}
+    th,td{border:1px solid #9bb4d0;padding:6px 8px;text-align:left;vertical-align:top;}
+    th{background:#d7e8c8;text-transform:uppercase;}
+    td.num{text-align:right;white-space:nowrap;}
+    .no-print{margin-bottom:14px;}
+    @media print{
+      .no-print{display:none;}
+      body{margin:10mm;}
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print">
+    <button type="button" onclick="window.print()">Print / Save as PDF</button>
+    <a href="/parts">Back to Parts Database</a>
+  </div>
+  <h1>Parts Database Report</h1>
+  <p class="meta">
+    Records: <%= parts.length %>
+    <% if (q) { %> · Search: <%= q %><% } %>
+    <% if (filterType) { %> · Type: <%= filterType %><% } %>
+    · Generated: <%= String(generatedAt || '').replace('T', ' ').slice(0, 19) %>
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <% columns.forEach((col) => { %>
+          <th><%= col.header %></th>
+        <% }) %>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!parts.length) { %>
+        <tr><td colspan="<%= columns.length + 1 %>">No records found.</td></tr>
+      <% } %>
+      <% parts.forEach((part, index) => { %>
+        <tr>
+          <td class="num"><%= index + 1 %></td>
+          <% columns.forEach((col) => { %>
+            <%
+              const value = part[col.key];
+              const display = (col.key === 'cost_price' || col.key === 'retail_price') && value != null && value !== ''
+                ? Number(value).toFixed(2)
+                : (value == null ? '' : value);
+              const numeric = col.key === 'qty' || col.key === 'cost_price' || col.key === 'markup' || col.key === 'retail_price';
+            %>
+            <td class="<%= numeric ? 'num' : '' %>"><%= display %></td>
+          <% }) %>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  <script>
+    window.addEventListener('load', function () {
+      window.print();
+    });
+  </script>
+</body>
+</html>

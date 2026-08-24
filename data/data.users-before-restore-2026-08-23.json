@@ -1,0 +1,12 @@
+{
+  "users": [
+    {
+      "id": "mt5pn4kbdb5n",
+      "created_at": "2026-08-23T11:14:58.139Z",
+      "username": "HR",
+      "role": "hr",
+      "password_salt": "8c2440ff82535f1f8fce707260fa8097",
+      "password_hash": "d9a998d0fca1e9dbc5b318d167d303bc9b1baddf5359683ee09c8ae7d654b9ee5fb26c1f46187bcf85508c80b421b819e5bb6c02f6a0b60902159f437844cc3f"
+    }
+  ]
+}

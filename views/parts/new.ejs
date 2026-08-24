@@ -1,0 +1,115 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell">
+  <div class="dashboard-title admin-title">Parts Database — New Entry</div>
+
+  <% if (error) { %><p class="error" style="font-weight:700;margin-bottom:10px;"><%= error %></p><% } %>
+
+  <article class="dashboard-card admin-panel" style="max-width:700px;">
+    <form method="post" action="/parts" class="form admin-form">
+
+      <label>Transaction Date
+        <input type="date" name="transaction_date" value="<%= prefill.transaction_date || new Date().toISOString().slice(0,10) %>" required />
+      </label>
+
+      <p class="dashboard-note admin-note" style="margin:0 0 8px;">
+        Transaction Number is auto-created on save and used as the authentication number for delivery forms, receipts, and related documents.
+      </p>
+
+      <label>Transaction Type
+        <select name="transaction_type" required>
+          <% transactionTypes.forEach(t => { %>
+            <option value="<%= t %>" <%= (prefill.transaction_type === t) ? 'selected' : '' %>><%= typeof displayPartsTransactionType === 'function' ? displayPartsTransactionType(t) : t %></option>
+          <% }) %>
+        </select>
+      </label>
+
+      <label>Present Location
+        <input type="text" value="<%= actorBranch || prefill.present_location || (currentUser && currentUser.branch) || '—' %>" readonly />
+        <input type="hidden" name="present_location" value="<%= actorBranch || prefill.present_location || (currentUser && currentUser.branch) || '' %>" />
+        <small style="opacity:.75;">Set from the branch of the user creating this transaction.</small>
+      </label>
+
+      <label>Part Number
+        <input type="text" name="part_number" value="<%= prefill.part_number || '' %>" required placeholder="e.g. PN-00123" />
+      </label>
+
+      <label>Part Name
+        <input type="text" name="part_name" value="<%= prefill.part_name || '' %>" required placeholder="e.g. Oil Filter" />
+      </label>
+
+      <label>Sub-ID
+        <input type="text" name="sub_id" value="<%= prefill.sub_id || '' %>" placeholder="e.g. variant, bin, or alternate ID" />
+      </label>
+
+      <label>Generic / Description
+        <input type="text" name="generic" class="description-faded" value="<%= prefill.generic || '' %>" placeholder="Generic name or description" />
+      </label>
+
+      <label>Supplier
+        <input type="text" name="supplier" value="<%= prefill.supplier || '' %>" placeholder="Supplier name" />
+      </label>
+
+      <label>Unit
+        <input type="text" name="unit" value="<%= prefill.unit || '' %>" placeholder="e.g. pcs, set, liter" />
+      </label>
+
+      <label>Qty
+        <input type="number" name="qty" value="<%= prefill.qty != null ? prefill.qty : '' %>" required placeholder="0" step="any" />
+      </label>
+
+      <label>Cost Price (₱)
+        <input type="number" name="cost_price" value="<%= prefill.cost_price != null ? prefill.cost_price : '' %>" placeholder="0.00" step="0.01" min="0"
+          oninput="computeRetail()" id="cost_price" />
+      </label>
+
+      <label>Markup (%)
+        <input type="number" name="markup" value="<%= prefill.markup != null ? prefill.markup : '' %>" placeholder="0" step="0.01" min="0"
+          oninput="computeRetail()" id="markup" />
+      </label>
+
+      <label>Retail Price (₱) <small style="opacity:.7;">(auto-computed from cost + markup; override if needed)</small>
+        <input type="number" name="retail_price" id="retail_price" value="<%= prefill.retail_price != null ? prefill.retail_price : '' %>" placeholder="0.00" step="0.01" min="0" />
+      </label>
+
+      <label>Sold To — Work Order #
+        <input type="text" name="sold_to" value="<%= prefill.sold_to || '' %>" placeholder="7-digit work order number (if Sold or Parts Request)" />
+      </label>
+
+      <div id="parts-request-fields" class="parts-request-fields" hidden>
+        <label>Requesting Branch
+          <input type="text" name="requesting_branch" value="<%= prefill.requesting_branch || (currentUser && currentUser.branch) || '' %>" placeholder="Branch requesting the part" />
+        </label>
+        <label>Fulfilling Branch
+          <input type="text" name="branch" value="<%= prefill.branch || '' %>" placeholder="e.g. Warehouse 1" />
+        </label>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button type="submit" style="background:#1f8f53;">Save Entry</button>
+        <a class="btn" href="/parts">Cancel</a>
+      </div>
+    </form>
+  </article>
+</section>
+
+<%- include('../partials/footer') %>
+<script>
+  function computeRetail() {
+    const cost = parseFloat(document.getElementById('cost_price').value) || 0;
+    const markup = parseFloat(document.getElementById('markup').value) || 0;
+    const retail = cost + cost * (markup / 100);
+    document.getElementById('retail_price').value = retail > 0 ? retail.toFixed(2) : '';
+  }
+
+  function togglePartsRequestFields() {
+    const select = document.querySelector('select[name="transaction_type"]');
+    const fields = document.getElementById('parts-request-fields');
+    if (!select || !fields) return;
+    const type = String(select.value || '').toLowerCase();
+    fields.hidden = type !== 'parts request' && type !== 'transfer request';
+  }
+
+  document.querySelector('select[name="transaction_type"]')?.addEventListener('change', togglePartsRequestFields);
+  togglePartsRequestFields();
+</script>

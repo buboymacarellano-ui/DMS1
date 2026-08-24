@@ -1,0 +1,80 @@
+<%- include('../partials/header') %>
+
+<div class="invoice">
+  <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+    <div>
+      <h1 style="margin:0">A&E Auto Repair Service Group</h1>
+      <div>Technician Work Order</div>
+    </div>
+    <div style="text-align:right">
+      <h2 style="margin:0">Work Order</h2>
+      <div>No: <strong><%= wo.work_order_number || wo.id %></strong></div>
+      <div>Date: <strong><%= wo.created_at ? new Date(wo.created_at).toLocaleString() : '' %></strong></div>
+    </div>
+  </header>
+
+  <section style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+    <div>
+      <h3>Customer</h3>
+      <div><strong><%= customer.name || '—' %></strong></div>
+      <div>Phone: <%= wo.telephone_number || customer.phone || '' %></div>
+      <div>Branch: <%= wo.branch || '' %></div>
+    </div>
+    <div>
+      <h3>Vehicle</h3>
+      <div>Brand: <strong><%= wo.car_brand || vehicle.make || '—' %></strong></div>
+      <div>Model: <%= wo.car_model || vehicle.model || '—' %></div>
+      <div>Year: <%= wo.car_year || vehicle.year || '—' %></div>
+      <div>Plate: <%= wo.plate_number || vehicle.license_plate || '—' %></div>
+      <div>Odometer: <%= wo.odometer || '—' %></div>
+    </div>
+  </section>
+
+  <section style="margin-bottom:12px">
+    <div><strong>SR:</strong> <%= wo.service_advisor || '' %></div>
+    <div><strong>Tecnician:</strong> <%= wo.technician || '' %></div>
+    <div><strong>Time In:</strong> <%= wo.time_in || '' %></div>
+    <div><strong>Time Out:</strong> <%= wo.time_out || '' %></div>
+  </section>
+
+  <h3>Service Instructions</h3>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
+    <thead>
+      <tr style="background:var(--card);color:var(--card-text)">
+        <th style="padding:8px;border-bottom:1px solid var(--border);text-align:left">#</th>
+        <th style="padding:8px;border-bottom:1px solid var(--border);text-align:left">Service Work and Reason</th>
+        <th style="padding:8px;border-bottom:1px solid var(--border);text-align:left">Description / Notes</th>
+        <th style="padding:8px;border-bottom:1px solid var(--border);text-align:left">Parts</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% (items || []).forEach((it, idx) => { %>
+        <tr>
+          <td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.04)"><%= idx + 1 %></td>
+          <td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.04)"><%= it.reason || it.service_type || '—' %></td>
+          <td class="description-cell" style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.04)"><%= it.description || '' %></td>
+          <td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.04)"><%= it.parts || '' %></td>
+        </tr>
+      <% }) %>
+      <% if (!(items || []).length) { %>
+        <tr>
+          <td colspan="4" style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.04)">No service lines yet.</td>
+        </tr>
+      <% } %>
+    </tbody>
+  </table>
+
+  <section style="margin-bottom:18px">
+    <div><strong>General Notes:</strong></div>
+    <div class="description-cell" style="min-height:60px;border:1px solid var(--border);padding:8px;border-radius:6px"><%= wo.description || '' %></div>
+  </section>
+
+  <div style="margin-top:18px;display:flex;justify-content:space-between;align-items:center">
+    <div>This print is for technician execution only (no pricing shown).</div>
+    <div>
+      <button onclick="window.print()" class="btn">Print</button>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

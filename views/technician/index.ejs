@@ -1,0 +1,353 @@
+<%- include('../partials/header') %>
+
+<style>
+  .tech-app {
+    --tech-bg-a: #0f3d4a;
+    --tech-bg-b: #11636b;
+    --tech-bg-c: #189a87;
+    --tech-card: #f4f8ff;
+    --tech-text: #10202f;
+    --tech-blue: #2a66ff;
+    --tech-orange: #ec8a00;
+    --tech-green: #1d9855;
+    --tech-gray: #5f6c80;
+  }
+
+  .tech-app-shell {
+    background: linear-gradient(135deg, var(--tech-bg-a) 0%, var(--tech-bg-b) 45%, var(--tech-bg-c) 100%);
+    border-radius: 18px;
+    padding: 16px;
+    color: #fff;
+  }
+
+  .tech-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 12px 0;
+  }
+
+  .tech-kpi-card {
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.34);
+    border-radius: 12px;
+    padding: 10px;
+  }
+
+  .tech-kpi-card p {
+    margin: 0;
+    font-size: 12px;
+    opacity: 0.9;
+  }
+
+  .tech-kpi-card h3 {
+    margin: 6px 0 0;
+    font-size: 24px;
+    font-weight: 900;
+    color: #fff;
+  }
+
+  .tech-panel {
+    background: var(--tech-card);
+    color: var(--tech-text);
+    border-radius: 14px;
+    padding: 12px;
+    margin-top: 12px;
+    border: 1px solid rgba(12, 27, 44, 0.16);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+  }
+
+  .tech-panel h3 {
+    margin: 0 0 8px;
+    font-size: 18px;
+    color: #0f2740;
+  }
+
+  .tech-current-vehicle {
+    display: grid;
+    gap: 6px;
+    background: linear-gradient(180deg, #fff7e2, #ffefc9);
+    border: 1px solid #f0cd77;
+    border-radius: 12px;
+    padding: 10px;
+  }
+
+  .tech-notif-list {
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 8px;
+  }
+
+  .tech-notif-item {
+    background: #eef5ff;
+    border: 1px solid #c9d9f5;
+    border-radius: 10px;
+    padding: 8px;
+  }
+
+  .tech-services-only-list {
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 8px;
+  }
+
+  .tech-services-only-item {
+    background: #eaf8ef;
+    border: 1px solid #b8e2c5;
+    border-radius: 10px;
+    padding: 8px;
+  }
+
+  .tech-services-only-item ol {
+    margin: 6px 0 0 18px;
+    padding: 0;
+  }
+
+  .tech-services-only-item li {
+    margin: 2px 0;
+  }
+
+  .tech-status-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
+  .tech-status-btn {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: #fff;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .tech-status-btn--break { background: var(--tech-orange); }
+  .tech-status-btn--done { background: var(--tech-green); }
+  .tech-status-btn--parts { background: var(--tech-blue); }
+
+  .tech-status-btn--note { background: var(--tech-gray); }
+
+  .tech-order-badge {
+    display: inline-flex;
+    background: #deecff;
+    color: #11407a;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 800;
+    margin-bottom: 6px;
+  }
+
+  @media (max-width: 860px) {
+    .tech-kpi-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<section class="dashboard-shell tech-app">
+  <div class="tech-app-shell">
+    <div class="dashboard-title gm-title role-dashboard-title"><span>Technician</span> <span class="role-dashboard-title__suffix">Dashboard</span></div>
+    <p class="dashboard-note" style="color:#eaf6ff;text-shadow:none;">Logged in as <strong><%= technicianName %></strong><%= technicianEmployeeId ? (' (ID: ' + technicianEmployeeId + ')') : '' %>.</p>
+
+    <div class="tech-kpi-grid">
+      <article class="tech-kpi-card">
+        <p>Labor Today</p>
+        <h3>₱<%= Number(laborToday || 0).toFixed(2) %></h3>
+      </article>
+      <article class="tech-kpi-card">
+        <p>Labor MTD</p>
+        <h3>₱<%= Number(laborMtd || 0).toFixed(2) %></h3>
+      </article>
+    </div>
+
+    <article class="tech-panel">
+      <h3>Current Assigned Vehicle</h3>
+      <% const currentOrder = (activeOrders && activeOrders.length) ? activeOrders[0] : null; %>
+      <% if (!currentOrder) { %>
+        <p>No active assigned vehicle right now.</p>
+      <% } else { %>
+        <div class="tech-current-vehicle">
+          <div><strong>WO:</strong> <%= currentOrder.work_order_number %></div>
+          <div><strong>Customer:</strong> <%= currentOrder.customer_name %></div>
+          <div><strong>Vehicle:</strong> <%= currentOrder.vehicle_label %></div>
+          <div><strong>Branch:</strong> <%= currentOrder.branch || '-' %></div>
+        </div>
+      <% } %>
+    </article>
+
+    <article class="tech-panel">
+      <h3>Notification Panel (from SR)</h3>
+      <% if (!incomingNotifications || !incomingNotifications.length) { %>
+        <p>No incoming notifications yet.</p>
+      <% } else { %>
+        <ul class="tech-notif-list">
+          <% incomingNotifications.forEach((notif) => { %>
+            <li class="tech-notif-item">
+              <div><strong>WO:</strong> <%= notif.work_order_number %> | <strong><%= formatTime(notif.created_at) %></strong></div>
+              <div><%= notif.message || 'No message text.' %></div>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </article>
+
+    <article class="tech-panel">
+      <h3>Services Only Panel</h3>
+      <% if (!activeOrders || !activeOrders.length) { %>
+        <p>No active services assigned right now.</p>
+      <% } else { %>
+        <ul class="tech-services-only-list">
+          <% activeOrders.forEach((order) => { %>
+            <li class="tech-services-only-item">
+              <div><strong>WO #<%= order.work_order_number %></strong> - <%= order.vehicle_label %></div>
+              <% if (!order.services || !order.services.length) { %>
+                <div>No service lines recorded yet.</div>
+              <% } else { %>
+                <ol>
+                  <% order.services.forEach((service) => { %>
+                    <li><%= service %></li>
+                  <% }) %>
+                </ol>
+              <% } %>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </article>
+  </div>
+
+  <% if (success) { %>
+    <p style="color:#1f7a32;font-weight:700;"><%= success %></p>
+  <% } %>
+  <% if (error) { %>
+    <p class="error"><%= error %></p>
+  <% } %>
+
+  <article class="dashboard-card gm-panel" style="margin-bottom:14px;">
+    <div class="dashboard-card__header gm-panel-header">Active Assigned Jobs</div>
+    <% if (!activeOrders.length) { %>
+      <p class="dashboard-note">No active work orders assigned yet.</p>
+    <% } else { %>
+      <div class="table-scroll">
+        <table class="list gm-table">
+          <thead>
+            <tr>
+              <th>Work Order</th>
+              <th>Customer</th>
+              <th>Vehicle</th>
+              <th>Required Service 1-10</th>
+              <th>Branch</th>
+              <th>Assigned At</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% activeOrders.forEach(order => { %>
+              <tr>
+                <td><%= order.work_order_number %></td>
+                <td><%= order.customer_name %></td>
+                <td><%= order.vehicle_label %></td>
+                <td>
+                  <% if (!order.services.length) { %>
+                    -
+                  <% } else { %>
+                    <%= order.services.join(' | ') %>
+                  <% } %>
+                </td>
+                <td><%= order.branch || '-' %></td>
+                <td><%= formatTime(order.technician_assigned_at || order.created_at) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </article>
+
+  <% activeOrders.forEach(order => { %>
+    <article class="dashboard-card gm-panel" style="margin-bottom:14px;">
+      <div class="dashboard-card__header gm-panel-header">Technician Action - WO #<%= order.work_order_number %></div>
+      <form method="post" action="/technician/updates" class="form" style="margin-bottom:12px;">
+        <input type="hidden" name="work_order_id" value="<%= order.id %>" />
+        <div class="tech-order-badge"><%= order.vehicle_label %></div>
+        <label>
+          Optional Note
+          <textarea name="note" placeholder="Optional details for SR"></textarea>
+        </label>
+        <div class="tech-status-actions">
+          <button type="submit" name="status_action" value="break" class="tech-status-btn tech-status-btn--break">Break</button>
+          <button type="submit" name="status_action" value="done" class="tech-status-btn tech-status-btn--done">Done</button>
+          <button type="submit" name="status_action" value="waiting_parts" class="tech-status-btn tech-status-btn--parts">Waiting Parts</button>
+          <button type="submit" class="tech-status-btn tech-status-btn--note">Send Note</button>
+        </div>
+      </form>
+
+      <div>
+        <strong>Recent Timeline</strong>
+        <% if (!order.recent_updates.length) { %>
+          <p class="dashboard-note">No updates yet for this work order.</p>
+        <% } else { %>
+          <ul style="margin:10px 0 0 18px;">
+            <% order.recent_updates.forEach(update => { %>
+              <% const flags = update.status_flags || {}; %>
+              <li style="margin-bottom:8px;">
+                <strong><%= ['service_advisor', 'service_receptionist', 'senior_service_receptionist'].includes(update.sender_role) ? 'SR' : 'TECH' %></strong>
+                <span> - <%= formatTime(update.created_at) %></span>
+                <% if (flags.on_break) { %>
+                  <span> [Break]</span>
+                <% } %>
+                <% if (flags.waiting_parts) { %>
+                  <span> [Waiting Parts]</span>
+                <% } %>
+                <% if (flags.done) { %>
+                  <span> [Done]</span>
+                <% } %>
+                <% if (update.message) { %>
+                  <div><%= update.message %></div>
+                <% } %>
+              </li>
+            <% }) %>
+          </ul>
+        <% } %>
+      </div>
+    </article>
+  <% }) %>
+
+  <article class="dashboard-card gm-panel">
+    <div class="dashboard-card__header gm-panel-header">Completed / Archived Assigned Jobs</div>
+    <% if (!otherOrders.length) { %>
+      <p class="dashboard-note">No completed jobs in your queue yet.</p>
+    <% } else { %>
+      <div class="table-scroll">
+        <table class="list gm-table">
+          <thead>
+            <tr>
+              <th>Work Order</th>
+              <th>Vehicle</th>
+              <th>Status</th>
+              <th>Latest Update</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% otherOrders.forEach(order => { %>
+              <tr>
+                <td><%= order.work_order_number %></td>
+                <td><%= order.vehicle_label %></td>
+                <td><%= order.status %></td>
+                <td><%= order.recent_updates.length ? formatTime(order.recent_updates[0].created_at) : '-' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </article>
+</section>
+
+<%- include('../partials/footer') %>

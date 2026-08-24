@@ -1,0 +1,200 @@
+<%- include('../partials/header') %>
+<link rel="stylesheet" href="/dms-catalog.css" />
+
+<%
+  const brands = [
+    'WHI ACES', 'Car & Trucks', 'Exhausts', 'Agricultural', 'Heavy-Duty',
+    'Power-Sport', 'Marine', 'GM AC-Delco', 'AC Delco', 'Federated'
+  ];
+  const engines = [
+    'V6-217cid 3.5L FI VIN N LZE',
+    'V6-262cid 4.3L FI VIN X LU3',
+    'V8-294cid 4.8L FI VIN C LY2',
+    'V8-325cid 5.3L FLEX FI VIN 0 LMG',
+    'V8-325cid 5.3L FI VIN J LY5',
+    'V8-325cid 5.3L FI VIN 3 LC9',
+    'V8-364cid 6.0L FI VIN K LY6',
+    'V8-364cid 6.0L FI VIN Y L76'
+  ];
+  const categories = [
+    'Ignition/Filters', 'Belts/Hoses/Cooling', 'Electrical', 'Brake', 'Fuel', 'Heating/AC',
+    'Steering/Suspension', 'Transmission', 'Exhaust', 'Wipers/Lighting', 'Engine Mechanical', 'Driveline'
+  ];
+  const groups = [
+    'Filters & PCV', 'Tune-Up and Ignition', 'Spark Plugs', 'Air Filters', 'Oil Filters',
+    'Fuel Filters', 'Cabin Air Filters', 'PCV Valves', 'Ignition Coils', 'Wire Sets'
+  ];
+  const history = [
+    '2008 - CHEVROLET - SILVERADO 1500 - V8-325CID 5.3L FLEX FI VIN 0 LMG',
+    '2015 - TOYOTA - CAMRY - V6-207CID 3.5L FI VIN 2 2GRFE',
+    '2019 - FORD - F-150 - V8-302CID 5.0L FI VIN F COYOTE',
+    '2012 - HONDA - CR-V - L4-144CID 2.4L FI VIN 5 K24Z7'
+  ];
+  const activeEngine = 'V8-325cid 5.3L FLEX FI VIN 0 LMG';
+  const vehiclePath = '2008 - CHEVROLET - SILVERADO 1500 - V8-325CID 5.3L FLEX FI VIN 0 LMG';
+  const checkedCategories = new Set(['Ignition/Filters']);
+  const checkedGroups = new Set(['Filters & PCV', 'Tune-Up and Ignition', 'Spark Plugs']);
+%>
+
+<main class="dms-catalog" aria-label="DEMO DMS DX Catalog" style="margin:12px;">
+  <header class="dms-catalog__topbar">
+    <div class="dms-catalog__brand">
+      <span class="dms-catalog__mark" aria-hidden="true">DX</span>
+      <h1 class="dms-catalog__title">
+        DEMO DMS <span class="dms-catalog__title-accent">DX Catalog</span>
+      </h1>
+    </div>
+    <div class="dms-catalog__top-actions">
+      <a class="dms-catalog__back" href="/gm">← Dashboard</a>
+    </div>
+  </header>
+
+  <div class="dms-catalog__vehicle-stripe" aria-live="polite">
+    <span class="dms-catalog__vehicle-label">VEHICLE</span>
+    <span class="dms-catalog__vehicle-path" id="dms-vehicle-path"><%= vehiclePath %></span>
+  </div>
+
+  <div class="dms-catalog__body">
+    <aside class="dms-catalog__sidebar" aria-label="Catalog brands">
+      <% brands.forEach((brand, index) => { %>
+        <button
+          type="button"
+          class="dms-catalog__brand-btn<%= index === 0 ? ' is-active' : '' %>"
+          data-brand="<%= brand %>"
+          aria-pressed="<%= index === 0 ? 'true' : 'false' %>"
+        ><%= brand %></button>
+      <% }) %>
+    </aside>
+
+    <div class="dms-catalog__main">
+      <section class="dms-catalog__column" aria-label="Vehicle engine specifications">
+        <div class="dms-catalog__column-header">Vehicle / Engine</div>
+        <div class="dms-catalog__column-body">
+          <ul class="dms-catalog__engine-list">
+            <% engines.forEach((engine) => { %>
+              <li>
+                <button
+                  type="button"
+                  class="dms-catalog__engine-btn<%= engine === activeEngine ? ' is-active' : '' %>"
+                  data-engine="<%= engine %>"
+                  aria-pressed="<%= engine === activeEngine ? 'true' : 'false' %>"
+                ><%= engine %></button>
+              </li>
+            <% }) %>
+          </ul>
+        </div>
+      </section>
+
+      <section class="dms-catalog__column" aria-label="Part categories">
+        <div class="dms-catalog__column-header">Categories</div>
+        <div class="dms-catalog__column-body">
+          <ul class="dms-catalog__check-list">
+            <% categories.forEach((category) => { %>
+              <li>
+                <label class="dms-catalog__check-item">
+                  <input type="checkbox" name="category" value="<%= category %>" <%= checkedCategories.has(category) ? 'checked' : '' %> />
+                  <span><%= category %></span>
+                </label>
+              </li>
+            <% }) %>
+          </ul>
+        </div>
+      </section>
+
+      <section class="dms-catalog__column" aria-label="Part groups">
+        <div class="dms-catalog__column-header">Groups</div>
+        <div class="dms-catalog__column-body">
+          <ul class="dms-catalog__check-list">
+            <% groups.forEach((group) => { %>
+              <li>
+                <label class="dms-catalog__check-item">
+                  <input type="checkbox" name="group" value="<%= group %>" <%= checkedGroups.has(group) ? 'checked' : '' %> />
+                  <span><%= group %></span>
+                </label>
+              </li>
+            <% }) %>
+          </ul>
+        </div>
+      </section>
+
+      <button type="button" class="dms-catalog__go" id="dms-catalog-go" aria-label="Run catalog search">GO</button>
+    </div>
+  </div>
+
+  <footer class="dms-catalog__footer">
+    <div class="dms-catalog__query-row">
+      <div class="dms-catalog__query-module">
+        <label for="dms-vin-query">VIN #</label>
+        <input id="dms-vin-query" type="text" placeholder="Enter VIN" autocomplete="off" />
+        <button type="button" class="dms-catalog__query-action" data-query="vin">Search / Interchange</button>
+      </div>
+      <div class="dms-catalog__query-module">
+        <label for="dms-part-query">Part</label>
+        <input id="dms-part-query" type="text" placeholder="Part number" autocomplete="off" />
+        <button type="button" class="dms-catalog__query-action" data-query="part">Search / Interchange</button>
+      </div>
+      <div class="dms-catalog__query-module">
+        <label for="dms-description-query">Description</label>
+        <input id="dms-description-query" type="text" placeholder="Part description" autocomplete="off" />
+        <button type="button" class="dms-catalog__query-action" data-query="description">Search / Interchange</button>
+      </div>
+    </div>
+
+    <div class="dms-catalog__history">
+      <label for="dms-vehicle-history">Vehicle History</label>
+      <select id="dms-vehicle-history" aria-label="Vehicle history selector">
+        <% history.forEach((entry) => { %>
+          <option value="<%= entry %>"><%= entry %></option>
+        <% }) %>
+      </select>
+    </div>
+  </footer>
+</main>
+
+<script>
+(function () {
+  var pathEl = document.getElementById('dms-vehicle-path');
+  var brandButtons = Array.prototype.slice.call(document.querySelectorAll('.dms-catalog__brand-btn'));
+  var engineButtons = Array.prototype.slice.call(document.querySelectorAll('.dms-catalog__engine-btn'));
+
+  brandButtons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      brandButtons.forEach(function (other) {
+        other.classList.toggle('is-active', other === btn);
+        other.setAttribute('aria-pressed', other === btn ? 'true' : 'false');
+      });
+    });
+  });
+
+  engineButtons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      engineButtons.forEach(function (other) {
+        other.classList.toggle('is-active', other === btn);
+        other.setAttribute('aria-pressed', other === btn ? 'true' : 'false');
+      });
+      if (pathEl) {
+        pathEl.textContent = '2008 - CHEVROLET - SILVERADO 1500 - ' + String(btn.getAttribute('data-engine') || '').toUpperCase();
+      }
+    });
+  });
+
+  document.getElementById('dms-catalog-go').addEventListener('click', function () {
+    var brand = (document.querySelector('.dms-catalog__brand-btn.is-active') || {}).textContent || '';
+    var engine = (document.querySelector('.dms-catalog__engine-btn.is-active') || {}).textContent || '';
+    var cats = Array.prototype.map.call(document.querySelectorAll('input[name="category"]:checked'), function (el) { return el.value; });
+    var grps = Array.prototype.map.call(document.querySelectorAll('input[name="group"]:checked'), function (el) { return el.value; });
+    alert(['Catalog search ready', 'Brand: ' + brand.trim(), 'Engine: ' + engine.trim(), 'Categories: ' + (cats.join(', ') || '(none)'), 'Groups: ' + (grps.join(', ') || '(none)')].join('\n'));
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('.dms-catalog__query-action'), function (btn) {
+    btn.addEventListener('click', function () {
+      var kind = btn.getAttribute('data-query');
+      var inputId = kind === 'vin' ? 'dms-vin-query' : (kind === 'part' ? 'dms-part-query' : 'dms-description-query');
+      var value = String((document.getElementById(inputId) || {}).value || '').trim();
+      alert(value ? (kind.toUpperCase() + ' search / interchange: ' + value) : ('Enter a ' + kind + ' value to search or interchange.'));
+    });
+  });
+})();
+</script>
+
+<%- include('../partials/footer') %>

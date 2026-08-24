@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Create Parts Manager Account</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <%- include('../partials/back-button') %>
+  <main class="auth-shell">
+    <section class="auth-card">
+      <h1>PARTS MANAGER SIGN UP</h1>
+      <p class="auth-subtitle">Create a login account for parts inventory and database management.</p>
+
+      <% if (error) { %>
+        <p class="error"><%= error %></p>
+      <% } %>
+
+      <form method="post" action="/auth/register-parts-manager" class="form auth-form">
+        <label>
+          Username
+          <input type="text" name="username" value="<%= username %>" autocomplete="username" required />
+        </label>
+        <label>
+          Password
+          <input type="password" name="password" autocomplete="new-password" minlength="6" required />
+        </label>
+        <label>
+          Confirm Password
+          <input type="password" name="confirm_password" autocomplete="new-password" minlength="6" required />
+        </label>
+        <button type="submit">Create Parts Manager Account</button>
+      </form>
+
+      <p class="auth-hint">Back to <a href="/auth/login?level=parts_manager">Parts Manager login</a>.</p>
+      <p class="auth-hint">Need SR level? <a href="/auth/register">Create SR account</a>.</p>
+      <p class="auth-hint">Need Technician level? <a href="/auth/register-technician">Create Technician account</a>.</p>
+      <p class="auth-hint">Need STM level? <a href="/auth/register-stm">Create STM account</a>.</p>
+      <p class="auth-hint">Need GM level? <a href="/auth/register-gm">Create GM account</a>.</p>
+      <p class="auth-hint">Need Admin level? <a href="/auth/register-admin">Create Admin account</a>.</p>
+      <p class="auth-hint">Need HR level? <a href="/auth/register-hr">Create HR account</a>.</p>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,239 @@
+<%- include('../partials/header') %>
+
+<%
+  function fmtMoney(value) {
+    return 'P ' + Number(value || 0).toFixed(2);
+  }
+  function fmtPct(value) {
+    return Number(value || 0).toFixed(1) + '%';
+  }
+  function fmtHours(value) {
+    return Number(value || 0).toFixed(2);
+  }
+%>
+
+<section class="dashboard-shell gm-shell">
+  <% const isStmOwner = currentUser && String(currentUser.role || '').toLowerCase() === 'service_technical_manager'; %>
+  <% if (isStmOwner) { %>
+  <div class="stm-action-toolbar" aria-label="STM workspace actions">
+    <button id="btnRestartTunnel" type="button" class="px-4 py-2 bg-amber-700 hover:bg-amber-600 text-white rounded font-medium transition shadow flex items-center gap-2">
+      <span>🔄</span> Restart Network Tunnel
+    </button>
+  </div>
+  <% } %>
+  <div class="dashboard-title gm-title role-dashboard-title"><span>STM</span> <span class="role-dashboard-title__suffix">Dashboard</span></div>
+  <p class="dashboard-note" style="margin-bottom:10px;">Period: <strong><%= metrics.period.monthLabel %></strong> | Standard Hourly Rate: <strong><%= fmtMoney(metrics.period.hourlyRate) %></strong></p>
+
+  <div class="sa-grid sa-grid--4">
+    <article class="gm-kpi-card sa-card">
+      <div class="sa-card-title">TRANSACTIONS</div>
+      <div class="sa-card-body">
+        <p class="sa-line"><strong>Work Orders:</strong> [<%= workOrdersCount %>]</p>
+        <p class="sa-line">Customers: [<%= customersCount %>] | Vehicles: [<%= vehiclesCount %>]</p>
+      </div>
+      <div class="sa-open-row">
+        <a class="btn" href="/work-order-transactions" aria-label="Open Transactions">OPEN</a>
+      </div>
+    </article>
+
+    <article class="gm-kpi-card sa-card">
+      <div class="sa-card-title">PARTS</div>
+      <div class="sa-card-body">
+        <p class="sa-line">Transaction &amp; Record Center</p>
+        <p class="sa-line">Real-time Stock Levels</p>
+      </div>
+      <div class="sa-open-row">
+        <a class="btn" href="/parts">ACCESS DATABASE</a>
+      </div>
+    </article>
+
+    <article class="gm-kpi-card sa-card">
+      <div class="sa-card-title">HELPER</div>
+      <div class="sa-card-body">
+        <p class="sa-line">Search Parts, Customer Info, Technicians, &amp; App Data.</p>
+        <p class="sa-line">Integrated Helpdesk &amp; KB.</p>
+      </div>
+      <div class="sa-open-row">
+        <a class="btn" href="/helper">SEARCH/OPEN</a>
+      </div>
+    </article>
+
+    <article class="gm-kpi-card sa-card">
+      <div class="sa-card-title">FTE</div>
+      <div class="sa-card-body">
+        <p class="sa-line">Facility, Tool &amp; Equipment Tracking</p>
+        <p class="sa-line">Log repairs, PM, and expense issues.</p>
+      </div>
+      <div class="sa-open-row">
+        <a class="btn" href="/gm/fte?log=1" aria-label="Log FTE Issue">+ LOG FTE ISSUE</a>
+      </div>
+    </article>
+  </div>
+
+  <div class="gm-kpi-grid">
+    <article class="gm-kpi-card"><p class="gm-kpi-label">Technician Productivity</p><h2 class="gm-kpi-value"><%= fmtPct(metrics.technicianLabor.technicianProductivityPct) %></h2></article>
+    <article class="gm-kpi-card"><p class="gm-kpi-label">Technician Efficiency</p><h2 class="gm-kpi-value"><%= fmtPct(metrics.technicianLabor.technicianEfficiencyPct) %></h2></article>
+    <article class="gm-kpi-card"><p class="gm-kpi-label">Technician Utilization</p><h2 class="gm-kpi-value"><%= fmtPct(metrics.technicianLabor.technicianUtilizationPct) %></h2></article>
+    <article class="gm-kpi-card"><p class="gm-kpi-label">Effective Labor Rate (ELR)</p><h2 class="gm-kpi-value"><%= fmtMoney(metrics.technicianLabor.effectiveLaborRate) %></h2></article>
+    <article class="gm-kpi-card"><p class="gm-kpi-label">Average Repair Order (ARO)</p><h2 class="gm-kpi-value"><%= fmtMoney(metrics.financial.averageRepairOrderValue) %></h2></article>
+    <article class="gm-kpi-card"><p class="gm-kpi-label">Hours Sold Per RO</p><h2 class="gm-kpi-value"><%= fmtHours(metrics.financial.hoursSoldPerRepairOrder) %></h2></article>
+    <article class="gm-kpi-card"><p class="gm-kpi-label">Avg Service TAT (Hours)</p><h2 class="gm-kpi-value"><%= fmtHours(metrics.operations.serviceTurnaroundHoursAvg) %></h2></article>
+    <article class="gm-kpi-card"><p class="gm-kpi-label">RO Volume (MTD)</p><h2 class="gm-kpi-value"><%= metrics.operations.carCountRoVolume %></h2></article>
+  </div>
+
+  <div class="gm-grid-2">
+    <article class="dashboard-card gm-panel">
+      <div class="dashboard-card__header gm-panel-header">Technician &amp; Labor Efficiency Metrics</div>
+      <div class="table-scroll">
+        <table class="list gm-table">
+          <tbody>
+            <tr><th>Active Technicians</th><td><%= metrics.technicianLabor.activeTechnicians %></td></tr>
+            <tr><th>Available Hours (MTD)</th><td><%= fmtHours(metrics.technicianLabor.availableHours) %></td></tr>
+            <tr><th>Actual Hours Worked (MTD)</th><td><%= fmtHours(metrics.technicianLabor.actualHoursWorked) %></td></tr>
+            <tr><th>Billed Hours (MTD)</th><td><%= fmtHours(metrics.technicianLabor.billedHours) %></td></tr>
+            <tr><th>Technician Productivity</th><td><%= fmtPct(metrics.technicianLabor.technicianProductivityPct) %></td></tr>
+            <tr><th>Technician Efficiency</th><td><%= fmtPct(metrics.technicianLabor.technicianEfficiencyPct) %></td></tr>
+            <tr><th>Technician Utilization Rate</th><td><%= fmtPct(metrics.technicianLabor.technicianUtilizationPct) %></td></tr>
+            <tr><th>Effective Labor Rate (ELR)</th><td><%= fmtMoney(metrics.technicianLabor.effectiveLaborRate) %></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="dashboard-note dashboard-note--small">Productivity uses MTD actual/proxy worked hours against available hours (8h/day x active technicians).</p>
+    </article>
+
+    <article class="dashboard-card gm-panel">
+      <div class="dashboard-card__header gm-panel-header">Financial &amp; Sales Performance</div>
+      <div class="table-scroll">
+        <table class="list gm-table">
+          <tbody>
+            <tr><th>Total Revenue (MTD)</th><td><%= fmtMoney(metrics.financial.totalRevenue) %></td></tr>
+            <tr><th>Labor Revenue (MTD)</th><td><%= fmtMoney(metrics.financial.laborRevenue) %></td></tr>
+            <tr><th>Parts Revenue (MTD)</th><td><%= fmtMoney(metrics.financial.partsRevenue) %></td></tr>
+            <tr><th>Average Repair Order (ARO)</th><td><%= fmtMoney(metrics.financial.averageRepairOrderValue) %></td></tr>
+            <tr><th>Hours Sold per RO (H/RO)</th><td><%= fmtHours(metrics.financial.hoursSoldPerRepairOrder) %></td></tr>
+            <tr><th>Labor-to-Parts Ratio</th><td><%= metrics.financial.laborToPartsRatio == null ? 'N/A' : Number(metrics.financial.laborToPartsRatio).toFixed(2) + ' : 1' %></td></tr>
+            <tr><th>Gross Profit Margin (Labor)</th><td>N/A (requires labor cost/wage data)</td></tr>
+            <tr><th>Gross Profit Margin (Parts)</th><td><%= metrics.financial.partsGrossProfitMarginPct == null ? 'N/A' : fmtPct(metrics.financial.partsGrossProfitMarginPct) %></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </article>
+  </div>
+
+  <div class="gm-grid-2">
+    <article class="dashboard-card gm-panel">
+      <div class="dashboard-card__header gm-panel-header">Operational &amp; Workshop Flow Metrics</div>
+      <div class="table-scroll">
+        <table class="list gm-table">
+          <tbody>
+            <tr><th>Service Turnaround Time (Avg Hours)</th><td><%= fmtHours(metrics.operations.serviceTurnaroundHoursAvg) %></td></tr>
+            <tr><th>TAT Sample Size (Closed RO)</th><td><%= metrics.operations.serviceTurnaroundSampleSize %></td></tr>
+            <tr><th>Car Count / RO Volume (MTD)</th><td><%= metrics.operations.carCountRoVolume %></td></tr>
+            <tr><th>Open RO (MTD)</th><td><%= metrics.operations.openRoCount %></td></tr>
+            <tr><th>Closed RO (MTD)</th><td><%= metrics.operations.closedRoCount %></td></tr>
+            <tr><th>Parts Inventory Turnover Rate</th><td><%= Number(metrics.operations.partsInventoryTurnoverRate || 0).toFixed(2) %></td></tr>
+            <tr><th>Parts Sold Qty (MTD)</th><td><%= Number(metrics.operations.soldQtyMtd || 0).toFixed(0) %></td></tr>
+            <tr><th>Average Inventory Qty (Proxy)</th><td><%= Number(metrics.operations.averageInventoryQty || 0).toFixed(2) %></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="dashboard-card gm-panel">
+      <div class="dashboard-card__header gm-panel-header">Quality &amp; Customer Satisfaction</div>
+      <div class="table-scroll">
+        <table class="list gm-table">
+          <tbody>
+            <tr><th>First-Time Fix Rate (FTFR)</th><td><%= fmtPct(metrics.quality.firstTimeFixRatePct) %></td></tr>
+            <tr><th>Comeback Rate</th><td><%= fmtPct(metrics.quality.comebackRatePct) %></td></tr>
+            <tr><th>Comeback Count</th><td><%= metrics.quality.comebackCount %></td></tr>
+            <tr><th>Customer Retention Rate</th><td><%= fmtPct(metrics.quality.customerRetentionRatePct) %></td></tr>
+            <tr><th>NPS / CSI</th><td><%= metrics.quality.npsOrCsi == null ? 'N/A (survey data not yet captured)' : metrics.quality.npsOrCsi %></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="dashboard-note dashboard-note--small">Comeback/FTFR uses closed and active MTD repair orders, a 30-day same-customer-and-vehicle return heuristic, and Back Job flags from work orders and transaction database records.</p>
+    </article>
+  </div>
+
+  <article class="dashboard-card gm-panel">
+    <div class="dashboard-card__header gm-panel-header">SR-to-Technician Assignment Delay</div>
+    <p class="dashboard-note">Average time from work order creation to technician assignment: <strong><%= Number(metrics.assignment.averageMinutesToAssignTechnician || 0).toFixed(1) %> minutes</strong></p>
+    <p class="dashboard-note">Target: <strong><%= metrics.period.assignTargetMinutes %> minutes</strong> | Delayed: <strong><%= metrics.assignment.delayedCount %></strong> / <%= metrics.assignment.sampleSize %></p>
+
+    <% if (!metrics.assignment.rows.length) { %>
+      <p class="dashboard-note">No assignment samples available yet for this month.</p>
+    <% } else { %>
+      <div class="table-scroll">
+        <table class="list gm-table">
+          <thead>
+            <tr>
+              <th>Work Order</th>
+              <th>SR</th>
+              <th>Technician</th>
+              <th>Minutes to Assign</th>
+              <th>Within Target</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% metrics.assignment.rows.forEach((row) => { %>
+              <tr>
+                <td><%= row.work_order_number %></td>
+                <td><%= row.service_advisor %></td>
+                <td><%= row.technician %></td>
+                <td><%= row.minutes_to_assign %></td>
+                <td><%= row.within_target ? 'YES' : 'NO' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </article>
+</section>
+
+<script>
+(function setupRestartTunnelButton() {
+  const button = document.getElementById('btnRestartTunnel');
+  if (!button) return;
+
+  const idleHtml = button.innerHTML;
+
+  button.addEventListener('click', async function onRestartTunnelClick(event) {
+    event.preventDefault();
+    if (button.disabled) return;
+
+    const confirmed = window.confirm(
+      'Confirm tunnel recycle? Remote branch users will lose connectivity for roughly 5 to 10 seconds.'
+    );
+    if (!confirmed) return;
+
+    button.disabled = true;
+    button.textContent = 'Recycling Tunnel... Please Wait.';
+
+    let notice = 'Tunnel recycle failed. Try again or check the server process.';
+    try {
+      const response = await fetch('/api/admin/restart-tunnel', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      });
+      const payload = await response.json().catch(function () { return {}; });
+      if (response.ok) {
+        notice = 'Tunnel command dispatched successfully.';
+      } else if (payload && (payload.message || payload.error)) {
+        notice = String(payload.message || payload.error);
+      }
+    } catch (error) {
+      notice = 'Tunnel recycle failed. Try again or check the server process.';
+    }
+
+    window.setTimeout(function restoreTunnelButton() {
+      button.disabled = false;
+      button.innerHTML = idleHtml;
+      window.alert(notice);
+    }, 5000);
+  });
+})();
+</script>
+<%- include('../partials/footer') %>

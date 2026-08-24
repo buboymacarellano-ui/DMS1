@@ -1,0 +1,104 @@
+<%- include('../partials/header') %>
+
+<%
+const columns = [
+  { header: 'Transaction Date', key: 'Transaction date' },
+  { header: 'Branch', key: 'Branch' },
+  { header: 'Work Order #', key: 'work order Number' },
+  { header: 'Customer Name', key: 'Customer name' },
+  { header: 'Tel #', key: 'Telephone number' },
+  { header: 'Car Brand', key: 'Car Brand' },
+  { header: 'Model', key: 'Model' },
+  { header: 'Year', key: 'Year' },
+  { header: 'SA', key: 'Service Advice Advisor' },
+  { header: 'Technician', key: 'Tecnician' },
+];
+for (let i = 1; i <= 15; i++) columns.push({ header: `Svc Req ${i}`, key: `Service${i}` });
+for (let i = 1; i <= 15; i++) columns.push({ header: `Svc Req'd ${i}`, key: `Service Required${i}` });
+for (let i = 1; i <= 15; i++) columns.push({ header: `Labor ${i}`, key: `Labor${i}` });
+for (let i = 1; i <= 50; i++) columns.push({ header: `Part ${i}`, key: `Part${i}` });
+for (let i = 1; i <= 50; i++) columns.push({ header: `Part Price ${i}`, key: `Parts Price${i}` });
+const totalColumns = [
+  { header: 'Total Labor', key: 'Total Labor' },
+  { header: 'Total Parts', key: 'Total Parts' },
+  { header: 'Grand Total', key: 'Grand Total' },
+  { header: 'VAT', key: 'Vat' },
+  { header: 'Total w/ VAT', key: 'Totalwith Vat' },
+  { header: 'Time In', key: 'TimeIn' },
+  { header: 'Time Out', key: 'TimeOut' },
+];
+totalColumns.forEach(c => columns.push(c));
+%>
+
+<section class="dashboard-shell admin-shell">
+  <div class="dashboard-title admin-title">Transaction Database</div>
+
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+    <a class="btn" href="/admin">← Back to Admin</a>
+    <span class="dashboard-note admin-note" style="margin:0;">Total Records: <strong><%= records.length %></strong></span>
+    <button type="button" class="btn" onclick="document.getElementById('import-csv-panel').style.display=document.getElementById('import-csv-panel').style.display==='none'?'block':'none'" style="background:#1a6bbf;">Import Data CSV</button>
+    <a class="btn" href="/admin/transaction-database/export.csv" style="background:#1f8f53;margin-left:auto;">Export CSV</a>
+  </div>
+
+  <% if (importError) { %>
+    <p style="color:#ff6b6b;font-weight:700;margin-bottom:10px;"><%= importError %></p>
+  <% } %>
+  <% if (importSuccess) { %>
+    <p style="color:#6bff91;font-weight:700;margin-bottom:10px;"><%= importSuccess %></p>
+  <% } %>
+
+  <div id="import-csv-panel" style="display:none;background:#1e2128;border:1px solid rgba(255,255,255,0.15);padding:16px;margin-bottom:16px;">
+    <div class="dashboard-card__header admin-panel-header" style="margin-bottom:10px;">Import CSV — Merge with Existing Database</div>
+    <p class="dashboard-note admin-note">Records will be <strong>validated</strong> before saving. A preview will show valid and invalid rows so you can confirm before committing.</p>
+    <p class="dashboard-note admin-note">Required fields: <strong>work order Number</strong> (7 digits), <strong>Transaction date</strong>, <strong>Customer name</strong>. Duplicates are auto-skipped.</p>
+    <form method="post" action="/admin/transaction-database/preview-csv" class="form admin-form" id="tx-db-import-form">
+      <label>Choose CSV File
+        <input type="file" id="tx-db-csv-file" accept="text/csv,.csv" />
+      </label>
+      <label>CSV Payload
+        <textarea name="import_csv" id="tx-db-csv-textarea" rows="8" spellcheck="false" required placeholder="Paste CSV here or choose a file above..."></textarea>
+      </label>
+      <button type="submit" style="background:#1a6bbf;">Preview &amp; Validate</button>
+    </form>
+  </div>
+
+  <div class="table-scroll" style="overflow-x:auto;max-height:75vh;overflow-y:auto;">
+    <table class="list" style="min-width:max-content;font-size:12px;">
+      <thead style="position:sticky;top:0;z-index:5;">
+        <tr>
+          <th style="white-space:nowrap;">#</th>
+          <% columns.forEach(col => { %>
+            <th style="white-space:nowrap;"><%= col.header %></th>
+          <% }) %>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!records.length) { %>
+          <tr><td colspan="<%= columns.length + 1 %>" style="text-align:center;padding:20px;">No transaction records found.</td></tr>
+        <% } %>
+        <% records.forEach((rec, idx) => { %>
+          <tr>
+            <td><%= idx + 1 %></td>
+            <% columns.forEach(col => { %>
+              <td style="white-space:nowrap;"><%= rec[col.key] != null ? rec[col.key] : '' %></td>
+            <% }) %>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>
+<script>
+  const fileInput = document.getElementById('tx-db-csv-file');
+  if (fileInput) {
+    fileInput.addEventListener('change', function () {
+      const file = this.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => { document.getElementById('tx-db-csv-textarea').value = e.target.result; };
+      reader.readAsText(file, 'utf-8');
+    });
+  }
+</script>

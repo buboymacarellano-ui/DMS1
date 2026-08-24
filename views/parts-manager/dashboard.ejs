@@ -1,0 +1,144 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell pm-shell" id="pm-dashboard">
+  <div class="dashboard-title admin-title role-dashboard-title"><span>Parts Manager</span> <span class="role-dashboard-title__suffix">Dashboard</span></div>
+  <%- include('./_nav') %>
+
+  <div class="pm-toolbar">
+    <label class="pm-search" for="pm-global-search">
+      <span class="pm-search__label">Quick Lookup</span>
+      <input id="pm-global-search" type="search" placeholder="Filter by part number or supplier..." autocomplete="off" />
+    </label>
+    <p id="pm-filter-status" class="dashboard-note admin-note pm-filter-status" aria-live="polite"></p>
+  </div>
+
+  <div class="pm-grid">
+    <article class="dashboard-card admin-panel pm-panel" data-pm-section="low-stock">
+      <div class="dashboard-card__header admin-panel-header pm-panel-header">
+        <span>Low Stock Alerts</span>
+        <span id="pm-low-stock-count" class="pm-badge"><%= overview.lowStockAlerts.length %></span>
+      </div>
+      <div class="table-scroll pm-table-wrap">
+        <table class="list pm-data-table" id="pm-low-stock-table">
+          <thead><tr><th>Part #</th><th>Name</th><th>Supplier</th><th>Qty</th><th></th></tr></thead>
+          <tbody>
+            <% if (!overview.lowStockAlerts.length) { %>
+              <tr class="pm-empty-row"><td colspan="5">No low-stock alerts.</td></tr>
+            <% } %>
+            <% overview.lowStockAlerts.forEach((row) => { %>
+              <tr class="pm-data-row" data-part="<%= row.part_number %>" data-supplier="<%= row.supplier || '' %>">
+                <td><%= row.part_number %></td>
+                <td><%= row.part_name || '-' %></td>
+                <td><%= row.supplier || '-' %></td>
+                <td class="pm-qty-cell" data-part-qty="<%= row.part_number %>"><%= row.qty %></td>
+                <td>
+                  <button type="button" class="btn pm-btn-adjust" data-part="<%= row.part_number %>" data-name="<%= row.part_name || '' %>" data-sub-id="<%= row.sub_id || '' %>" data-supplier="<%= row.supplier || '' %>" data-qty="<%= row.qty %>">Adjust</button>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="dashboard-card admin-panel pm-panel" data-pm-section="pending-pos">
+      <div class="dashboard-card__header admin-panel-header pm-panel-header">
+        <span>Pending POs</span>
+        <span id="pm-pending-po-count" class="pm-badge"><%= overview.pendingPOs.length %></span>
+      </div>
+      <div class="table-scroll pm-table-wrap">
+        <table class="list pm-data-table" id="pm-pending-po-table">
+          <thead><tr><th>Supplier</th><th>Branch</th><th>Status</th><th>Notes</th></tr></thead>
+          <tbody>
+            <% if (!overview.pendingPOs.length) { %>
+              <tr class="pm-empty-row"><td colspan="4">No pending purchase orders.</td></tr>
+            <% } %>
+            <% overview.pendingPOs.forEach((po) => { %>
+              <tr class="pm-data-row" data-part="" data-supplier="<%= po.supplier || '' %>">
+                <td><%= po.supplier || '-' %></td>
+                <td><%= po.branch || '-' %></td>
+                <td><span class="pm-status pm-status--pending"><%= po.status %></span></td>
+                <td><%= po.notes || '-' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="dashboard-card admin-panel pm-panel pm-panel--wide" data-pm-section="mechanic-requests">
+      <div class="dashboard-card__header admin-panel-header pm-panel-header">
+        <span>Branch Parts Requests</span>
+        <span id="pm-requests-count" class="pm-badge pm-badge--alert"><%= overview.pendingPartsRequests.length %></span>
+      </div>
+      <div class="table-scroll pm-table-wrap">
+        <table class="list pm-data-table" id="pm-requests-table">
+          <thead><tr><th>Requesting Branch</th><th>WO #</th><th>Part #</th><th>Part Name</th><th>Sub-ID</th><th>Supplier</th><th>Qty</th><th>Fulfilling Branch</th><th>Requested By</th><th>Actions</th></tr></thead>
+          <tbody id="pm-requests-body">
+            <% if (!overview.pendingPartsRequests.length) { %>
+              <tr class="pm-empty-row"><td colspan="10">No pending branch requests.</td></tr>
+            <% } %>
+            <% overview.pendingPartsRequests.forEach((req) => { %>
+              <% const woRaw = String(req.work_order_number || req.work_order_id || '').trim(); %>
+              <tr class="pm-data-row pm-request-row" data-request-id="<%= req.id %>" data-part="<%= req.part_number || '' %>" data-supplier="<%= req.supplier || '' %>">
+                <td><%= req.requesting_branch || req.branch || '-' %></td>
+                <td class="pm-wo-cell<%= woRaw ? '' : ' pm-wo-cell--empty' %>"><%= woRaw || '—' %></td>
+                <td><%= req.part_number || '-' %></td>
+                <td><%= req.part_name || '-' %></td>
+                <td><%= req.sub_id || '-' %></td>
+                <td><%= req.supplier || '-' %></td>
+                <td><%= req.qty != null ? req.qty : '-' %></td>
+                <td><%= req.branch || '-' %></td>
+                <td><%= req.requested_by || req.editor || '-' %></td>
+                <td class="pm-action-cell">
+                  <button type="button" class="btn pm-btn-review" data-id="<%= req.id %>">Review</button>
+                  <button type="button" class="btn pm-btn-approve" data-id="<%= req.id %>">Approve</button>
+                  <button type="button" class="btn pm-btn-reject" data-id="<%= req.id %>">Reject</button>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="dashboard-card admin-panel pm-panel pm-panel--wide" data-pm-section="recent-movements">
+      <div class="dashboard-card__header admin-panel-header pm-panel-header">
+        <span>Recent Movements</span>
+        <span id="pm-movements-count" class="pm-badge"><%= overview.recentMovements.length %></span>
+      </div>
+      <div class="table-scroll pm-table-wrap">
+        <table class="list pm-data-table" id="pm-movements-table">
+          <thead><tr><th>Date</th><th>Type</th><th>Part #</th><th>Supplier</th><th>Qty</th><th>Editor</th><th></th></tr></thead>
+          <tbody>
+            <% if (!overview.recentMovements.length) { %>
+              <tr class="pm-empty-row"><td colspan="7">No recent movements.</td></tr>
+            <% } %>
+            <% overview.recentMovements.forEach((row) => { %>
+              <tr class="pm-data-row" data-part="<%= row.part_number || '' %>" data-supplier="<%= row.supplier || '' %>">
+                <td><%= row.transaction_date || '' %></td>
+                <td><%= ({ NewEntry: 'New Stock', Restock: 'Stock' })[row.transaction_type] || row.transaction_type || '' %></td>
+                <td><%= row.part_number || '' %></td>
+                <td><%= row.supplier || '-' %></td>
+                <td><%= row.qty != null ? row.qty : '' %></td>
+                <td><%= row.editor || '' %></td>
+                <td>
+                  <button type="button" class="btn pm-btn-adjust" data-part="<%= row.part_number || '' %>" data-name="<%= row.part_name || '' %>" data-sub-id="<%= row.sub_id || '' %>" data-supplier="<%= row.supplier || '' %>" data-qty="">Adjust</button>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </article>
+  </div>
+</section>
+
+<%- include('./_stock-modal') %>
+<%- include('./_review-modal') %>
+
+<script>
+  window.__PM_OVERVIEW__ = <%- JSON.stringify(overview) %>;
+</script>
+<script src="/js/parts-manager-dashboard.js"></script>
+<%- include('../partials/footer') %>

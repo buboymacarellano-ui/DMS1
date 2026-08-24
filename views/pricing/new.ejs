@@ -1,0 +1,98 @@
+<%- include('../partials/header') %>
+
+<%
+  const hourlyLaborRate = Number((settings && settings.hourly_rate) || 0);
+  const laborRules = Array.isArray(typeof pricing_rules !== 'undefined' ? pricing_rules : null) ? pricing_rules : [];
+  function laborPriceFor(rule) {
+    const hours = Number(rule && rule.hours || 0);
+    return hours * hourlyLaborRate;
+  }
+  function unitTypeLabel(value) {
+    const key = String(value || '').trim();
+    const labels = {
+      small: 'Small',
+      medium: 'Medium',
+      large: 'Large',
+      compactSuv: 'Compact SUV',
+      vanSuvPickup: 'SUV / Van / Pickup',
+      truck: 'Truck',
+      equipment: 'Equipment',
+      facility: 'Facility',
+      tools: 'Tools',
+    };
+    return labels[key] || key || '—';
+  }
+  function createdBranchLabel(rule) {
+    return String(rule && rule.created_branch || '').trim() || '—';
+  }
+%>
+
+<section class="labor-charge-page">
+  <h2>Create Labor Charge</h2>
+
+  <form method="post" action="/pricing/new" class="form">
+    <label>Unit Type
+      <select name="vehicle_type" required>
+        <option value="">--select--</option>
+        <option value="small">Small</option>
+        <option value="medium">Medium</option>
+        <option value="large">Large</option>
+        <option value="compactSuv">Compact SUV</option>
+        <option value="vanSuvPickup">SUV / Van / Pickup</option>
+        <option value="truck">Truck</option>
+        <option value="equipment">Equipment</option>
+        <option value="facility">Facility</option>
+        <option value="tools">Tools</option>
+      </select>
+    </label>
+    <small>Car unit types create all 6 vehicle sizes. Hours move 10% left/right from the type you pick. Equipment, Facility, and Tools stay as one line.</small>
+    <label>Service Type <input name="service_type" required></label>
+    <label>Service Hours <input name="hours" type="number" step="0.01" min="0" required></label>
+    <label>Price <input name="price" type="number" step="0.01" min="0" required></label>
+    <button type="submit">Create</button>
+    <a href="/work-order-transactions">Cancel</a>
+  </form>
+
+  <article class="dashboard-card labor-charge-db" id="labor-pricing-db">
+    <div class="dashboard-card__header admin-panel-header">Central Labor Pricing Database</div>
+    <p class="dashboard-note">Live for every branch. A charge created at Branch 1 is immediately available to Branch 2, Branch 4, and all other branches on work order service selection.</p>
+    <p class="dashboard-note"><strong><%= laborRules.length %></strong> labor price row<%= laborRules.length === 1 ? '' : 's' %> · Hourly rate ₱<%= hourlyLaborRate.toFixed(2) %></p>
+    <div class="table-scroll labor-charge-db__scroll">
+      <table class="list">
+        <thead>
+          <tr>
+            <th>Created Branch</th>
+            <th>Unit Type</th>
+            <th>Service Type</th>
+            <th>Service Hours</th>
+            <th>Hourly/Labor/Rate</th>
+            <th>Labor Price</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% laborRules.forEach((rule) => { %>
+            <tr>
+              <td><%= createdBranchLabel(rule) %></td>
+              <td><%= unitTypeLabel(rule.vehicle_type) %></td>
+              <td><%= rule.service_type %></td>
+              <td><%= rule.hours %></td>
+              <td>₱<%= hourlyLaborRate.toFixed(2) %></td>
+              <td>₱<%= laborPriceFor(rule).toFixed(2) %></td>
+              <td class="actions">
+                <a class="btn" href="/pricing/<%= rule.id %>/edit">Edit</a>
+              </td>
+            </tr>
+          <% }) %>
+          <% if (!laborRules.length) { %>
+            <tr>
+              <td colspan="7">No labor pricing created yet. New charges appear here for all branches as soon as they are saved.</td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+
+<%- include('../partials/footer') %>

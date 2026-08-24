@@ -1,0 +1,140 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell">
+  <div class="dashboard-title admin-title">Employee Database — Edit Entry</div>
+
+  <% if (error) { %><p style="color:#ff6b6b;font-weight:700;margin-bottom:10px;"><%= error %></p><% } %>
+  <% if (success) { %><p style="color:#6bff91;font-weight:700;margin-bottom:10px;"><%= success %></p><% } %>
+
+  <article class="dashboard-card admin-panel" style="max-width:980px;">
+    <form method="post" action="/employees/<%= employee.id %>/edit" class="form admin-form">
+      <div class="employee-grid">
+        <section class="employee-pane">
+          <h3>1. Primary Identification & Core Profile</h3>
+          <label>Employee ID <input name="employee_id" value="<%= employee.employee_id || '' %>" required></label>
+          <label>First Name <input name="first_name" value="<%= employee.first_name || '' %>" required></label>
+          <label>Middle Name / Initial <input name="middle_name" value="<%= employee.middle_name || '' %>"></label>
+          <label>Last Name <input name="last_name" value="<%= employee.last_name || '' %>" required></label>
+          <label>Preferred Name / Display Name <input name="preferred_name" value="<%= employee.preferred_name || '' %>"></label>
+          <label>National Identification Number <input name="national_id" value="<%= employee.national_id || '' %>"></label>
+          <label>Date of Birth <input type="date" name="date_of_birth" value="<%= employee.date_of_birth || '' %>"></label>
+          <label>Gender Identity <input name="gender_identity" value="<%= employee.gender_identity || '' %>"></label>
+        </section>
+
+        <section class="employee-pane">
+          <h3>2. Contact Information</h3>
+          <label>Work Email Address <input type="email" name="work_email" value="<%= employee.work_email || '' %>"></label>
+          <label>Personal Email Address <input type="email" name="personal_email" value="<%= employee.personal_email || '' %>"></label>
+          <label>Work Phone / Extension <input name="work_phone" value="<%= employee.work_phone || '' %>"></label>
+          <label>Personal Phone Number <input name="personal_phone" value="<%= employee.personal_phone || '' %>"></label>
+          <label>Residential Street Address <input name="residential_address" value="<%= employee.residential_address || '' %>"></label>
+          <label>City <input name="city" value="<%= employee.city || '' %>"></label>
+          <label>State / Province <input name="state_province" value="<%= employee.state_province || '' %>"></label>
+          <label>Postal / ZIP Code <input name="postal_code" value="<%= employee.postal_code || '' %>"></label>
+          <label>Country <input name="country" value="<%= employee.country || '' %>"></label>
+          <label>Emergency Contact Name <input name="emergency_contact_name" value="<%= employee.emergency_contact_name || '' %>"></label>
+          <label>Emergency Contact Relationship <input name="emergency_contact_relationship" value="<%= employee.emergency_contact_relationship || '' %>"></label>
+          <label>Emergency Contact Phone <input name="emergency_contact_phone" value="<%= employee.emergency_contact_phone || '' %>"></label>
+        </section>
+
+        <section class="employee-pane">
+          <h3>3. Employment & Job Placement Details</h3>
+          <label>Employment Status
+            <select name="employment_status" required>
+              <% statuses.forEach((status) => { %>
+                <option value="<%= status %>" <%= employee.employment_status === status ? 'selected' : '' %>><%= status %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>Employment Type
+            <select name="employment_type" required>
+              <% types.forEach((type) => { %>
+                <option value="<%= type %>" <%= employee.employment_type === type ? 'selected' : '' %>><%= type %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>Hire Date / Start Date <input type="date" name="hire_date" value="<%= employee.hire_date || '' %>"></label>
+          <label>Adjusted Service Date <input type="date" name="adjusted_service_date" value="<%= employee.adjusted_service_date || '' %>"></label>
+          <label>Termination Date <input type="date" name="termination_date" value="<%= employee.termination_date || '' %>"></label>
+          <label>Termination Reason
+            <select name="termination_reason">
+              <option value="">-- select --</option>
+              <% terminationReasons.forEach((reason) => { %>
+                <option value="<%= reason %>" <%= employee.termination_reason === reason ? 'selected' : '' %>><%= reason %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>Job Title <input name="job_title" value="<%= employee.job_title || '' %>"></label>
+          <label>Job Code / Role ID <input name="job_code" value="<%= employee.job_code || '' %>"></label>
+          <label>Department ID / Name <input name="department_id_name" value="<%= employee.department_id_name || '' %>"></label>
+          <label>Business Unit / Division <input name="business_unit_division" value="<%= employee.business_unit_division || '' %>"></label>
+          <label>Work Location / Branch ID <input name="work_location_branch_id" value="<%= employee.work_location_branch_id || '' %>"></label>
+          <label>Work Mode
+            <select name="work_mode">
+              <option value="">-- select --</option>
+              <% workModes.forEach((mode) => { %>
+                <option value="<%= mode %>" <%= employee.work_mode === mode ? 'selected' : '' %>><%= mode %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>Manager / Supervisor Name <input name="manager_name" value="<%= employee.manager_name || '' %>"></label>
+          <label>Manager Employee ID <input name="manager_employee_id" value="<%= employee.manager_employee_id || '' %>"></label>
+        </section>
+
+        <section class="employee-pane">
+          <h3>4. Compensation, Payroll & Tax</h3>
+          <label>Pay Frequency
+            <select name="pay_frequency">
+              <option value="">-- select --</option>
+              <% payFrequencies.forEach((freq) => { %>
+                <option value="<%= freq %>" <%= employee.pay_frequency === freq ? 'selected' : '' %>><%= freq %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>Pay Structure
+            <select name="pay_structure">
+              <option value="">-- select --</option>
+              <% payStructures.forEach((structure) => { %>
+                <option value="<%= structure %>" <%= employee.pay_structure === structure ? 'selected' : '' %>><%= structure %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>Base Salary / Pay Rate <input type="number" step="0.01" min="0" name="base_salary_pay_rate" value="<%= employee.base_salary_pay_rate || '' %>"></label>
+          <label>Currency Code <input name="currency_code" value="<%= employee.currency_code || 'PHP' %>"></label>
+          <label>FLSA / Overtime Classification
+            <select name="flsa_overtime_classification">
+              <option value="">-- select --</option>
+              <% flsaTypes.forEach((type) => { %>
+                <option value="<%= type %>" <%= employee.flsa_overtime_classification === type ? 'selected' : '' %>><%= type %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>Bank Name <input name="bank_name" value="<%= employee.bank_name || '' %>"></label>
+          <label>Bank Routing Number / Swift Code <input name="bank_routing_swift_code" value="<%= employee.bank_routing_swift_code || '' %>"></label>
+          <label>Account Number (Encrypted/Hashed) <input name="account_number_encrypted" value="<%= employee.account_number_encrypted || '' %>"></label>
+          <label>Tax Filing Status <input name="tax_filing_status" value="<%= employee.tax_filing_status || '' %>"></label>
+          <label>Tax Allowance / Withholding Exemptions <input name="tax_allowance_withholding_exemptions" value="<%= employee.tax_allowance_withholding_exemptions || '' %>"></label>
+        </section>
+
+        <section class="employee-pane">
+          <h3>5. Benefits, Leave & Compliance</h3>
+          <label>Health Insurance Plan ID / Status <input name="health_insurance_plan_status" value="<%= employee.health_insurance_plan_status || '' %>"></label>
+          <label>Retirement Plan Enrollment Status <input name="retirement_plan_enrollment_status" value="<%= employee.retirement_plan_enrollment_status || '' %>"></label>
+          <label>PTO / Paid Time Off Accrual Balance <input type="number" step="0.01" min="0" name="pto_balance" value="<%= employee.pto_balance || '' %>"></label>
+          <label>Sick Leave Balance <input type="number" step="0.01" min="0" name="sick_leave_balance" value="<%= employee.sick_leave_balance || '' %>"></label>
+          <label>Remarks 1 <input name="remarks_1" value="<%= employee.remarks_1 || employee.work_authorization_visa_type || '' %>"></label>
+          <label>Remarks 2 <input name="remarks_2" value="<%= employee.remarks_2 || employee.visa_expiration_date || '' %>"></label>
+          <label>Background Check Status / Date <input name="background_check_status" value="<%= employee.background_check_status || '' %>"></label>
+          <label>Background Check Date <input type="date" name="background_check_date" value="<%= employee.background_check_date || '' %>"></label>
+        </section>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:14px;">
+        <button type="submit" style="background:#1a6bbf;">Save Employee</button>
+        <a class="btn" href="/employees">Cancel</a>
+      </div>
+    </form>
+  </article>
+</section>
+
+<%- include('../partials/footer') %>

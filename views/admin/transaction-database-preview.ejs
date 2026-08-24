@@ -1,0 +1,64 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell">
+  <div class="dashboard-title admin-title">Import Preview — Validate Before Saving</div>
+
+  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:14px;">
+    <span style="color:#6bff91;font-weight:700;">✔ Valid: <%= validCount %></span>
+    <span style="color:#ff6b6b;font-weight:700;"><%= invalidCount > 0 ? '✘ Invalid (will be skipped): ' + invalidCount : '' %></span>
+    <a class="btn" href="/admin/gates/transaction-database" style="margin-left:auto;">← Cancel</a>
+  </div>
+
+  <% if (validCount === 0) { %>
+    <p style="color:#ff6b6b;font-weight:700;">No valid records found. Fix the CSV and re-upload.</p>
+  <% } else { %>
+    <form method="post" action="/admin/transaction-database/confirm-import">
+      <button type="submit" style="background:#1f8f53;padding:10px 22px;font-weight:700;font-size:14px;border:none;cursor:pointer;color:#fff;margin-bottom:14px;">
+        Confirm — Import <%= validCount %> Valid Record<%= validCount !== 1 ? 's' : '' %>
+      </button>
+    </form>
+  <% } %>
+
+  <div class="table-scroll" style="overflow-x:auto;max-height:70vh;overflow-y:auto;">
+    <table class="list" style="min-width:max-content;font-size:12px;">
+      <thead style="position:sticky;top:0;z-index:5;">
+        <tr>
+          <th>Row</th>
+          <th>Status</th>
+          <th>Issues</th>
+          <th>Work Order #</th>
+          <th>Transaction Date</th>
+          <th>Customer Name</th>
+          <th>Branch</th>
+          <th>Car Brand</th>
+          <th>Model</th>
+          <th>SR</th>
+          <th>Technician</th>
+          <th>Grand Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% validated.forEach(v => { %>
+          <tr style="<%= v.valid ? '' : 'background:rgba(255,80,80,0.12);' %>">
+            <td><%= v.rowIndex %></td>
+            <td style="font-weight:700;color:<%= v.valid ? '#6bff91' : '#ff6b6b' %>">
+              <%= v.valid ? '✔ Valid' : '✘ Invalid' %>
+            </td>
+            <td style="color:#ff9f43;white-space:nowrap;"><%= v.errors.join('; ') || '—' %></td>
+            <td style="white-space:nowrap;"><%= v.record['work order Number'] || '' %></td>
+            <td style="white-space:nowrap;"><%= v.record['Transaction date'] || '' %></td>
+            <td style="white-space:nowrap;"><%= v.record['Customer name'] || '' %></td>
+            <td style="white-space:nowrap;"><%= v.record['Branch'] || '' %></td>
+            <td style="white-space:nowrap;"><%= v.record['Car Brand'] || '' %></td>
+            <td style="white-space:nowrap;"><%= v.record['Model'] || '' %></td>
+            <td style="white-space:nowrap;"><%= v.record['Service Advice Advisor'] || '' %></td>
+            <td style="white-space:nowrap;"><%= v.record['Tecnician'] || '' %></td>
+            <td style="white-space:nowrap;"><%= v.record['Grand Total'] || '' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

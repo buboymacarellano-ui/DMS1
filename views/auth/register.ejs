@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Create Frontline Account</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <%- include('../partials/back-button') %>
+  <main class="auth-shell">
+    <section class="auth-card">
+      <h1>FRONTLINE SIGN UP</h1>
+      <p class="auth-subtitle">Create SA, SR, or Senior SR access from Employee DB. Username is the employee ID; job code must match the access level.</p>
+
+      <% if (error) { %>
+        <p class="error"><%= error %></p>
+      <% } %>
+
+      <% const byRole = frontlineByRole || {}; %>
+      <% const currentOptions = byRole[accessLevel] || []; %>
+
+      <form method="post" action="/auth/register" class="form auth-form">
+        <label>
+          Access Level
+          <select name="access_level" id="register-access-level" required>
+            <option value="service_advisor" <%= accessLevel === 'service_advisor' ? 'selected' : '' %>>SA - Service Advisor</option>
+            <option value="service_receptionist" <%= accessLevel === 'service_receptionist' ? 'selected' : '' %>>SR - Service Receptionist</option>
+            <option value="senior_service_receptionist" <%= accessLevel === 'senior_service_receptionist' ? 'selected' : '' %>>SSR - Senior Service Receptionist</option>
+          </select>
+        </label>
+        <label>
+          Employee
+          <select name="employee_id" id="register-employee-id" required>
+            <option value="">-- Select employee --</option>
+            <% currentOptions.forEach((option) => { %>
+              <option value="<%= option.employeeId %>" <%= String(employeeId || '').toUpperCase() === String(option.employeeId || '').toUpperCase() ? 'selected' : '' %>><%= option.label %> | <%= option.branch %> | <%= option.jobCode %></option>
+            <% }); %>
+          </select>
+        </label>
+        <% if (!currentOptions.length) { %>
+          <p class="auth-hint">No employees with this job code were found in Employee DB.</p>
+        <% } %>
+        <label>
+          Password
+          <input type="password" name="password" autocomplete="new-password" minlength="6" required />
+        </label>
+        <label>
+          Confirm Password
+          <input type="password" name="confirm_password" autocomplete="new-password" minlength="6" required />
+        </label>
+        <button type="submit">Create Account</button>
+      </form>
+
+      <p class="auth-hint">Already have an account? <a href="/auth/login">Log in</a>.</p>
+      <p class="auth-hint">Need Technician level? <a href="/auth/register-technician">Create Technician account</a>.</p>
+      <p class="auth-hint">Need STM level? <a href="/auth/register-stm">Create STM account</a>.</p>
+      <p class="auth-hint">Need GM level? <a href="/auth/register-gm">Create GM access</a> (limited slots).</p>
+      <p class="auth-hint">Need Admin level? <a href="/auth/register-admin">Create admin access</a>.</p>
+      <p class="auth-hint">Need HR level? <a href="/auth/register-hr">Create HR account</a>.</p>
+      <p class="auth-hint">Need Parts Manager level? <a href="/auth/register-parts-manager">Create Parts Manager account</a>.</p>
+    </section>
+  </main>
+  <script type="application/json" id="frontline-by-role"><%- JSON.stringify(frontlineByRole || {}).replace(/</g, '\\u003c') %></script>
+  <script>
+    (function bindFrontlineEmployeePicker() {
+      var accessSelect = document.getElementById('register-access-level');
+      var employeeSelect = document.getElementById('register-employee-id');
+      var dataNode = document.getElementById('frontline-by-role');
+      if (!accessSelect || !employeeSelect) return;
+
+      var byRole = {};
+      try {
+        byRole = JSON.parse((dataNode && dataNode.textContent) || '{}');
+      } catch (error) {
+        byRole = {};
+      }
+
+      function fill(role, selectedId) {
+        var options = byRole[role] || [];
+        employeeSelect.innerHTML = '';
+        var placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = '-- Select employee --';
+        employeeSelect.appendChild(placeholder);
+        for (var i = 0; i < options.length; i += 1) {
+          var option = options[i];
+          var item = document.createElement('option');
+          item.value = option.employeeId;
+          item.textContent = option.label + ' | ' + option.branch + ' | ' + option.jobCode;
+          if (selectedId && String(selectedId).toUpperCase() === String(option.employeeId).toUpperCase()) {
+            item.selected = true;
+          }
+          employeeSelect.appendChild(item);
+        }
+      }
+
+      accessSelect.addEventListener('change', function () {
+        var role = String(accessSelect.value || '').toLowerCase();
+        if (byRole[role] && byRole[role].length) {
+          fill(role, '');
+          return;
+        }
+        window.location.href = '/auth/register?level=' + encodeURIComponent(role);
+      });
+    })();
+  </script>
+</body>
+</html>

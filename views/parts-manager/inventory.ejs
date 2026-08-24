@@ -1,0 +1,26 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell pm-shell">
+  <div class="dashboard-title admin-title role-dashboard-title"><span>Parts Manager</span> <span class="role-dashboard-title__suffix">Inventory</span></div>
+  <%- include('./_nav') %>
+
+  <div class="admin-grid">
+    <article class="dashboard-card admin-panel pm-panel">
+      <div class="dashboard-card__header admin-panel-header">Inventory Actions</div>
+      <div class="gm-actions">
+        <a class="dashboard-button" href="/parts/new">New Parts Creation</a>
+        <a class="dashboard-button" href="/parts-manager/transfer">Transfer of Parts</a>
+        <a class="dashboard-button" href="/parts">Open Parts Database</a>
+      </div>
+      <p class="dashboard-note admin-note">Total inventory records: <strong><%= partsCount %></strong></p>
+    </article>
+
+    <article class="dashboard-card admin-panel pm-panel">
+      <div class="dashboard-card__header admin-panel-header">Multi-Branch Transfer Wizard</div>
+      <p class="dashboard-note admin-note">Route parts between branch locations using the transfer wizard.</p>
+      <a class="dashboard-button" href="/parts-manager/transfer">Start Transfer Wizard</a>
+    </article>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

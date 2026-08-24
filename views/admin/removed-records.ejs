@@ -1,0 +1,62 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell">
+  <div class="dashboard-title admin-title">Removed Work Order Records</div>
+
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+    <a class="btn" href="/admin">Back to Admin</a>
+    <span class="dashboard-note admin-note" style="margin:0;">Total Removed: <strong><%= records.length %></strong></span>
+  </div>
+
+  <div class="admin-summary-grid">
+    <% branchSummary.forEach(item => { %>
+      <article class="gm-kpi-card admin-summary-card">
+        <p class="gm-kpi-label"><%= item.branch %></p>
+        <p class="gm-kpi-value"><%= item.count %></p>
+        <p class="dashboard-note admin-note">Removed value: ₱<%= item.total.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></p>
+      </article>
+    <% }) %>
+  </div>
+
+  <div class="table-scroll" style="overflow-x:auto;max-height:70vh;overflow-y:auto;">
+    <table class="list" style="min-width:1100px;font-size:12px;">
+      <thead style="position:sticky;top:0;z-index:5;">
+        <tr>
+          <th>#</th>
+          <th>Removed Date</th>
+          <th>Branch</th>
+          <th>Work Order #</th>
+          <th>Customer</th>
+          <th>Vehicle</th>
+          <th>SA</th>
+          <th>Technician</th>
+          <th>Removed By</th>
+          <th>Total w/ VAT</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!records.length) { %>
+          <tr><td colspan="10" style="text-align:center;padding:20px;">No removed work-order records found.</td></tr>
+        <% } %>
+        <% records.forEach((record, index) => { %>
+          <% const removedDate = record['Transaction date'] || record.created_at; %>
+          <% const vehicle = [record['Car Brand'], record.Model, record.Year].filter(Boolean).join(' '); %>
+          <tr>
+            <td><%= index + 1 %></td>
+            <td style="white-space:nowrap;"><%= removedDate ? new Date(removedDate).toLocaleString('en-PH') : '' %></td>
+            <td><%= record.Branch || 'Unassigned' %></td>
+            <td><%= record['work order Number'] || '' %></td>
+            <td><%= record['Customer name'] || '' %></td>
+            <td><%= vehicle %></td>
+            <td><%= record['Service Advice Advisor'] || '' %></td>
+            <td><%= record.Tecnician || '' %></td>
+            <td><%= record.action_by || 'Not recorded' %></td>
+            <td style="white-space:nowrap;">₱<%= (Number(record['Totalwith Vat'] || record['Grand Total']) || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

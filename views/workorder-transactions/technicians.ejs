@@ -1,0 +1,61 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell technician-monitor">
+  <div class="dashboard-title gm-title">Technician Activity Portal</div>
+  <p><a class="btn" href="/work-order-transactions">Back to Work Order Transactions</a></p>
+  <% if (success) { %><p class="success"><%= success %></p><% } %>
+  <% if (error) { %><p class="error"><%= error %></p><% } %>
+
+  <div class="technician-monitor__summary">
+    <article><span>Technician Roster</span><strong><%= summary.roster %></strong></article>
+    <article><span>Working Now</span><strong><%= summary.working %></strong></article>
+    <article><span>Active Work Orders</span><strong><%= summary.activeOrders %></strong></article>
+    <article><span>Pending Work Orders</span><strong><%= summary.pendingOrders %></strong></article>
+    <article><span>Labor MTD</span><strong>₱<%= Number(summary.laborMtd).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></strong></article>
+  </div>
+
+  <div class="technician-monitor__toolbar">
+    <label>Find Technician <input id="technician-monitor-search" type="search" placeholder="Name, branch or status"></label>
+  </div>
+
+  <div class="table-scroll technician-monitor__grid-wrap">
+    <table id="technician-monitor-list" class="list technician-monitor__grid">
+      <thead>
+        <tr><th>#</th><th>Technician</th><th>Branch</th><th>Status</th><th>Present WO</th><th>Vehicle</th><th>Active Hours</th><th>Pending</th><th>Pending Reason</th><th>Completed MTD</th><th>Completion</th><th>Labor MTD</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% technicians.forEach((technician, index) => { const firstPending = technician.pending_orders[0]; %>
+          <tr data-technician-row data-search="<%= [technician.technician, technician.branch, technician.job_title, technician.live_status, technician.current_order && technician.current_order.work_order_number, firstPending && firstPending.reason].filter(Boolean).join(' ').toLowerCase() %>">
+            <td><%= index + 1 %></td>
+            <td><a class="technician-monitor__name-link" href="/work-order-transactions/technicians/<%= encodeURIComponent(technician.technician) %>"><%= technician.technician %></a><small><%= technician.job_title || 'Technician' %></small></td>
+            <td><%= technician.branch || '—' %></td>
+            <td><span class="technician-monitor__status"><%= technician.live_status %></span></td>
+            <td><% if (technician.current_order) { %><a href="/work-orders/<%= technician.current_order.id %>/edit">WO <%= technician.current_order.work_order_number %></a><% } else { %>—<% } %></td>
+            <td><%= technician.current_order ? (technician.current_order.vehicle || '—') : '—' %></td>
+            <td><%= technician.hours_active.toFixed(1) %>h</td>
+            <td><%= technician.pending_orders.length %></td>
+            <td><%= firstPending ? firstPending.reason : '—' %></td>
+            <td><%= technician.completed_mtd %></td>
+            <td><%= technician.completion_rate.toFixed(1) %>%</td>
+            <td>₱<%= Number(technician.labor_mtd).toLocaleString('en-PH', { maximumFractionDigits: 2 }) %></td>
+            <td><a href="/work-order-transactions/technicians/<%= encodeURIComponent(technician.technician) %>">Details</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<script>
+  (function filterTechnicians() {
+    const input = document.getElementById('technician-monitor-search');
+    const rows = Array.from(document.querySelectorAll('[data-technician-row]'));
+    if (!input) return;
+    input.addEventListener('input', () => {
+      const query = String(input.value || '').trim().toLowerCase();
+      rows.forEach(row => { row.hidden = Boolean(query && !String(row.dataset.search || '').includes(query)); });
+    });
+  })();
+</script>
+
+<%- include('../partials/footer') %>

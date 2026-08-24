@@ -1,0 +1,17 @@
+<%- include('../partials/header') %>
+
+<h2>Edit Customer</h2>
+
+<form method="post" action="/customers/<%= customer.id %>/edit" class="form">
+  <label>Name <input name="name" value="<%= customer.name %>" required></label>
+  <label>Phone <input name="phone" value="<%= customer.phone %>"></label>
+  <label>Email <input name="email" type="email" value="<%= customer.email %>"></label>
+  <label>Address <input name="address" value="<%= customer.address %>"></label>
+  <label>TIN <input name="tin" value="<%= customer.tin || '' %>" placeholder="000-000-000-00000"></label>
+  <label>Business Style <input name="business_style" value="<%= customer.business_style || '' %>"></label>
+  <label>Notes <textarea name="notes"><%= customer.notes %></textarea></label>
+  <button type="submit">Save</button>
+  <a href="/customers">Cancel</a>
+</form>
+
+<%- include('../partials/footer') %>

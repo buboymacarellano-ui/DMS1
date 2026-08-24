@@ -1,0 +1,97 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell gm-shell">
+  <div class="dashboard-title gm-title role-dashboard-title"><span>Performance</span> <span class="role-dashboard-title__suffix">&amp; Incentives</span></div>
+  <p><a class="btn" href="/gm?date=<%= reporting.date %>">&larr; Back to GM Dashboard</a></p>
+
+  <form method="get" action="/gm/performance-incentives" class="gm-reporting-form">
+    <label for="gm-reporting-date">Reporting Date</label>
+    <input id="gm-reporting-date" type="date" name="date" value="<%= reporting.date %>" />
+    <button type="submit" class="btn">Apply</button>
+  </form>
+
+  <% const techRows = technicianPerformance.periods.find(period => period.key === 'mtd').rows; %>
+  <article class="dashboard-card gm-panel gm-technician-performance">
+    <div class="dashboard-card__header gm-panel-header">Technician Performance and Incentives — MTD through <%= reporting.label %></div>
+    <% if (!techRows.length) { %>
+      <p class="dashboard-note">No technician activity for this period.</p>
+    <% } else { %>
+      <div class="table-scroll">
+        <table class="list gm-table gm-technician-performance__table">
+          <thead><tr><th>ID</th><th>Technician</th><th>MTD Billable Hours</th><th>MTD Labor Hours</th><th>MTD Labor Amount</th><th>Rate%</th><th>Incentive</th></tr></thead>
+          <tbody>
+            <% techRows.forEach((row) => { %>
+              <tr>
+                <td><%= row.id %></td><td><%= row.technician %></td>
+                <td><%= Number(row.billableHours || 0).toFixed(2) %></td><td><%= Number(row.laborHours || 0).toFixed(2) %></td>
+                <td>P <%= Number(row.laborAmount || 0).toFixed(2) %></td>
+                <td><input class="gm-incentive-rate" type="number" min="0" max="100" step="0.01" value="<%= Number(row.incentiveRatePct || 0).toFixed(2) %>" data-id="<%= row.id %>" data-amount="<%= Number(row.laborAmount || 0) %>" data-type="technician" aria-label="Incentive rate for <%= row.technician %>"></td>
+                <td class="gm-incentive-value">P <%= Number(row.incentive || 0).toFixed(2) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </article>
+
+  <article class="dashboard-card gm-panel gm-technician-performance">
+    <div class="dashboard-card__header gm-panel-header">Non-Technician Employee Sales and Incentives — MTD through <%= reporting.label %></div>
+    <div class="table-scroll">
+      <table class="list gm-table gm-technician-performance__table">
+        <thead><tr><th>ID</th><th>Employee</th><th>Position</th><th>MTD Total Sales</th><th>Rate%</th><th>Incentive</th></tr></thead>
+        <tbody>
+          <% employeeSalesPerformance.forEach((row) => { %>
+            <tr>
+              <td><%= row.id %></td><td><%= row.employee %></td><td><%= row.jobTitle %></td>
+              <td>P <%= Number(row.totalSales || 0).toFixed(2) %></td>
+              <td><input class="gm-incentive-rate" type="number" min="0" max="100" step="0.01" value="<%= Number(row.incentiveRatePct || 0).toFixed(2) %>" data-id="<%= row.id %>" data-amount="<%= Number(row.totalSales || 0) %>" data-type="employee" aria-label="Incentive rate for <%= row.employee %>"></td>
+              <td class="gm-incentive-value">P <%= Number(row.incentive || 0).toFixed(2) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="dashboard-card gm-panel">
+    <div class="dashboard-card__header gm-panel-header">Current Transactions — Largest to Smallest</div>
+    <% if (!currentTransactions.length) { %>
+      <p class="dashboard-note">No transactions on <%= reporting.label %>.</p>
+    <% } else { %>
+      <div class="table-scroll"><table class="list gm-table">
+        <thead><tr><th>Work Order #</th><th>Customer</th><th>Service Advisor</th><th>Total</th></tr></thead>
+        <tbody><% currentTransactions.forEach((transaction) => { %><tr>
+          <td><%= transaction.workOrderNumber %></td><td><%= transaction.customer %></td><td><%= transaction.advisor %></td><td>P <%= Number(transaction.total || 0).toFixed(2) %></td>
+        </tr><% }) %></tbody>
+      </table></div>
+    <% } %>
+  </article>
+</section>
+
+<script>
+  document.querySelectorAll('.gm-incentive-rate').forEach((input) => {
+    input.addEventListener('change', async () => {
+      const rate = Number(input.value);
+      const amount = Number(input.dataset.amount || 0);
+      const valueCell = input.closest('tr').querySelector('.gm-incentive-value');
+      const previousValue = valueCell.textContent;
+      if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
+        window.alert('Enter an incentive rate from 0 to 100.');
+        return;
+      }
+      valueCell.textContent = `P ${(amount * rate / 100).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      input.disabled = true;
+      try {
+        const response = await fetch('/gm/technician-incentive-rate', {
+          method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ technician_id: input.dataset.id, rate_pct: rate, incentive_type: input.dataset.type }),
+        });
+        if (!response.ok) throw new Error('Save failed');
+      } catch (error) {
+        valueCell.textContent = previousValue;
+        window.alert('The incentive rate could not be saved. Please try again.');
+      } finally { input.disabled = false; }
+    });
+  });
+</script>

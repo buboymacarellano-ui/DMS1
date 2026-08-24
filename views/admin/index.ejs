@@ -1,0 +1,168 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell">
+  <div class="dashboard-title admin-title role-dashboard-title"><span>Admin</span> <span class="role-dashboard-title__suffix">Dashboard</span></div>
+
+  <% if (error) { %>
+    <p class="error"><%= error %></p>
+  <% } %>
+  <% if (success) { %>
+    <p class="success"><%= success %></p>
+  <% } %>
+  <% if (backupPath) { %>
+    <p class="dashboard-note admin-note">Backup created at: <strong><%= backupPath %></strong></p>
+  <% } %>
+
+  <div class="admin-summary-grid">
+    <% (adminGates || []).forEach((gate) => { %>
+      <article class="gm-kpi-card admin-summary-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+        <p class="gm-kpi-label" style="margin:0;"><%= gate.label %></p>
+        <a class="btn" href="/admin/gates/<%= gate.slug %>" style="white-space:nowrap;">Open</a>
+      </article>
+    <% }) %>
+    <article class="gm-kpi-card admin-summary-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <p class="gm-kpi-label" style="margin:0;">Employee DB</p>
+      <a class="btn" href="/employees" style="white-space:nowrap;">Open</a>
+    </article>
+  </div>
+
+  <div class="admin-grid">
+    <article class="dashboard-card admin-panel">
+      <div class="dashboard-card__header admin-panel-header">Delete &amp; Remove Password</div>
+      <p class="dashboard-note admin-note">
+        Protection: <strong><%= deletePasswordEnabled ? 'ON' : 'OFF' %></strong> | Password: <strong><%= deletePasswordConfigured ? 'Configured' : 'Not Configured' %></strong>
+      </p>
+      <form method="post" action="/admin/delete-password/toggle" class="form admin-form" style="margin-bottom:14px;">
+        <label style="flex-direction:row;align-items:center;gap:10px;">
+          <input type="checkbox" name="enabled" value="1" <%= deletePasswordEnabled ? 'checked' : '' %> style="width:auto;margin:0;" />
+          Require password for delete and remove actions
+        </label>
+        <button type="submit">Save Protection Setting</button>
+      </form>
+      <p class="dashboard-note admin-note"><%= deletePasswordEnabled ? 'Operators must enter this password before deleting stored records or removing service rows.' : 'Delete and remove actions currently proceed without the shared password.' %></p>
+      <form method="post" action="/admin/delete-password" class="form admin-form">
+        <label>
+          New Delete Password
+          <input type="password" name="delete_password" minlength="6" autocomplete="new-password" required />
+        </label>
+        <label>
+          Confirm Delete Password
+          <input type="password" name="confirm_delete_password" minlength="6" autocomplete="new-password" required />
+        </label>
+        <button type="submit"><%= deletePasswordConfigured ? 'Change Password' : 'Set Password' %></button>
+      </form>
+    </article>
+
+    <article class="dashboard-card admin-panel">
+      <div class="dashboard-card__header admin-panel-header">Import Transactions JSON</div>
+      <p class="dashboard-note admin-note">Upload a JSON file or paste raw JSON. Accepted shapes: an array of records or an object containing <strong>transaction_records</strong>.</p>
+      <form method="post" action="/admin/import-transactions" class="form admin-form" id="transaction-import-form">
+        <label>
+          Import Mode
+          <select name="import_mode">
+            <option value="merge" <%= importMode === 'merge' ? 'selected' : '' %>>Merge with existing transactions</option>
+            <option value="replace" <%= importMode === 'replace' ? 'selected' : '' %>>Replace existing transactions</option>
+          </select>
+        </label>
+        <label>
+          Choose JSON File
+          <input type="file" id="import-json-file" accept="application/json,.json" />
+        </label>
+        <label>
+          Transaction JSON Payload
+          <textarea name="import_json" id="import-json-textarea" rows="16" spellcheck="false" required><%= importJson %></textarea>
+        </label>
+        <button type="submit">Import Transactions</button>
+      </form>
+
+      <hr style="margin: 18px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.12);" />
+
+      <div class="dashboard-card__header admin-panel-header">Import Workorder Transactions CSV</div>
+      <p class="dashboard-note admin-note">Upload your edited CSV export from Workorder Transactions. Header aliases like <strong>Service Request and Reason1</strong> and <strong>Service1</strong> are supported.</p>
+      <p class="dashboard-note admin-note"><a class="btn" href="/admin/transaction-template.csv" style="background:#1f8f53">Download CSV Template</a></p>
+      <form method="post" action="/admin/import-transactions-csv" class="form admin-form" id="transaction-import-csv-form">
+        <label>
+          Import Mode
+          <select name="import_mode">
+            <option value="merge" <%= importMode === 'merge' ? 'selected' : '' %>>Merge with existing transactions</option>
+            <option value="replace" <%= importMode === 'replace' ? 'selected' : '' %>>Replace existing transactions</option>
+          </select>
+        </label>
+        <label>
+          Choose CSV File
+          <input type="file" id="import-csv-file" accept="text/csv,.csv" />
+        </label>
+        <label>
+          Transaction CSV Payload
+          <textarea name="import_csv" id="import-csv-textarea" rows="12" spellcheck="false" required><%= importCsv %></textarea>
+        </label>
+        <button type="submit">Import CSV Transactions</button>
+      </form>
+    </article>
+
+    <article class="dashboard-card admin-panel">
+      <div class="dashboard-card__header admin-panel-header">Collection Editor</div>
+      <p class="dashboard-note admin-note">Edit one collection at a time and save it back into the local data store.</p>
+      <form method="get" action="/admin" class="admin-inline-form">
+        <label>
+          Select Collection
+          <select name="collection" onchange="this.form.submit()">
+            <% collectionOptions.forEach((option) => { %>
+              <option value="<%= option %>" <%= selectedCollection === option ? 'selected' : '' %>><%= option %></option>
+            <% }) %>
+          </select>
+        </label>
+      </form>
+      <form method="post" action="/admin/save-collection" class="form admin-form">
+        <input type="hidden" name="collection_name" value="<%= selectedCollection %>" />
+        <label>
+          <%= selectedCollection %> JSON
+          <textarea name="collection_json" rows="18" spellcheck="false" required><%= collectionJson %></textarea>
+        </label>
+        <button type="submit">Save Collection</button>
+      </form>
+    </article>
+  </div>
+
+  <article class="dashboard-card admin-panel">
+    <div class="dashboard-card__header admin-panel-header">Full Database Editor</div>
+    <p class="dashboard-note admin-note">Use this only when you want to replace the complete local database structure in <strong>data/data.json</strong>.</p>
+    <form method="post" action="/admin/save-database" class="form admin-form">
+      <input type="hidden" name="selected_collection" value="<%= selectedCollection %>" />
+      <label>
+        Entire data.json Structure
+        <textarea name="database_json" rows="26" spellcheck="false" required><%= databaseJson %></textarea>
+      </label>
+      <button type="submit">Save Full Database</button>
+    </form>
+  </article>
+</section>
+
+<script>
+  (function initAdminImportFileReader() {
+    function bindFileInput(fileInputId, textareaId, errorMessage) {
+      const fileInput = document.getElementById(fileInputId);
+      const textarea = document.getElementById(textareaId);
+      if (!fileInput || !textarea) return;
+
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = () => {
+          textarea.value = String(reader.result || '');
+        };
+        reader.onerror = () => {
+          window.alert(errorMessage);
+        };
+        reader.readAsText(file);
+      });
+    }
+
+    bindFileInput('import-json-file', 'import-json-textarea', 'Unable to read the selected JSON file.');
+    bindFileInput('import-csv-file', 'import-csv-textarea', 'Unable to read the selected CSV file.');
+  })();
+</script>
+
+<%- include('../partials/footer') %>

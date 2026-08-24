@@ -1,0 +1,109 @@
+Car Brand,Model,Column1,Unit Type,Capacity,Oil Filter,Price
+Toyota,Avanza,Gas,CompactSuv,4,C-110,275
+Toyota,Camry,Gas,Large,5,O118,335
+Toyota,Fortuner ,Gas,VanSuvPickUp,8,C-111,266
+Toyota,Hilux,Diesel,VanSuvPickUp,8,C-111,266
+Toyota,Hi-ace,Diesel,VanSuvPickUp,7,C-110,246
+Toyota,Innova,Diesel,VanSuvPickUp,7,C-111,266
+Toyota,Prado,Gas,VanSuvPickUp,8,C-111,266
+Toyota,Land-Cruiser,Diesel,VanSuvPickUp,8,,
+Toyota,Rav4,Gas,CompactSuv,6,C-111,266
+Toyota,Vios,Gas,Medium,4,C-110,246
+Toyota,Corolla,Gas,Medium,4,C-110,246
+Toyota,Revo Gas,GAs,CompactSuv,4,C-111,266
+Toyota,Revo Diesel,Diesel,CompactSuv,6,C-111,266
+Toyota,Altis,Gas,Medium,5,C-110,246
+Toyota,Wigo,Gas,small,3,C-932,246
+Suzuki,Swift,Gas,medium,4,C-110,246
+Suzuki,Ertiga,Gas,CompactSuv,4,C-110,246
+Suzuki,Celerio,Gas,small,3,C-110,246
+Suzuki,Mini Van,Gas,CompactSuv,3,C-110,246
+Suzuki,Alto,Gas,small,3,C-110,246
+Suzuki,Wagon,Gas,CompactSuv,3,C-110,246
+Suzuki,Vitara,Gas,CompactSuv,5,C-110,246
+Suzuki,APV,Gas,CompactSuv,4,C-110,246
+Suzuki,SX4,Gas,Large,4,C-110,246
+Nissan,Navara,Diesel,VanSuvPickUp,6,C-206,320
+Nissan,Sentra,Gas,Medium,4,C-110,246
+Nissan,X-Trail,Gas,VanSuvPickUp,5,C-224,257
+Nissan,Almera,Gas,Large,4,C-224,257
+Nissan,Urban,Diesel,VanSuvPickUp,7,C-206,320
+Nissan,Patrol,Diesel,VanSuvPickUp,8,C-206,320
+Nissan,Serena,Gas,compact suv,4,,
+Nissan,Cefiro,Gas,Large,4,C-315,257
+Nissan,Livina,Gas,CompactSuv,4,C-224,257
+Nissan,Vanette,Gas,VanSuvPickUp,5,C-224,257
+Nissan,Outlander,Gas,VanSuvPickUp,5,C-415,257
+Mitsubishi,Lancer,Gas,Large,4,C-415,257
+Mitsubishi,Pajero,Diesel,VanSuvPickUp,8,C-313,755
+Mitsubishi,Mirage,Gas,small,3,C-415,257
+Mitsubishi,Mirage-G4,Gas,small,3,C-415,257
+Mitsubishi,Montero,Diesel,VanSuvPickUp,7,C-306,598
+Mitsubishi,Adventure Gas,Gas,CompactSuv,4,C-415,257
+Mitsubishi,Adventure,Diesel,CompactSuv,6,C-306,598
+Mitsubishi,Strada,Diesel,VanSuvPickUp,8,C-313,755
+Mitsubishi,Delica,Diesel,VanSuvPickUp,6,C-306,598
+Mitsubishi,L300,Diesel,VanSuvPickUp,6,C-306,598
+Mitsubishi,Fuzion,Gas,VanSuvPickUp,5,C-415,257
+Mitsubishi,ASX,Gas,Medium,4,C-415,257
+Mitsubishi,L200,Diesel,VanSuvPickUp,6,C-306,598
+Mazda,Familia,Gas,Large,4,C-415,257
+Mazda,CX-5 Gas,Gas,VanSuvPickUp,4,C-415,257
+Mazda,CX-5,Diesel,VanSuvPickUp,0,,
+Mazda,CX-9 Gas,Gas,VanSuvPickUp,5,,
+Mazda,CX-9,Diesel,VanSuvPickUp,0,,
+Mazda,Mazda2,Gas,Medium,4,C-415,257
+Mazda,CX-7 Gas,Gas,VanSuvPickUp,4,C-415,257
+Mazda,CX-7,Diesel,VanSuvPickUp,0,C-415,257
+Mazda,Mazda3,Gas,Large,4,C-415,257
+Kia,Sorento,Diesel,VanSuvPickUp,8,K-27200,850
+Kia,Sportage Gas,Gas,CompactSuv,4,,
+Kia,Sportage,Diesel,CompactSuv,8,,
+Kia,Soul,Gas,CompactSuv,4,,
+Kia,Picanto,Gas,Small   ,4,,
+Kia,Rio,Gas,Medium,4,,
+Kia,K2700,Diesel,VanSuvPickUp,7,,
+Kia,Carens,Diesel,VanSuvPickUp,7,,
+Isuzu,Crosswind,Diesel,CompactSuv,5,,
+Isuzu,D-max,Diesel,VanSuvPickUp,8,,
+Isuzu,Pickup,Diesel,VanSuvPickUp,7,,
+Isuzu,Trooper,Diesel,VanSuvPickUp,8,,
+Isuzu,Mu-X,Diesel,VanSuvPickUp,8,,
+Isuzu,Sportivo,Diesel,CompactSuv,5,,
+Hyundai,Tucson,Diesel,CompactSuv,8,,
+Hyundai,Santa Fe,Diesel,VanSuvPickUp,8,,
+Hyundai,Accent Gas,Gas,Medium,4,,
+Hyundai,Accent,Diesel,compact suv,5,,
+Hyundai,Elantra,Gas,Large,4,,
+Hyundai,Eon,Gas,Small,3,,
+Hyundai,i10,Gas,Small,3,,
+Hyundai,Getz,Gas,Medium,4,,
+Hyundai,Veloster,Gas,Large,0,,
+Hyundai,Starex,Diesel,VanSuvPickUp,8,,
+Ford,Fiesta,Gas,Medium,4,,
+Ford,Focus Gas,Gas,Medium,4,,
+Ford,Focus,Diesel,Large,6,,
+Ford,Mustang,Gas,Large,0,,
+Ford,Escape,Gas,VanSuvPickUp,4,,
+Ford,EcoSport,Gas,CompactSuv,4,,
+Ford,Explorer,Gas,VanSuvPickUp,8,,
+Ford,Lynx,Gas,Large,4,,
+Ford,Everest,Diesel,VanSuvPickUp,8,,
+Ford,Expedition,Gas,VanSuvPickUp,8,,
+Ford,Ranger,Diesel,VanSuvPickUp,8,,
+Chevrolet,Captiva,Diesel,VanSuvPickUp,6,,
+Chevrolet,Spin,Gas,CompactSuv,4,,
+Chevrolet,Spark,Gas,small,4,,
+Chevrolet,Trailblazer,Gas,VanSuvPickUp,6,,
+Chevrolet,Cruze,Gas,Large,4,,
+Chevrolet,Optra,Gas,Medium,4,,
+Chevrolet,Orlando,Gas,VanSuvPickUp,4,,
+Chevrolet,Colorado,Gas,VanSuvPickUp,7,,
+Honda,Accord,Gas,Large,4,,
+Honda,City,Gas,Medium,4,,
+Honda,Civic,Gas,Large,4,,
+Honda,CRV Gas,Gas,CompactSuv,5,,
+Honda,CRV,Diesel,CompactSuv,5,,
+Honda,Jazz,Gas,Small Sedan,4,,
+Honda,Brio,Gas,CompactSuv,4,,
+Honda,Mobilo,Gas,CompactSuv,5,,

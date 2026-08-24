@@ -1,0 +1,25 @@
+<div id="pm-review-modal" class="pm-modal" hidden aria-hidden="true">
+  <div class="pm-modal__backdrop" data-pm-close-review></div>
+  <div class="pm-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="pm-review-modal-title">
+    <header class="pm-modal__header">
+      <h2 id="pm-review-modal-title">Review Branch Parts Request</h2>
+      <button type="button" class="pm-modal__close" data-pm-close-review aria-label="Close">&times;</button>
+    </header>
+    <div class="pm-modal__body pm-review-body">
+      <dl class="pm-review-details">
+        <div><dt>Requesting Branch</dt><dd id="pm-review-requesting-branch"></dd></div>
+        <div><dt>WO #</dt><dd id="pm-review-work-order"></dd></div>
+        <div><dt>Part #</dt><dd id="pm-review-part-number"></dd></div>
+        <div><dt>Part Name</dt><dd id="pm-review-part-name"></dd></div>
+        <div><dt>Sub-ID</dt><dd id="pm-review-sub-id"></dd></div>
+        <div><dt>Supplier</dt><dd id="pm-review-supplier"></dd></div>
+        <div><dt>Qty</dt><dd id="pm-review-qty"></dd></div>
+        <div><dt>Fulfilling Branch</dt><dd id="pm-review-fulfilling-branch"></dd></div>
+        <div><dt>Requested By</dt><dd id="pm-review-requested-by"></dd></div>
+      </dl>
+    </div>
+    <footer class="pm-modal__footer">
+      <button type="button" class="btn" data-pm-close-review>Close</button>
+    </footer>
+  </div>
+</div>

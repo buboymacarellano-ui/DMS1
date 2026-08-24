@@ -1,0 +1,96 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell">
+  <div class="dashboard-title admin-title role-dashboard-title"><span>HR</span> <span class="role-dashboard-title__suffix">Dashboard</span></div>
+
+  <div class="admin-summary-grid">
+    <article class="gm-kpi-card admin-summary-card">
+      <p class="gm-kpi-label">Total Accounts</p>
+      <h2 class="gm-kpi-value"><%= totalUsers %></h2>
+    </article>
+    <article class="gm-kpi-card admin-summary-card">
+      <p class="gm-kpi-label">SA Accounts</p>
+      <h2 class="gm-kpi-value"><%= roleCounts.service_advisor || 0 %></h2>
+    </article>
+    <article class="gm-kpi-card admin-summary-card">
+      <p class="gm-kpi-label">SR Accounts</p>
+      <h2 class="gm-kpi-value"><%= roleCounts.service_receptionist || 0 %></h2>
+    </article>
+    <article class="gm-kpi-card admin-summary-card">
+      <p class="gm-kpi-label">Senior SR Accounts</p>
+      <h2 class="gm-kpi-value"><%= roleCounts.senior_service_receptionist || 0 %></h2>
+    </article>
+    <article class="gm-kpi-card admin-summary-card">
+      <p class="gm-kpi-label">General Managers</p>
+      <h2 class="gm-kpi-value"><%= roleCounts.general_manager || 0 %></h2>
+    </article>
+    <article class="gm-kpi-card admin-summary-card">
+      <p class="gm-kpi-label">Admins</p>
+      <h2 class="gm-kpi-value"><%= roleCounts.admin || 0 %></h2>
+    </article>
+    <article class="gm-kpi-card admin-summary-card">
+      <p class="gm-kpi-label">HR Accounts</p>
+      <h2 class="gm-kpi-value"><%= roleCounts.hr || 0 %></h2>
+    </article>
+    <article class="gm-kpi-card admin-summary-card">
+      <p class="gm-kpi-label">STM Accounts</p>
+      <h2 class="gm-kpi-value"><%= roleCounts.service_technical_manager || 0 %></h2>
+    </article>
+    <article class="gm-kpi-card admin-summary-card">
+      <p class="gm-kpi-label">Technician Accounts</p>
+      <h2 class="gm-kpi-value"><%= roleCounts.technician || 0 %></h2>
+    </article>
+    <article class="gm-kpi-card admin-summary-card">
+      <p class="gm-kpi-label">Parts Manager Accounts</p>
+      <h2 class="gm-kpi-value"><%= roleCounts.parts_manager || 0 %></h2>
+    </article>
+  </div>
+
+  <div class="admin-grid">
+    <article class="dashboard-card admin-panel">
+      <div class="dashboard-card__header admin-panel-header">Quick Actions</div>
+      <div class="gm-actions">
+        <a class="dashboard-button" href="/employees">Open Employee DB</a>
+        <a class="dashboard-button" href="/auth/register-technician">Create Technician Account</a>
+        <a class="dashboard-button" href="/auth/register-hr">Create HR Account</a>
+        <a class="dashboard-button" href="/auth/register-stm">Create STM Account</a>
+        <a class="dashboard-button" href="/auth/register-parts-manager">Create Parts Manager Account</a>
+        <a class="dashboard-button" href="/auth/register-admin">Create Admin Account</a>
+        <a class="dashboard-button" href="/auth/register-gm">Create GM Account</a>
+        <a class="dashboard-button" href="/auth/register">Create SA / SR / Senior SR Account</a>
+      </div>
+    </article>
+
+    <article class="dashboard-card admin-panel">
+      <div class="dashboard-card__header admin-panel-header">Employee DB</div>
+      <p class="dashboard-note admin-note">Open the full Employee Database table in the same formatted screen layout.</p>
+      <a class="dashboard-button" href="/employees" style="display:inline-flex;align-items:center;justify-content:center;">Open Employee DB</a>
+    </article>
+
+    <article class="dashboard-card admin-panel">
+      <div class="dashboard-card__header admin-panel-header">Staff Directory</div>
+      <div class="table-scroll">
+        <table class="list">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Role</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% users.forEach((user) => { %>
+              <tr>
+                <td><%= user.username %></td>
+                <td><%= user.role %></td>
+                <td><%= user.created_at ? new Date(user.created_at).toLocaleString() : '' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </article>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

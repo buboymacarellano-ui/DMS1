@@ -1,0 +1,25 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell pm-shell">
+  <div class="dashboard-title admin-title role-dashboard-title"><span>Parts Manager</span> <span class="role-dashboard-title__suffix">Branch Reports</span></div>
+  <%- include('./_nav') %>
+
+  <form method="get" action="/parts-manager/branch-reports" class="form pm-form pm-form--inline">
+    <label for="pm-branch-filter">Branch</label>
+    <select id="pm-branch-filter" name="branch" onchange="this.form.submit()">
+      <% branches.forEach((branch) => { %>
+        <option value="<%= branch %>" <%= selectedBranch === branch ? 'selected' : '' %>><%= branch %></option>
+      <% }) %>
+    </select>
+  </form>
+
+  <article class="dashboard-card admin-panel pm-panel">
+    <div class="dashboard-card__header admin-panel-header"><%= selectedBranch %> — Sorter Report</div>
+    <div id="pm-branch-report" class="table-scroll" data-branch="<%= selectedBranch %>">
+      <p class="dashboard-note admin-note">Loading branch report...</p>
+    </div>
+  </article>
+</section>
+
+<script src="/js/parts-manager-nav.js"></script>
+<%- include('../partials/footer') %>

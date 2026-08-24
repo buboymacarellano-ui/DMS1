@@ -1,0 +1,39 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell gm-shell gm-aging-report">
+  <div class="dashboard-title gm-title">Aging Work Orders: <%= bucketLabel %></div>
+  <p><a class="btn" href="/gm">Back to GM Dashboard</a></p>
+
+  <article class="dashboard-card gm-panel">
+    <div class="dashboard-card__header gm-panel-header"><%= agingWorkOrders.length %> Work Order<%= agingWorkOrders.length === 1 ? '' : 's' %></div>
+    <% if (!agingWorkOrders.length) { %>
+      <p class="dashboard-note">No work orders are currently in this aging group.</p>
+    <% } else { %>
+      <div class="table-scroll">
+        <table class="list gm-table gm-aging-report__table">
+          <thead><tr><th>#</th><th>Work Order</th><th>Customer</th><th>Telephone</th><th>Vehicle</th><th>Branch</th><th>Technician</th><th>Status</th><th>Created</th><th>Exact Age</th><th>Amount</th><th></th></tr></thead>
+          <tbody>
+            <% agingWorkOrders.forEach((workOrder, index) => { %>
+              <tr>
+                <td><%= index + 1 %></td>
+                <td><a href="/work-orders/<%= workOrder.id %>/edit">WO <%= workOrder.work_order_number || workOrder.id %></a></td>
+                <td><%= workOrder.customer_name %></td>
+                <td><%= workOrder.telephone_number || '—' %></td>
+                <td><%= workOrder.vehicle_label || '—' %></td>
+                <td><%= workOrder.branch || '—' %></td>
+                <td><%= workOrder.technician || 'Unassigned' %></td>
+                <td><%= workOrder.status || 'open' %></td>
+                <td><%= new Date(workOrder.created_at || 0).toLocaleString('en-PH') %></td>
+                <td><%= workOrder.ageDays %>d <%= workOrder.ageHours % 24 %>h</td>
+                <td>P <%= Number(workOrder.total || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
+                <td class="actions"><a href="/work-orders/<%= workOrder.id %>/edit">Information</a><a href="/work-orders/<%= workOrder.id %>/service">Services</a></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </article>
+</section>
+
+<%- include('../partials/footer') %>

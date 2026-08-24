@@ -1,0 +1,72 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell">
+  <div class="dashboard-title admin-title role-dashboard-title"><%= approver ? 'Approval Center' : 'Approval Requests' %></div>
+
+  <% if (error) { %><p class="error"><%= error %></p><% } %>
+  <% if (success) { %><p class="success"><%= success %></p><% } %>
+
+  <% if (!approver) { %>
+    <article class="dashboard-card admin-panel">
+      <div class="dashboard-card__header admin-panel-header">Change Branch Duty (CBD)</div>
+      <form method="post" action="/approvals/request/cbd" class="form">
+        <% if (!employeeId) { %>
+          <label>Employee ID<input name="employee_id" required></label>
+        <% } %>
+        <label>Target Branch
+          <select name="target_branch" required>
+            <option value="">Select branch</option>
+            <% branches.forEach(branch => { %><option value="<%= branch %>"><%= branch %></option><% }) %>
+          </select>
+        </label>
+        <label>Reason<textarea name="reason" rows="3" required></textarea></label>
+        <button type="submit" class="btn">Submit CBD</button>
+      </form>
+    </article>
+  <% } %>
+
+  <article class="dashboard-card admin-panel">
+    <div class="dashboard-card__header admin-panel-header"><%= approver ? 'Requests From Subordinates' : 'My Requests' %></div>
+    <% if (!requests.length) { %>
+      <p class="dashboard-note admin-note">No approval requests.</p>
+    <% } else { %>
+      <div class="table-scroll">
+        <table class="list">
+          <thead><tr><th>Type</th><th>Requested By</th><th>Details</th><th>Reason</th><th>Status</th><th>Requested</th><th></th></tr></thead>
+          <tbody>
+            <% requests.forEach(request => { %>
+              <tr>
+                <td><strong><%= request.type %></strong></td>
+                <td><%= request.requested_by %><br><small><%= request.requested_by_role %></small></td>
+                <td>
+                  <% if (request.type === 'CBD') { %>
+                    <%= request.employee_name || request.employee_id %>: <%= request.current_branch || '-' %> to <%= request.target_branch %>
+                  <% } else { %>
+                    WO <%= request.work_order_number %> | <%= request.branch || '-' %>
+                  <% } %>
+                </td>
+                <td><%= request.reason || '-' %></td>
+                <td><%= request.status %></td>
+                <td><%= new Date(request.created_at).toLocaleString('en-PH') %></td>
+                <td>
+                  <% if (approver && request.status === 'pending') { %>
+                    <form method="post" action="/approvals/<%= request.id %>/resolve" style="display:inline">
+                      <input type="hidden" name="decision" value="approved">
+                      <button type="submit">Approve</button>
+                    </form>
+                    <form method="post" action="/approvals/<%= request.id %>/resolve" style="display:inline">
+                      <input type="hidden" name="decision" value="rejected">
+                      <button type="submit">Reject</button>
+                    </form>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </article>
+</section>
+
+<%- include('../partials/footer') %>

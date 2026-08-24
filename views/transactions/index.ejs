@@ -1,0 +1,89 @@
+<%- include('../partials/header') %>
+
+<h2>Data Base &amp; Inventory</h2>
+<%
+  const safeSearchError = (typeof searchError !== 'undefined' && searchError) ? searchError : '';
+  const safeSearchQuery = (typeof searchQuery !== 'undefined' && searchQuery) ? searchQuery : '';
+%>
+<p>
+  <a class="btn" href="/transactions/export.csv">Download CSV</a>
+</p>
+
+<div class="search-billing-box">
+  <h3>Closed Work Order Billing Search</h3>
+  <p>Search by Work Order#, Vehicle, Plate Number, or Customer Name. Press Enter to open Billing Statement.</p>
+  <% if (safeSearchError) { %>
+    <p class="error"><%= safeSearchError %></p>
+  <% } %>
+  <form method="get" action="/transactions/closed-work-order-search" class="search-billing-form">
+    <input
+      type="text"
+      name="q"
+      value="<%= safeSearchQuery %>"
+      placeholder="Example: 0077295, Toyota Corolla, BGD124, Juan Dela Cruz"
+      aria-label="Search closed work order"
+      required
+    >
+    <button type="submit" class="btn">Open Billing Statement</button>
+  </form>
+</div>
+
+<div class="table-scroll transaction-table-wrap">
+  <table class="list transaction-table">
+    <thead>
+      <tr>
+        <th class="sticky-col sticky-col-1">Transaction date</th>
+        <th class="sticky-col sticky-col-2">work order Number</th>
+        <th>Branch</th>
+        <th>Customer name</th>
+        <th>Telephone number</th>
+        <th>Car Brand</th>
+        <th>Model</th>
+        <th>Year</th>
+        <th>SA</th>
+        <th>Tecnician</th>
+        <th>Services</th>
+        <th>Parts</th>
+        <th>Total Labor</th>
+        <th>Total Parts</th>
+        <th>Grand Total</th>
+        <th>Vat</th>
+        <th>Totalwith Vat</th>
+        <th>TimeIn</th>
+        <th>TimeOut</th>
+        <th>Details</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% records.forEach(record => {
+           const serviceCount = Array.from({ length: 15 }, (_, index) => record['Service' + (index + 1)]).filter(Boolean).length;
+           const partCount = Array.from({ length: 50 }, (_, index) => record['Part' + (index + 1)]).filter(Boolean).length;
+      %>
+        <tr>
+          <td class="sticky-col sticky-col-1"><%= record['Transaction date'] || '' %></td>
+          <td class="sticky-col sticky-col-2"><%= record['work order Number'] || '' %></td>
+          <td><%= record['Branch'] || '' %></td>
+          <td><%= record['Customer name'] || '' %></td>
+          <td><%= record['Telephone number'] || '' %></td>
+          <td><%= record['Car Brand'] || '' %></td>
+          <td><%= record['Model'] || '' %></td>
+          <td><%= record['Year'] || '' %></td>
+          <td><%= record['Service Advice Advisor'] || '' %></td>
+          <td><%= record['Tecnician'] || '' %></td>
+          <td><%= serviceCount %></td>
+          <td><%= partCount %></td>
+          <td><%= record['Total Labor'] || '' %></td>
+          <td><%= record['Total Parts'] || '' %></td>
+          <td><%= record['Grand Total'] || '' %></td>
+          <td><%= record['Vat'] || '' %></td>
+          <td><%= record['Totalwith Vat'] || '' %></td>
+          <td><%= record['TimeIn'] || '' %></td>
+          <td><%= record['TimeOut'] || '' %></td>
+          <td><a href="/transactions/<%= record.id %>">View</a></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<%- include('../partials/footer') %>

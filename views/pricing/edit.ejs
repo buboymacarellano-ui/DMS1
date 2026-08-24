@@ -1,0 +1,28 @@
+<%- include('../partials/header') %>
+
+<h2>Edit Labor Charge</h2>
+
+<form method="post" action="/pricing/<%= rule.id %>/edit" class="form">
+  <label>Unit Type
+    <select name="vehicle_type" required>
+      <option value="">--select--</option>
+      <option value="small" <%= rule.vehicle_type === 'small' ? 'selected' : '' %>>Small</option>
+      <option value="medium" <%= rule.vehicle_type === 'medium' ? 'selected' : '' %>>Medium</option>
+      <option value="large" <%= (rule.vehicle_type === 'large' || rule.vehicle_type === 'largeUnit') ? 'selected' : '' %>>Large</option>
+      <option value="compactSuv" <%= rule.vehicle_type === 'compactSuv' ? 'selected' : '' %>>Compact SUV</option>
+      <option value="vanSuvPickup" <%= (rule.vehicle_type === 'vanSuvPickup' || rule.vehicle_type === 'suvVanPickUp') ? 'selected' : '' %>>SUV / Van / Pickup</option>
+      <option value="truck" <%= rule.vehicle_type === 'truck' ? 'selected' : '' %>>Truck</option>
+      <option value="equipment" <%= rule.vehicle_type === 'equipment' ? 'selected' : '' %>>Equipment</option>
+      <option value="facility" <%= rule.vehicle_type === 'facility' ? 'selected' : '' %>>Facility</option>
+      <option value="tools" <%= rule.vehicle_type === 'tools' ? 'selected' : '' %>>Tools</option>
+    </select>
+  </label>
+  <small>Saving a car unit type updates all 6 vehicle sizes for this service. Hours move 10% left/right from the type you pick.</small>
+  <label>Service Type <input name="service_type" value="<%= rule.service_type %>" required></label>
+  <label>Service Hours <input name="hours" type="number" step="0.01" min="0" value="<%= rule.hours %>" required></label>
+  <label>Price <input name="price" type="number" step="0.01" min="0" value="<%= rule.price %>" required></label>
+  <button type="submit">Save</button>
+  <a href="/pricing/new">Cancel</a>
+</form>
+
+<%- include('../partials/footer') %>

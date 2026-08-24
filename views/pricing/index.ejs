@@ -1,0 +1,186 @@
+<%- include('../partials/header') %>
+
+<h2>Pricing</h2>
+<%
+  const hourlyLaborRate = Number(settings.hourly_rate || 0);
+  function laborPriceFor(rule) {
+    const hours = Number(rule && rule.hours || 0);
+    return hours * hourlyLaborRate;
+  }
+%>
+
+<div class="tabs" id="pricing-tabs">
+  <div class="tab-list" role="tablist" aria-label="Pricing sections">
+    <button type="button" class="tab-button <%= activeTab === 'labor' ? 'active' : '' %>" data-tab="labor" role="tab" aria-selected="<%= activeTab === 'labor' %>">Labor Pricing Rules</button>
+    <button type="button" class="tab-button <%= activeTab === 'database' ? 'active' : '' %>" data-tab="database" role="tab" aria-selected="<%= activeTab === 'database' %>">Show Data Base</button>
+    <button type="button" class="tab-button <%= activeTab === 'parts' ? 'active' : '' %>" data-tab="parts" role="tab" aria-selected="<%= activeTab === 'parts' %>">Parts Pricing Rules</button>
+    <button type="button" class="tab-button <%= activeTab === 'search' ? 'active' : '' %>" data-tab="search" role="tab" aria-selected="<%= activeTab === 'search' %>">Look for Price Search</button>
+  </div>
+
+  <section class="tab-panel <%= activeTab === 'labor' ? 'active' : '' %>" data-panel="labor" role="tabpanel">
+    <form method="post" action="/pricing/settings" class="form">
+      <label>Hourly labor rate (₱/hour)
+        <input name="hourly_rate" type="number" step="0.01" min="0" value="<%= settings.hourly_rate %>">
+      </label>
+      <button type="submit">Save rate</button>
+    </form>
+
+    <p><a class="btn btn-secondary" href="/pricing/new">+ Add Rule</a></p>
+
+    <div class="table-scroll">
+    <table class="list">
+      <thead>
+        <tr>
+          <th>Created Branch</th>
+          <th>Unit Type</th>
+          <th>Service Type</th>
+          <th>Service Hours</th>
+          <th>Hourly/Labor/Rate</th>
+          <th>Labor Price</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% pricing_rules.forEach(rule => { %>
+          <tr>
+            <td><%= String(rule.created_branch || '').trim() || '—' %></td>
+            <td><%= rule.vehicle_type %></td>
+            <td><%= rule.service_type %></td>
+            <td><%= rule.hours %></td>
+            <td>₱<%= hourlyLaborRate.toFixed(2) %></td>
+            <td>₱<%= laborPriceFor(rule).toFixed(2) %></td>
+            <td class="actions">
+              <a href="/pricing/<%= rule.id %>/edit">Edit</a>
+              <form method="post" action="/pricing/<%= rule.id %>/delete" style="display:inline" onsubmit="return confirm('Delete this pricing rule?');">
+                <button type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section class="tab-panel <%= activeTab === 'database' ? 'active' : '' %>" data-panel="database" role="tabpanel">
+    <div class="card">
+      <h3>Pricing Data Base</h3>
+      <p>Total labor pricing rules: <strong><%= pricing_rules.length %></strong></p>
+      <p>Current hourly labor rate: <strong>₱<%= Number(settings.hourly_rate || 0).toFixed(2) %></strong></p>
+      <div class="table-scroll">
+        <table class="list">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Created Branch</th>
+              <th>Unit Type</th>
+              <th>Service Type</th>
+              <th>Service Hours</th>
+              <th>Hourly/Labor/Rate</th>
+              <th>Labor Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% pricing_rules.forEach(rule => { %>
+              <tr>
+                <td><%= rule.id %></td>
+                <td><%= String(rule.created_branch || '').trim() || '—' %></td>
+                <td><%= rule.vehicle_type %></td>
+                <td><%= rule.service_type %></td>
+                <td><%= rule.hours %></td>
+                <td>₱<%= hourlyLaborRate.toFixed(2) %></td>
+                <td>₱<%= laborPriceFor(rule).toFixed(2) %></td>
+              </tr>
+            <% }) %>
+            <% if (!pricing_rules.length) { %>
+              <tr><td colspan="7">No pricing rules yet.</td></tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="tab-panel <%= activeTab === 'parts' ? 'active' : '' %>" data-panel="parts" role="tabpanel">
+    <div class="card">
+      <h3>Parts Pricing Rules</h3>
+      <p>Parts pricing module placeholder is ready. Add your parts file later and this tab can be wired to import, maintain, and search parts prices.</p>
+    </div>
+  </section>
+
+  <section class="tab-panel <%= activeTab === 'search' ? 'active' : '' %>" data-panel="search" role="tabpanel">
+    <div class="card">
+      <h3>Look for Price Search</h3>
+      <form method="get" action="/pricing" class="form">
+        <input type="hidden" name="tab" value="search">
+        <label>Search by unit type or service type
+          <input name="search" value="<%= search %>" placeholder="e.g. small, change oil, brake">
+        </label>
+        <button type="submit">Search</button>
+      </form>
+
+      <% if (search) { %>
+        <p>Showing <strong><%= searchResults.length %></strong> result(s) for "<%= search %>".</p>
+        <div class="table-scroll">
+        <table class="list">
+          <thead>
+            <tr>
+              <th>Unit Type</th>
+              <th>Service Type</th>
+              <th>Service Hours</th>
+              <th>Hourly/Labor/Rate</th>
+              <th>Labor Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% searchResults.forEach(rule => { %>
+              <tr>
+                <td><%= rule.vehicle_type %></td>
+                <td><%= rule.service_type %></td>
+                <td><%= rule.hours %></td>
+                <td>₱<%= hourlyLaborRate.toFixed(2) %></td>
+                <td>₱<%= laborPriceFor(rule).toFixed(2) %></td>
+              </tr>
+            <% }) %>
+            <% if (!searchResults.length) { %>
+              <tr><td colspan="5">No matching pricing records found.</td></tr>
+            <% } %>
+          </tbody>
+        </table>
+        </div>
+      <% } else { %>
+        <p>Enter a keyword to search existing labor pricing rules.</p>
+      <% } %>
+    </div>
+  </section>
+</div>
+
+<script>
+  (function initPricingTabs() {
+    const root = document.getElementById('pricing-tabs');
+    if (!root) return;
+
+    const buttons = Array.from(root.querySelectorAll('.tab-button'));
+    const panels = Array.from(root.querySelectorAll('.tab-panel'));
+
+    function setActive(tabName) {
+      buttons.forEach(button => {
+        const isActive = button.dataset.tab === tabName;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-selected', String(isActive));
+      });
+
+      panels.forEach(panel => {
+        panel.classList.toggle('active', panel.dataset.panel === tabName);
+      });
+    }
+
+    buttons.forEach(button => {
+      button.addEventListener('click', () => {
+        setActive(button.dataset.tab);
+      });
+    });
+  })();
+</script>
+
+<%- include('../partials/footer') %>

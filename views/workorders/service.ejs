@@ -1,0 +1,390 @@
+<%- include('../partials/header') %>
+
+<%
+  const serviceCustomerName = String((customer && customer.name) || wo.customer_entry || '').trim() || 'Unknown Customer';
+  const serviceVehicleBrand = String((wo && wo.car_brand) || (vehicle && vehicle.make) || '').trim();
+  const serviceVehicleModel = String((wo && wo.car_model) || (vehicle && vehicle.model) || '').trim();
+  const serviceVehiclePlate = String((wo && wo.plate_number) || (vehicle && vehicle.license_plate) || '').trim();
+  const serviceVehicleLabel = [serviceVehicleBrand, serviceVehicleModel].filter(Boolean).join(' ').trim() || 'Unknown Vehicle';
+  const serviceVehicleWithPlate = serviceVehiclePlate ? `${serviceVehicleLabel} (${serviceVehiclePlate})` : serviceVehicleLabel;
+%>
+<h2>Services - <%= serviceCustomerName %> - <%= serviceVehicleWithPlate %></h2>
+
+<% if (inventoryError) { %>
+  <p style="color:#ff6b6b;font-weight:700;"><%= inventoryError %></p>
+<% } %>
+<% if (typeof communicationOk !== 'undefined' && communicationOk) { %>
+  <p style="color:#1f7a32;font-weight:700;"><%= communicationOk %></p>
+<% } %>
+<% if (typeof communicationError !== 'undefined' && communicationError) { %>
+  <p class="error"><%= communicationError %></p>
+<% } %>
+
+<% const reasonOptions = [
+  'Due for Maintenance',
+  'Deffective',
+  'Quotation',
+  'Recommendation',
+  'Customer Request',
+  'Purchase',
+  'Back Job',
+]; %>
+<% const laborPriceMatrix = (typeof labor_price_matrix !== 'undefined' && labor_price_matrix) ? labor_price_matrix : []; %>
+<% const serviceRequiredOptions = Array.from(new Set(laborPriceMatrix.map(row => (row.service_required || '').trim()).filter(Boolean))); %>
+
+<form method="post" action="/work-orders/<%= wo.id %>/service" class="form service-form">
+  <label>Work Order Notes
+    <textarea name="description" class="description-faded"><%= wo.description || '' %></textarea>
+  </label>
+
+  <datalist id="service-required-options">
+    <% serviceRequiredOptions.forEach(option => { %>
+      <option value="<%= option %>"></option>
+    <% }) %>
+  </datalist>
+
+  <datalist id="part-number-options">
+    <% (parts_catalog || []).forEach(part => { %>
+      <option value="<%= part.part_number %>"><%= part.part_name || '' %> (Stock: <%= Math.max(0, Number(part.stock || 0)) %>)</option>
+    <% }) %>
+  </datalist>
+
+  <div class="service-table-scroll">
+  <table class="service-table">
+    <thead>
+      <tr>
+        <th>Service Work and Reason</th>
+        <th>Service Required</th>
+        <th>Labor Price</th>
+        <th>Qty.</th>
+        <th>Parts</th>
+        <th>Part Number</th>
+        <th>Unit</th>
+        <th>Unit Price</th>
+        <th>QTY</th>
+        <th>Total</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="service-rows">
+      <% const renderedItems = (wo.service_items && wo.service_items.length)
+          ? wo.service_items
+          : [{ reason: '', description: '', labor_price: '', service_qty: 1, parts: '', part_number: '', unit: '', parts_qty: 1, parts_price: '', total_price: '' }]; %>
+      <% renderedItems.forEach((item, idx) => { %>
+        <tr>
+          <td>
+            <select name="service_items[<%= idx %>][reason]" class="service-type-select">
+              <% reasonOptions.forEach((reason, reasonIdx) => { %>
+                <% const selectedReason = item.reason || item.service_type || ''; %>
+                <option value="<%= reason %>" <%= (selectedReason ? selectedReason === reason : reasonIdx === 0) ? 'selected' : '' %>><%= reason %></option>
+              <% }) %>
+            </select>
+          </td>
+          <td>
+            <input type="text" name="service_items[<%= idx %>][description]" class="service-required-input row-input description-faded" list="service-required-options" value="<%= item.description || '' %>" placeholder="Type service required" autocomplete="off" />
+          </td>
+          <td><input type="number" name="service_items[<%= idx %>][labor_price]" value="<%= item.labor_price || '' %>" step="0.01" min="0" class="row-input labor" /></td>
+          <td><input type="number" name="service_items[<%= idx %>][service_qty]" value="<%= (item.service_qty != null && item.service_qty !== '') ? item.service_qty : 1 %>" step="1" min="1" class="row-input service-qty" /></td>
+          <td><input type="text" name="service_items[<%= idx %>][parts]" value="<%= item.parts || '' %>" class="row-input parts-desc" /></td>
+          <td>
+            <input type="text" name="service_items[<%= idx %>][part_number]" value="<%= item.part_number || '' %>" class="row-input part-number-input" list="part-number-options" placeholder="Select part #" />
+            <div style="margin-top:4px;display:flex;gap:6px;align-items:center;">
+              <a href="/parts" target="_blank" class="part-db-link" style="font-size:11px;">Open Part</a>
+              <span class="part-stock-hint" style="font-size:11px;opacity:.75;"></span>
+            </div>
+          </td>
+          <td><input type="text" name="service_items[<%= idx %>][unit]" value="<%= item.unit || '' %>" class="row-input part-unit-input" placeholder="pcs, set, liter" /></td>
+          <td><input type="number" name="service_items[<%= idx %>][parts_price]" value="<%= item.parts_price || '' %>" step="0.01" min="0" class="row-input parts-price" /></td>
+          <td><input type="number" name="service_items[<%= idx %>][parts_qty]" value="<%= (item.parts_qty != null && item.parts_qty !== '') ? item.parts_qty : 1 %>" step="1" min="0" class="row-input parts-qty" /></td>
+          <td>
+            <input type="hidden" name="service_items[<%= idx %>][total_price]" value="<%= item.total_price || '' %>" class="total-hidden" />
+            <input type="text" value="<%= (item.total_price != null && item.total_price !== '') ? ('₱' + Number(item.total_price).toFixed(2)) : '' %>" class="row-input total-display" readonly />
+          </td>
+          <td><button type="button" class="btn btn-secondary remove-row">Remove</button></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="service-actions">
+    <button type="button" class="btn btn-secondary" id="add-row">Add row</button>
+    <div class="service-summary">
+      <span>Grand Total:</span>
+      <strong id="grand-total">₱<%= (wo.service_items || []).reduce((sum, item) => sum + Number(item.total_price || 0), 0).toFixed(2) %></strong>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" class="btn">Save Service Details</button>
+    <a href="/work-orders">Cancel</a>
+  </div>
+</form>
+
+<section class="dashboard-card gm-panel" style="margin-top:16px;">
+  <div class="dashboard-card__header gm-panel-header">Technician Communication</div>
+  <form method="post" action="/work-orders/<%= wo.id %>/technician-update" class="form" style="margin-bottom:10px;">
+    <input type="hidden" name="return_to" value="service" />
+    <label>
+      Message to Technician
+      <textarea name="message" placeholder="Send service updates, parts instructions, or urgency notes."></textarea>
+    </label>
+    <button type="submit">Send Update</button>
+  </form>
+
+  <% const technicianUpdatesSafe = Array.isArray(typeof technicianUpdates !== 'undefined' ? technicianUpdates : []) ? technicianUpdates : []; %>
+  <div>
+    <strong>Timeline</strong>
+    <% if (!technicianUpdatesSafe.length) { %>
+      <p class="dashboard-note">No communication updates yet.</p>
+    <% } else { %>
+      <ul style="margin:10px 0 0 18px;">
+        <% technicianUpdatesSafe.forEach(entry => { %>
+          <% const flags = entry.status_flags || {}; %>
+          <li style="margin-bottom:8px;">
+            <strong><%= entry.sender_role === 'technician' ? 'TECH' : 'SR' %></strong>
+            <span> - <%= new Date(entry.created_at || '').toLocaleString('en-PH') %></span>
+            <% if (flags.on_break) { %>
+              <span> [Break]</span>
+            <% } %>
+            <% if (flags.waiting_parts) { %>
+              <span> [Waiting Parts]</span>
+            <% } %>
+            <% if (entry.message) { %>
+              <div><%= entry.message %></div>
+            <% } %>
+          </li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </div>
+</section>
+
+<script>
+  const vehicleType = '<%= typeof service_vehicle_type !== 'undefined' ? service_vehicle_type : (vehicle ? vehicle.vehicle_type || '' : '') %>';
+  const laborPriceMatrix = <%- JSON.stringify((typeof labor_price_matrix !== 'undefined' && labor_price_matrix) ? labor_price_matrix : []) %>;
+  const reasonOptions = <%- JSON.stringify(reasonOptions || []) %>;
+  const partsCatalog = <%- JSON.stringify(parts_catalog || []) %>;
+  function normalizePartNumberKey(value) {
+    const raw = String(value || '').trim().toUpperCase();
+    if (!raw) return '';
+    if (/^\d+$/.test(raw)) return raw.replace(/^0+(?=\d)/, '');
+    return raw;
+  }
+  const partsCatalogMap = new Map(
+    (partsCatalog || []).map(item => [normalizePartNumberKey(item.part_number), item])
+  );
+
+  function normalizeLookupText(value) {
+    return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  }
+
+  function normalizeVehicleTypeKey(value) {
+    const key = normalizeLookupText(value).replace(/[^a-z0-9]/g, '');
+    const aliases = {
+      small: 'small',
+      smallsedan: 'small',
+      medium: 'medium',
+      large: 'large',
+      largeunit: 'large',
+      compactsuv: 'compactsuv',
+      vansuv: 'vansuvpickup',
+      vansuvpickup: 'vansuvpickup',
+      suvvanpickup: 'vansuvpickup',
+      pickup: 'vansuvpickup',
+      truck: 'truck',
+      equipment: 'equipment',
+      facility: 'facility',
+      tools: 'tools',
+    };
+    return aliases[key] || key;
+  }
+
+  function formatCurrency(n) {
+    try {
+      return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(Number(n || 0));
+    } catch (e) {
+      return '₱' + Number(n || 0).toFixed(2);
+    }
+  }
+
+  function getPriceForServiceRequired(serviceRequired) {
+    const vehtype = normalizeVehicleTypeKey(vehicleType);
+    const normalizedService = normalizeLookupText(serviceRequired);
+    if (!vehtype || !normalizedService) return null;
+
+    const serviceRow = laborPriceMatrix.find(row => (
+      normalizeLookupText(row.service_required) === normalizedService
+    ));
+    if (!serviceRow || !serviceRow.prices) return null;
+
+    const price = Number(serviceRow.prices[vehtype]);
+    return Number.isFinite(price) ? price : null;
+  }
+
+  function updateTotals() {
+    const rows = document.querySelectorAll('#service-rows tr');
+    let grandTotal = 0;
+    rows.forEach(row => {
+      const labor = parseFloat((row.querySelector('.labor') || {}).value) || 0;
+      const serviceQty = parseFloat((row.querySelector('.service-qty') || {}).value) || 1;
+      const qty = parseFloat((row.querySelector('.parts-qty') || {}).value) || 0;
+      const partsUnitPrice = parseFloat((row.querySelector('.parts-price') || {}).value) || 0;
+      const partsLineTotal = qty * partsUnitPrice;
+      const total = (labor * serviceQty) + partsLineTotal;
+      const hidden = row.querySelector('.total-hidden');
+      const disp = row.querySelector('.total-display');
+      if (hidden) hidden.value = total.toFixed(2);
+      if (disp) disp.value = formatCurrency(total);
+      grandTotal += total;
+    });
+    document.getElementById('grand-total').textContent = formatCurrency(grandTotal);
+  }
+
+  function updatePartRowFromSelection(row) {
+    const partNumberInput = row.querySelector('.part-number-input');
+    if (!partNumberInput) return;
+
+    const partsDescInput = row.querySelector('.parts-desc');
+    const partsPriceInput = row.querySelector('.parts-price');
+    const partUnitInput = row.querySelector('.part-unit-input');
+    const stockHint = row.querySelector('.part-stock-hint');
+    const dbLink = row.querySelector('.part-db-link');
+    const selectedPartNumber = String(partNumberInput.value || '').trim().toUpperCase();
+    const selectedPartKey = normalizePartNumberKey(selectedPartNumber);
+
+    if (dbLink) {
+      dbLink.href = selectedPartNumber ? `/parts?q=${encodeURIComponent(selectedPartNumber)}` : '/parts';
+    }
+
+    const selectedPart = partsCatalogMap.get(selectedPartKey);
+    if (!selectedPart) {
+      if (stockHint) stockHint.textContent = '';
+      return;
+    }
+
+    if (partsDescInput && !String(partsDescInput.value || '').trim()) {
+      partsDescInput.value = selectedPart.part_name || '';
+    }
+
+    if (partsPriceInput) {
+      const price = Number(selectedPart.retail_price || 0);
+      partsPriceInput.value = Number.isFinite(price) && price > 0 ? price.toFixed(2) : '0.00';
+    }
+
+    if (partUnitInput) {
+      partUnitInput.value = String(selectedPart.unit || '').trim();
+    }
+
+    if (stockHint) {
+      const stock = Math.max(0, Number(selectedPart.stock || 0));
+      stockHint.textContent = `Stock: ${stock}`;
+    }
+  }
+
+  function refreshRowNames() {
+    document.querySelectorAll('#service-rows tr').forEach((row, idx) => {
+      row.querySelectorAll('[name^="service_items"]').forEach(input => {
+        const name = input.name.replace(/service_items\[\d+\]/, `service_items[${idx}]`);
+        input.name = name;
+      });
+    });
+  }
+
+  function attachRowEvents(row) {
+    row.querySelectorAll('.labor, .service-qty, .parts-qty, .parts-price').forEach(input => {
+      input.addEventListener('input', updateTotals);
+      input.addEventListener('blur', () => {
+        if (input.classList.contains('service-qty')) {
+          const q = Math.max(1, Math.floor(parseFloat(input.value) || 1));
+          input.value = String(q);
+        } else if (input.classList.contains('parts-qty')) {
+          const q = Math.max(0, Math.floor(parseFloat(input.value) || 0));
+          input.value = String(q);
+        } else {
+          const v = parseFloat(input.value) || 0;
+          input.value = v.toFixed(2);
+        }
+        updateTotals();
+      });
+    });
+    row.querySelector('.remove-row').addEventListener('click', () => {
+      row.remove();
+      refreshRowNames();
+      updateTotals();
+    });
+    const serviceRequiredInput = row.querySelector('.service-required-input');
+    if (serviceRequiredInput) {
+      const applyAutoLabor = () => {
+        const laborInput = row.querySelector('.labor');
+        if (!laborInput) return;
+        const computed = getPriceForServiceRequired(serviceRequiredInput.value);
+        laborInput.value = computed === null ? '' : computed.toFixed(2);
+        updateTotals();
+      };
+      serviceRequiredInput.addEventListener('change', applyAutoLabor);
+      serviceRequiredInput.addEventListener('blur', applyAutoLabor);
+      serviceRequiredInput.addEventListener('input', () => {
+        if (normalizeLookupText(serviceRequiredInput.value).length >= 3) {
+          applyAutoLabor();
+        }
+      });
+      applyAutoLabor();
+    }
+
+    const partNumberInput = row.querySelector('.part-number-input');
+    if (partNumberInput) {
+      const syncPartSelection = () => {
+        updatePartRowFromSelection(row);
+        updateTotals();
+      };
+      partNumberInput.addEventListener('input', syncPartSelection);
+      partNumberInput.addEventListener('change', syncPartSelection);
+      partNumberInput.addEventListener('blur', syncPartSelection);
+      syncPartSelection();
+    }
+  }
+
+  document.getElementById('add-row').addEventListener('click', () => {
+    addServiceRowWithoutRedirect();
+    refreshRowNames();
+    updateTotals();
+  });
+
+  /* Keep this helper available if row-append mode is restored later. */
+  function addServiceRowWithoutRedirect() {
+    const tbody = document.getElementById('service-rows');
+    const idx = tbody.querySelectorAll('tr').length;
+    const row = document.createElement('tr');
+    const options = reasonOptions.map((reason, reasonIdx) => `<option value="${reason}"${reasonIdx === 0 ? ' selected' : ''}>${reason}</option>`).join('');
+    row.innerHTML = `
+      <td><select name="service_items[${idx}][reason]" class="service-type-select">${options}</select></td>
+      <td><input type="text" name="service_items[${idx}][description]" class="service-required-input row-input description-faded" list="service-required-options" placeholder="Type service required" autocomplete="off" /></td>
+      <td><input type="number" name="service_items[${idx}][labor_price]" step="0.01" min="0" class="row-input labor" /></td>
+      <td><input type="number" name="service_items[${idx}][service_qty]" step="1" min="1" value="1" class="row-input service-qty" /></td>
+      <td><input type="text" name="service_items[${idx}][parts]" class="row-input parts-desc" /></td>
+      <td>
+        <input type="text" name="service_items[${idx}][part_number]" class="row-input part-number-input" list="part-number-options" placeholder="Select part #" />
+        <div style="margin-top:4px;display:flex;gap:6px;align-items:center;">
+          <a href="/parts" target="_blank" class="part-db-link" style="font-size:11px;">Open Part</a>
+          <span class="part-stock-hint" style="font-size:11px;opacity:.75;"></span>
+        </div>
+      </td>
+      <td><input type="text" name="service_items[${idx}][unit]" class="row-input part-unit-input" placeholder="pcs, set, liter" /></td>
+      <td><input type="number" name="service_items[${idx}][parts_price]" step="0.01" min="0" class="row-input parts-price" /></td>
+      <td><input type="number" name="service_items[${idx}][parts_qty]" step="1" min="0" value="1" class="row-input parts-qty" /></td>
+      <td>
+        <input type="hidden" name="service_items[${idx}][total_price]" class="total-hidden" />
+        <input type="text" class="row-input total-display" readonly />
+      </td>
+      <td><button type="button" class="btn btn-secondary remove-row">Remove</button></td>
+    `;
+    tbody.appendChild(row);
+    attachRowEvents(row);
+  }
+
+  document.querySelectorAll('#service-rows tr').forEach(attachRowEvents);
+  updateTotals();
+</script>
+
+<%- include('../partials/footer') %>

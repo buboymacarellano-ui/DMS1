@@ -1,0 +1,6 @@
+{
+    "recommendations": [
+        "ollama.ollama",
+        "dartyushin.ollama-participant"
+    ]
+}

@@ -1,0 +1,14 @@
+# Exclude heavy third-party code packages
+node_modules/
+
+# Exclude dense auto parts/service CSV data sheets
+*.csv
+VehServiceLabor.csv
+
+# Exclude sensitive environment config variables
+.env
+.env.*
+
+# Exclude system folders
+.vscode/
+.git/
