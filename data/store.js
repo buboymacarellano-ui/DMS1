@@ -248,4 +248,5 @@ module.exports = {
   backupData,
   getSqlitePath: sqlite.getSqlitePath,
   getSnapshotPath: sqlite.getSnapshotPath,
+  getEngineName: sqlite.getEngineName,
 };

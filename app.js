@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const session = require('express-session');
@@ -76,11 +77,40 @@ const BYPASS_ROLE = BYPASS_ROLES.has(requestedBypassRole) ? requestedBypassRole 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
-const sessionSecret = String(process.env.SESSION_SECRET || '').trim();
 
-if (isProduction && sessionSecret.length < 32) {
-  throw new Error('SESSION_SECRET must be set to at least 32 characters in production.');
+function resolveSessionSecret() {
+  const fromEnv = String(process.env.SESSION_SECRET || '').trim();
+  if (fromEnv.length >= 32) return fromEnv;
+
+  const dataDir = String(process.env.DMS_SQLITE_PATH || '').trim()
+    ? path.dirname(path.resolve(process.env.DMS_SQLITE_PATH))
+    : (fs.existsSync('/data') ? '/data' : path.join(process.env.LOCALAPPDATA || __dirname, 'AE-DMS'));
+  const secretFile = path.join(dataDir, 'session-secret.txt');
+
+  try {
+    if (fs.existsSync(secretFile)) {
+      const stored = String(fs.readFileSync(secretFile, 'utf8') || '').trim();
+      if (stored.length >= 32) return stored;
+    }
+  } catch (_) {
+    // Fall through and generate.
+  }
+
+  const generated = crypto.randomBytes(32).toString('hex');
+  try {
+    fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(secretFile, generated, { encoding: 'utf8', mode: 0o600 });
+    console.log('Generated SESSION_SECRET file at', secretFile);
+    return generated;
+  } catch (error) {
+    if (isProduction) {
+      throw new Error('SESSION_SECRET must be set to at least 32 characters in production. Add it in Render Environment, then Redeploy.');
+    }
+    return 'local-dev-only-secret-change-me';
+  }
 }
+
+const sessionSecret = resolveSessionSecret();
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -144,7 +174,7 @@ app.get('/healthz', (req, res) => {
   res.status(200).json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    storage: 'sqlite',
+    storage: store.getEngineName ? store.getEngineName() : 'sqlite',
     sqlitePath: store.getSqlitePath(),
     jsonSnapshot: store.getSnapshotPath(),
     persistent: true,
@@ -2011,7 +2041,7 @@ ensureSeedHrAccount()
     console.error('Failed to seed HR account:', error);
   })
   .finally(() => {
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running at http://localhost:${PORT}`);
     });
   });
