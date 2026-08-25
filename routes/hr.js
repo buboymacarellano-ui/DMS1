@@ -26,6 +26,7 @@ function emptyRoleCounts() {
     hr: 0,
     service_technical_manager: 0,
     parts_manager: 0,
+    finance_manager: 0,
     technician: 0,
   };
 }
@@ -33,7 +34,9 @@ function emptyRoleCounts() {
 async function renderDirectory(res, extra) {
   const users = await store.getAll('users');
   const roleCounts = users.reduce((counts, user) => {
-    const role = String(user.role || '').trim().toLowerCase();
+    let role = String(user.role || '').trim().toLowerCase();
+    if (role === 'fm') role = 'finance_manager';
+    if (role === 'pm') role = 'parts_manager';
     counts[role] = (counts[role] || 0) + 1;
     return counts;
   }, emptyRoleCounts());

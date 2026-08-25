@@ -44,6 +44,10 @@
       <p class="gm-kpi-label">Parts Manager Accounts</p>
       <h2 class="gm-kpi-value"><%= roleCounts.parts_manager || 0 %></h2>
     </article>
+    <article class="gm-kpi-card admin-summary-card">
+      <p class="gm-kpi-label">Finance Manager Accounts</p>
+      <h2 class="gm-kpi-value"><%= roleCounts.finance_manager || 0 %></h2>
+    </article>
   </div>
 
   <div class="admin-grid">
@@ -55,6 +59,7 @@
         <a class="dashboard-button" href="/auth/register-hr">Create HR Account</a>
         <a class="dashboard-button" href="/auth/register-stm">Create STM Account</a>
         <a class="dashboard-button" href="/auth/register-parts-manager">Create Parts Manager Account</a>
+        <a class="dashboard-button" href="/auth/register-finance-manager">Create Finance Manager Account</a>
         <a class="dashboard-button" href="/auth/register-admin">Create Admin Account</a>
         <a class="dashboard-button" href="/auth/register-gm">Create GM Account</a>
         <a class="dashboard-button" href="/auth/register">Create SA / SR / Senior SR Account</a>

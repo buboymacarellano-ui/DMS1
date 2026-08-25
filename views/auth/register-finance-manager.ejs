@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Create Finance Manager Account</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <%- include('../partials/back-button') %>
+  <main class="auth-shell">
+    <section class="auth-card">
+      <h1>FINANCE MANAGER SIGN UP</h1>
+      <p class="auth-subtitle">Create a login account for revenue, receivables, and end-of-day cash drawer reconciliation.</p>
+
+      <% if (error) { %>
+        <p class="error"><%= error %></p>
+      <% } %>
+
+      <form method="post" action="/auth/register-finance-manager" class="form auth-form">
+        <label>
+          Username
+          <input type="text" name="username" value="<%= username %>" autocomplete="username" required />
+        </label>
+        <label>
+          Password
+          <input type="password" name="password" autocomplete="new-password" minlength="6" required />
+        </label>
+        <label>
+          Confirm Password
+          <input type="password" name="confirm_password" autocomplete="new-password" minlength="6" required />
+        </label>
+        <button type="submit">Create Finance Manager Account</button>
+      </form>
+
+      <p class="auth-hint">Back to <a href="/auth/login?level=finance_manager">Finance Manager login</a>.</p>
+      <p class="auth-hint">Need Parts Manager level? <a href="/auth/register-parts-manager">Create Parts Manager account</a>.</p>
+    </section>
+  </main>
+</body>
+</html>

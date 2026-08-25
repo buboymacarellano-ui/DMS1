@@ -18,6 +18,12 @@ const {
   formatWorkOrderStatusLabel,
   resolveWorkOrderLifecycleStatus,
 } = require('../lib/work-order-status');
+const {
+  PAYMENT_STATUS,
+  computeInvoiceEconomics,
+  financeFieldsFromSnapshot,
+  buildPartsCostIndex,
+} = require('../lib/finance-ledger');
 const router = express.Router();
 
 router.use((req, res, next) => {
@@ -597,7 +603,7 @@ function splitParts(text) {
   return values.length ? values : [raw];
 }
 
-function buildTransactionRecord(wo, customer, vehicle, action, audit = {}) {
+function buildTransactionRecord(wo, customer, vehicle, action, audit = {}, partsIndex) {
   const items = wo.service_items || [];
   const totals = computeTotals(items);
   const parts = [];
@@ -641,6 +647,12 @@ function buildTransactionRecord(wo, customer, vehicle, action, audit = {}) {
     'Totalwith Vat': asMoney(totals.totalWithVat),
     'TimeIn': wo.time_in || '',
     'TimeOut': wo.time_out || '',
+    ...financeFieldsFromSnapshot(computeInvoiceEconomics(wo, partsIndex), {
+      paymentMethod: wo.paymentMethod || wo.payment_method || '',
+      paymentStatus: wo.paymentStatus || wo.payment_status || (
+        String(action || '').indexOf('billing') === 0 ? PAYMENT_STATUS.UNPAID : ''
+      ),
+    }),
   };
 
   for (let i = 1; i <= 15; i += 1) {
@@ -667,7 +679,8 @@ async function saveTransactionRecord(workOrderId, action, audit = {}) {
   if (!wo) return;
   const customer = wo.customer_id ? (await store.getById('customers', wo.customer_id)) || {} : {};
   const vehicle = wo.vehicle_id ? (await store.getById('vehicles', wo.vehicle_id)) || {} : {};
-  const record = buildTransactionRecord(wo, customer, vehicle, action, audit);
+  const partsIndex = buildPartsCostIndex(await store.getAll('parts_inventory'));
+  const record = buildTransactionRecord(wo, customer, vehicle, action, audit, partsIndex);
   await store.create('transaction_records', record);
 }
 
@@ -1083,10 +1096,16 @@ router.post('/:id/billing/final-print', async (req, res) => {
     return res.redirect(`/work-orders/${req.params.id}/billing?contactError=${encodeURIComponent('Customer email address is required.')}`);
   }
 
+  const partsIndex = buildPartsCostIndex(await store.getAll('parts_inventory'));
+  const finance = financeFieldsFromSnapshot(computeInvoiceEconomics(wo, partsIndex), {
+    paymentMethod: normalizeText(req.body.paymentMethod || req.body.payment_method),
+    paymentStatus: PAYMENT_STATUS.UNPAID,
+  });
   const updated = {
     status: 'closed',
     invoice_number: normalizeText(wo.invoice_number) || normalizeWorkOrderNumber(wo.work_order_number, wo.id),
     invoice_date: normalizeText(wo.invoice_date) || new Date().toISOString(),
+    ...finance,
   };
 
   if (!normalizeText(wo.time_out)) {

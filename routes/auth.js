@@ -33,6 +33,7 @@ const ROLE_ADMIN = 'admin';
 const ROLE_HR = 'hr';
 const ROLE_STM = 'service_technical_manager';
 const ROLE_PARTS_MANAGER = 'parts_manager';
+const ROLE_FINANCE_MANAGER = 'finance_manager';
 const ROLE_TECHNICIAN = 'technician';
 const MAX_GM_USERS = 3;
 
@@ -50,6 +51,9 @@ function normalizeAccessLevel(value) {
   if (normalized === ROLE_HR) return ROLE_HR;
   if (normalized === ROLE_STM || normalized === 'stm' || normalized === 'service & technical manager') return ROLE_STM;
   if (normalized === ROLE_PARTS_MANAGER || normalized === 'pm') return ROLE_PARTS_MANAGER;
+  if (normalized === ROLE_FINANCE_MANAGER || normalized === 'fm' || normalized === 'finance manager') {
+    return ROLE_FINANCE_MANAGER;
+  }
   if (normalized === ROLE_TECHNICIAN) return ROLE_TECHNICIAN;
   if (normalized === ROLE_SERVICE_ADVISOR || normalized === 'sa') return ROLE_SERVICE_ADVISOR;
   if (normalized === ROLE_SENIOR_SERVICE_RECEPTIONIST || normalized === 'ssr' || normalized === 'senior_sr') {
@@ -65,6 +69,7 @@ function redirectForRole(role) {
   if (role === ROLE_HR) return '/hr';
   if (role === ROLE_STM) return '/stm';
   if (role === ROLE_PARTS_MANAGER || role === 'pm') return '/parts-manager';
+  if (role === ROLE_FINANCE_MANAGER || role === 'fm') return '/finance';
   if (role === ROLE_TECHNICIAN) return '/technician';
   if (isFrontlineRole(role)) return frontlineHomePath(role);
   return '/work-order-transactions';
@@ -76,6 +81,7 @@ function roleShortLabel(role) {
   if (role === ROLE_HR) return 'HR';
   if (role === ROLE_STM) return 'STM';
   if (role === ROLE_PARTS_MANAGER || role === 'pm') return 'PM';
+  if (role === ROLE_FINANCE_MANAGER || role === 'fm') return 'FM';
   if (role === ROLE_TECHNICIAN) return 'TECH';
   if (role === ROLE_SERVICE_ADVISOR) return 'SA';
   if (role === ROLE_SENIOR_SERVICE_RECEPTIONIST) return 'SSR';
@@ -431,6 +437,16 @@ router.post('/login', async (req, res) => {
   if (accessLevel === ROLE_PARTS_MANAGER && accountRole !== ROLE_PARTS_MANAGER && accountRole !== 'pm') {
     return res.status(403).render('auth/login', buildLoginPayload({
       error: 'This account is not authorized for the Parts Manager interface.',
+      success: '',
+      hasAccounts,
+      username: loginInputRaw,
+      accessLevel,
+    }));
+  }
+
+  if (accessLevel === ROLE_FINANCE_MANAGER && accountRole !== ROLE_FINANCE_MANAGER && accountRole !== 'fm') {
+    return res.status(403).render('auth/login', buildLoginPayload({
+      error: 'This account is not authorized for the Finance Manager interface.',
       success: '',
       hasAccounts,
       username: loginInputRaw,
@@ -914,6 +930,65 @@ router.post('/register-parts-manager', async (req, res) => {
   });
 
   return res.redirect('/auth/login?registered=1&level=parts_manager');
+});
+
+router.get('/register-finance-manager', async (req, res) => {
+  if (req.session.user && !canManageAccounts(req)) {
+    return res.redirect(redirectForRole(normalizeRole(req.session.user.role)));
+  }
+
+  return res.render('auth/register-finance-manager', {
+    error: '',
+    username: '',
+  });
+});
+
+router.post('/register-finance-manager', async (req, res) => {
+  const username = normalizeUsername(req.body.username);
+  const password = String(req.body.password || '');
+  const confirmPassword = String(req.body.confirm_password || '');
+
+  if (!username || !password) {
+    return res.status(400).render('auth/register-finance-manager', {
+      error: 'Username and password are required.',
+      username,
+    });
+  }
+
+  if (password.length < 6) {
+    return res.status(400).render('auth/register-finance-manager', {
+      error: 'Password must be at least 6 characters.',
+      username,
+    });
+  }
+
+  if (password !== confirmPassword) {
+    return res.status(400).render('auth/register-finance-manager', {
+      error: 'Password confirmation does not match.',
+      username,
+    });
+  }
+
+  const users = await store.getAll('users');
+  const exists = users.some((user) => normalizeUsername(user.username) === username);
+  if (exists) {
+    return res.status(409).render('auth/register-finance-manager', {
+      error: 'Username already exists. Please choose another.',
+      username,
+    });
+  }
+
+  const salt = crypto.randomBytes(16).toString('hex');
+  const passwordHash = hashPassword(password, salt);
+
+  await store.create('users', {
+    username,
+    role: ROLE_FINANCE_MANAGER,
+    password_salt: salt,
+    password_hash: passwordHash,
+  });
+
+  return res.redirect('/auth/login?registered=1&level=finance_manager');
 });
 
 router.get('/register-technician', async (req, res) => {

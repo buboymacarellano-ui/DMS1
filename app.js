@@ -15,6 +15,10 @@ const transactionsRouter = require('./routes/transactions');
 const partsRouter = require('./routes/parts');
 const partsManagerRouter = require('./routes/parts-manager');
 const { isPartsManagerRole } = require('./routes/parts-manager');
+const financeRouter = require('./routes/finance');
+const { isFinanceManagerRole, ROLE_FINANCE_MANAGER } = require('./lib/finance-ledger');
+// Invoice/transaction finance fields (persisted on work_orders + transaction_records):
+// paymentMethod, partsCostPrice, partsSellingPrice, laborCost, taxAmount, paymentStatus.
 const employeesRouter = require('./routes/employees');
 const helperRouter = require('./routes/helper');
 const branchPartsRouter = require('./routes/branch-parts');
@@ -73,6 +77,7 @@ const BYPASS_ROLES = new Set([
   ROLE_HR,
   ROLE_STM,
   ROLE_PARTS_MANAGER,
+  ROLE_FINANCE_MANAGER,
   ROLE_TECHNICIAN,
 ]);
 const HR_SEED_USERNAME = 'HR';
@@ -129,7 +134,7 @@ app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
 }));
-app.use(express.urlencoded({ extended: true, limit: '200kb' }));
+app.use(express.urlencoded({ extended: true, limit: '8mb' }));
 app.use(express.json({ limit: '200kb' }));
 app.use(session({
   name: 'dms.sid',
@@ -157,7 +162,7 @@ app.use(async (req, res, next) => {
   if (AUTH_DISABLED && !req.session.user) {
     const roleLabel = BYPASS_ROLE === ROLE_GENERAL_MANAGER
       ? 'GM'
-      : (BYPASS_ROLE === ROLE_ADMIN ? 'ADMIN' : (BYPASS_ROLE === ROLE_HR ? 'HR' : (BYPASS_ROLE === ROLE_STM ? 'STM' : (BYPASS_ROLE === ROLE_PARTS_MANAGER ? 'PARTS' : (BYPASS_ROLE === ROLE_TECHNICIAN ? 'TECH' : 'SA')))));
+      : (BYPASS_ROLE === ROLE_ADMIN ? 'ADMIN' : (BYPASS_ROLE === ROLE_HR ? 'HR' : (BYPASS_ROLE === ROLE_STM ? 'STM' : (BYPASS_ROLE === ROLE_PARTS_MANAGER ? 'PARTS' : (BYPASS_ROLE === ROLE_FINANCE_MANAGER ? 'FM' : (BYPASS_ROLE === ROLE_TECHNICIAN ? 'TECH' : 'SA'))))));
     req.session.user = {
       id: `dev-bypass-${BYPASS_ROLE}`,
       username: `DEV-${roleLabel}`,
@@ -174,6 +179,7 @@ app.use(async (req, res, next) => {
   const activeRole = String(req.session.user && req.session.user.role || '').trim().toLowerCase();
   res.locals.canApproveRequests = APPROVER_ROLES.has(activeRole);
   res.locals.isPartsManager = isPartsManagerRole(activeRole);
+  res.locals.isFinanceManager = isFinanceManagerRole(activeRole);
   res.locals.isGmSupervisor = activeRole === ROLE_GENERAL_MANAGER;
   res.locals.pendingApprovalCount = res.locals.canApproveRequests
     ? (await store.getAll('approval_requests')).filter(request => request.status === 'pending').length
@@ -299,6 +305,15 @@ function requireAnyRole(...roles) {
     }
     return res.redirect('/');
   };
+}
+
+function requireFinanceManager(req, res, next) {
+  if (isLoginAuthDisabled()) return next();
+  const activeRole = String(req.session.user && req.session.user.role || '').trim().toLowerCase();
+  if (isFinanceManagerRole(activeRole) || activeRole === ROLE_GENERAL_MANAGER) return next();
+  const url = String(req.originalUrl || req.path || '');
+  if (url.indexOf('/api/') !== -1) return res.status(403).json({ error: 'Finance Manager access only.' });
+  return res.status(403).send('Finance Manager access only.');
 }
 
 function requirePartsManager(req, res, next) {
@@ -1736,6 +1751,9 @@ app.get('/', async (req, res) => {
   if (activeRole === ROLE_PARTS_MANAGER || activeRole === 'pm') {
     return res.redirect('/parts-manager');
   }
+  if (isFinanceManagerRole(activeRole)) {
+    return res.redirect('/finance');
+  }
   if (isFrontlineRole(activeRole)) {
     return res.redirect(frontlineHomePath(activeRole));
   }
@@ -2467,6 +2485,8 @@ app.use('/work-order-transactions', workOrderTransactionsRouter);
 app.use('/pricing', pricingRouter);
 app.use('/transactions', transactionsRouter);
 app.use('/parts-manager', requirePartsManager, partsManagerRouter);
+app.use('/finance', requireFinanceManager, financeRouter);
+app.use('/api/finance', requireFinanceManager, financeRouter.apiRouter);
 app.use('/api/reports', requireAnyRole(
   ROLE_PARTS_MANAGER,
   'pm',

@@ -7,13 +7,15 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <% const activeRole = currentUser ? String(currentUser.role || '').toLowerCase() : ''; %>
-<body class="<%= ['service_advisor', 'service_receptionist', 'senior_service_receptionist'].includes(activeRole) ? 'role-frontline' : (activeRole === 'service_technical_manager' ? 'role-stm' : '') %>">
+<body class="<%= ['service_advisor', 'service_receptionist', 'senior_service_receptionist'].includes(activeRole) ? 'role-frontline' : (activeRole === 'service_technical_manager' ? 'role-stm' : ((activeRole === 'parts_manager' || activeRole === 'pm') ? 'role-pm' : ((activeRole === 'finance_manager' || activeRole === 'fm') ? 'role-fm' : ''))) %>">
   <% const pathNow = typeof currentPath !== 'undefined' && currentPath ? String(currentPath) : ''; %>
   <% const queryScope = typeof currentQuery !== 'undefined' && currentQuery ? String(currentQuery.scope || currentQuery.location || '').toLowerCase() : ''; %>
   <% const viewingWarehouse1 = pathNow.indexOf('/parts') === 0 && queryScope.indexOf('warehouse') !== -1; %>
-  <% const roleLabel = activeRole === 'general_manager' ? 'GM' : (activeRole === 'technician' ? 'TECH' : (activeRole === 'service_technical_manager' ? 'STM' : ((activeRole === 'parts_manager' || activeRole === 'pm') ? 'PM' : (activeRole === 'admin' ? 'ADMIN' : (activeRole === 'hr' ? 'HR' : (activeRole === 'service_advisor' ? 'SA' : (activeRole === 'senior_service_receptionist' ? 'SSR' : 'SR'))))))); %>
-  <% const cleanSessionHeader = activeRole === 'general_manager' || activeRole === 'service_technical_manager'; %>
-  <% const cleanHomePath = activeRole === 'general_manager' ? '/gm' : '/stm'; %>
+  <% const isPmRole = activeRole === 'parts_manager' || activeRole === 'pm'; %>
+  <% const isFmRole = activeRole === 'finance_manager' || activeRole === 'fm'; %>
+  <% const roleLabel = activeRole === 'general_manager' ? 'GM' : (activeRole === 'technician' ? 'TECH' : (activeRole === 'service_technical_manager' ? 'STM' : (isPmRole ? 'PM' : (isFmRole ? 'FM' : (activeRole === 'admin' ? 'ADMIN' : (activeRole === 'hr' ? 'HR' : (activeRole === 'service_advisor' ? 'SA' : (activeRole === 'senior_service_receptionist' ? 'SSR' : 'SR')))))))); %>
+  <% const cleanSessionHeader = activeRole === 'general_manager' || activeRole === 'service_technical_manager' || isPmRole || isFmRole; %>
+  <% const cleanHomePath = activeRole === 'general_manager' ? '/gm' : (activeRole === 'service_technical_manager' ? '/stm' : (isFmRole ? '/finance' : '/parts-manager')); %>
   <%
     const roleHomeByRole = {
       general_manager: '/gm',
@@ -21,8 +23,10 @@
       hr: '/hr',
       service_technical_manager: '/stm',
       technician: '/technician',
-      parts_manager: '/parts-manager/dashboard',
-      pm: '/parts-manager/dashboard',
+      parts_manager: '/parts-manager',
+      pm: '/parts-manager',
+      finance_manager: '/finance',
+      fm: '/finance',
       service_receptionist: '/service-receptionist',
       senior_service_receptionist: '/service-receptionist',
       service_advisor: '/service-receptionist',
@@ -32,7 +36,8 @@
     const normalizedHome = String(roleHomePath || '/').replace(/\/+$/, '') || '/';
     const isHomePage = normalizedPath === '/'
       || normalizedPath === normalizedHome
-      || ((activeRole === 'parts_manager' || activeRole === 'pm') && normalizedPath === '/parts-manager');
+      || ((activeRole === 'parts_manager' || activeRole === 'pm') && normalizedPath === '/parts-manager')
+      || ((activeRole === 'finance_manager' || activeRole === 'fm') && normalizedPath === '/finance');
   %>
   <header class="site-header<%= cleanSessionHeader ? ' site-header--gm site-header--gm-clean' : '' %>">
     <% if (cleanSessionHeader) { %>
@@ -90,10 +95,6 @@
           <a href="/hr">HR Dashboard</a>
         <% } else if (['service_receptionist', 'senior_service_receptionist', 'service_advisor'].includes(activeRole)) { %>
           <a href="/service-receptionist" class="<%= pathNow.indexOf('/service-receptionist') === 0 ? 'nav-link--active' : '' %>"><%= roleLabel %> Dashboard</a>
-        <% } %>
-        <% if (isPartsManager) { %>
-          <a href="/parts-manager/dashboard">Parts Dashboard</a>
-          <a href="/parts">Parts Database</a>
         <% } %>
         <% if (activeRole === 'admin' || activeRole === 'hr') { %>
           <a href="/employees">Employee DB</a>

@@ -1,0 +1,142 @@
+<%- include('../partials/header') %>
+<%
+  function fmtMoney(value) {
+    return '₱' + Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  const m = (typeof metrics !== 'undefined' && metrics) ? metrics : { grossRevenue: 0, netProfit: 0, outstandingReceivables: 0 };
+  const matrix = Array.isArray(paymentMatrix) ? paymentMatrix : [];
+  const arRows = Array.isArray(receivables) ? receivables : [];
+  const dayRows = Array.isArray(dailyRows) ? dailyRows : [];
+  const dateValue = typeof reportingDate !== 'undefined' ? reportingDate : '';
+%>
+
+<section class="dashboard-shell gm-shell stm-shell fm-workspace" id="fm-workspace" data-reporting-date="<%= dateValue %>">
+  <div class="stm-head">
+    <div class="dashboard-title gm-title role-dashboard-title"><span>FM</span> <span class="role-dashboard-title__suffix">Finance Monitor</span></div>
+    <form method="get" action="/finance" class="stm-branch-filter fm-date-filter">
+      <span>Reporting Date</span>
+      <input type="date" name="date" value="<%= dateValue %>" aria-label="Reporting date" />
+      <button type="submit" class="btn">Apply</button>
+      <a class="btn" href="/api/finance/eod-report?date=<%= encodeURIComponent(dateValue) %>" target="_blank" rel="noopener">Print EOD drawer</a>
+    </form>
+  </div>
+
+  <section class="fm-metrics" aria-label="Core finance balances">
+    <article class="gm-kpi-card fm-metric" data-metric="grossRevenue">
+      <p class="gm-kpi-label">Gross Revenue</p>
+      <h2 class="gm-kpi-value" id="fm-gross-revenue"><%= fmtMoney(m.grossRevenue) %></h2>
+      <p class="dashboard-note">Collected invoices (Paid + partial receipts)</p>
+    </article>
+    <article class="gm-kpi-card fm-metric" data-metric="netProfit">
+      <p class="gm-kpi-label">Net Profit</p>
+      <h2 class="gm-kpi-value" id="fm-net-profit"><%= fmtMoney(m.netProfit) %></h2>
+      <p class="dashboard-note">Revenue − parts cost − labor cost</p>
+    </article>
+    <article class="gm-kpi-card fm-metric" data-metric="outstandingReceivables">
+      <p class="gm-kpi-label">Outstanding Receivables</p>
+      <h2 class="gm-kpi-value" id="fm-receivables-total"><%= fmtMoney(m.outstandingReceivables) %></h2>
+      <p class="dashboard-note">Unpaid / Account Receivable balances</p>
+    </article>
+  </section>
+
+  <section class="dashboard-card gm-panel fm-panel" aria-label="Daily payment matrix">
+    <div class="dashboard-card__header gm-panel-header">Daily Payment Matrix · <%= dateValue %></div>
+    <p class="dashboard-note">Transactions for the reporting date, grouped by tender type.</p>
+    <div class="table-scroll">
+      <table class="list gm-table" id="fm-payment-matrix">
+        <thead>
+          <tr>
+            <th>Payment Method</th>
+            <th>Count</th>
+            <th>Collected</th>
+            <th>Parts Cost</th>
+            <th>Labor Cost</th>
+            <th>VAT 12%</th>
+            <th>Net</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!matrix.length) { %>
+            <tr class="fm-empty"><td colspan="7">No payment activity for this date.</td></tr>
+          <% } %>
+          <% matrix.forEach((row) => { %>
+            <tr data-method="<%= row.paymentMethod %>">
+              <td><%= row.paymentMethod %></td>
+              <td style="text-align:right;"><%= row.count %></td>
+              <td style="text-align:right;"><%= fmtMoney(row.gross) %></td>
+              <td style="text-align:right;"><%= fmtMoney(row.partsCostPrice) %></td>
+              <td style="text-align:right;"><%= fmtMoney(row.laborCost) %></td>
+              <td style="text-align:right;"><%= fmtMoney(row.taxAmount) %></td>
+              <td style="text-align:right;"><%= fmtMoney(row.netProfit) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <% if (dayRows.length) { %>
+      <div class="table-scroll" style="margin-top:12px;">
+        <table class="list gm-table">
+          <thead>
+            <tr>
+              <th>Invoice</th>
+              <th>Customer</th>
+              <th>Plate</th>
+              <th>Method</th>
+              <th>Status</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% dayRows.forEach((row) => { %>
+              <tr>
+                <td><%= row.invoice_number %></td>
+                <td><%= row.customerName || '—' %></td>
+                <td><%= row.plateNumber || '—' %></td>
+                <td><%= row.paymentMethod || '—' %></td>
+                <td><%= row.paymentStatus %></td>
+                <td style="text-align:right;"><%= fmtMoney(row.grandTotal) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+
+  <section class="dashboard-card gm-panel fm-panel" aria-label="Accounts receivable">
+    <div class="dashboard-card__header gm-panel-header">Accounts Receivable</div>
+    <p class="dashboard-note">Unpaid invoices. Mark as Paid posts Cash into Gross Revenue without reloading the page.</p>
+    <div class="table-scroll">
+      <table class="list gm-table" id="fm-receivables">
+        <thead>
+          <tr>
+            <th>Customer Name</th>
+            <th>Plate Number</th>
+            <th>Invoice</th>
+            <th>Balance Due</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!arRows.length) { %>
+            <tr class="fm-empty" id="fm-ar-empty"><td colspan="5">No outstanding receivables.</td></tr>
+          <% } %>
+          <% arRows.forEach((row) => { %>
+            <tr class="fm-ar-row" data-id="<%= row.id %>" data-balance="<%= row.balanceDue %>">
+              <td><%= row.customerName || '—' %></td>
+              <td><%= row.plateNumber || '—' %></td>
+              <td><%= row.invoice_number %></td>
+              <td style="text-align:right;"><%= fmtMoney(row.balanceDue) %></td>
+              <td>
+                <button type="button" class="btn fm-mark-paid" data-id="<%= row.id %>">Mark as Paid</button>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
+
+<script src="/js/finance-workspace.js"></script>
+<%- include('../partials/footer') %>

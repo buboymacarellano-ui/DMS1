@@ -28,6 +28,7 @@ function normalizeData(data) {
     parts_purchase_orders: source.parts_purchase_orders || [],
     parts_suppliers: source.parts_suppliers || [],
     parts_requests: source.parts_requests || [],
+    parts_documents: source.parts_documents || [],
     parts_request_transactions: source.parts_request_transactions || [],
     branch_parts_order_drafts: source.branch_parts_order_drafts || [],
     branches: source.branches || [],

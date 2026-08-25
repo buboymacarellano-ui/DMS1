@@ -1,0 +1,448 @@
+<%- include('../partials/header') %>
+<%
+  function fmtMoney(value) {
+    return '₱' + Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  const view = typeof partsView !== 'undefined' && partsView ? partsView : { label: 'All branches + Warehouse 1 General Parts Database' };
+  const v = (typeof vitals !== 'undefined' && vitals) ? vitals : { cards: {}, fastMoving: [], idle: [], mostVolume: [], mostCostlyOnHand: [] };
+  const cards = v.cards || {};
+  const approvalDesk = (typeof approvals !== 'undefined' && approvals) ? approvals : { requests: [], requestsByLocation: [], transfers: [], purchaseOrders: [], documents: [], transactions: [] };
+  const locations = Array.isArray(locationOptions) ? locationOptions : [];
+  const warehouseLabel = typeof warehouse1 !== 'undefined' && warehouse1 ? warehouse1 : 'Warehouse 1';
+  const panel = typeof openPanel !== 'undefined' ? String(openPanel || '') : '';
+%>
+
+<section class="dashboard-shell gm-shell stm-shell pm-workspace" id="pm-workspace" data-open-panel="<%= panel %>">
+  <div class="stm-head">
+    <div class="dashboard-title gm-title role-dashboard-title"><span>PM</span> <span class="role-dashboard-title__suffix">Parts Monitor</span></div>
+    <p class="dashboard-note stm-section__note">Sole owner of <%= warehouseLabel %> · view / edit / check every branch P-db</p>
+  </div>
+
+  <% if (error) { %><p class="error" style="font-weight:700;margin:0;"><%= error %></p><% } %>
+  <% if (success) { %><p class="success" style="font-weight:700;margin:0;"><%= success %></p><% } %>
+
+  <nav class="pm-role-bar" aria-label="Parts Manager roles">
+    <button type="button" class="btn pm-role-btn<%= panel === 'csv' ? ' pm-role-btn--active' : '' %>" data-pm-panel="csv">1. Load / Download CSV Update</button>
+    <button type="button" class="btn pm-role-btn<%= panel === 'edit' ? ' pm-role-btn--active' : '' %>" data-pm-panel="edit">2. Edit Parts</button>
+    <button type="button" class="btn pm-role-btn<%= panel === 'vitals' ? ' pm-role-btn--active' : '' %>" data-pm-panel="vitals">3. Fast Moving / Idle / Vitals</button>
+    <button type="button" class="btn pm-role-btn<%= panel === 'approvals' ? ' pm-role-btn--active' : '' %>" data-pm-panel="approvals">4. Approval Window</button>
+  </nav>
+
+  <section class="pm-panel-card dashboard-card gm-panel" id="pm-panel-csv" data-pm-section="csv" hidden>
+    <div class="dashboard-card__header gm-panel-header">Load / Download CSV Update</div>
+    <p class="dashboard-note">Download a sorted P-db report, then upload an updated CSV to <strong>integrate</strong> into the existing database or <strong>replace</strong> it entirely. A backup is taken before import.</p>
+    <div class="pm-csv-actions">
+      <a class="btn" href="/parts-manager/export.csv">Download sorted P-db CSV</a>
+    </div>
+    <form method="post" action="/parts-manager/csv-import" class="form pm-csv-form" id="pm-csv-form">
+      <label>Import mode
+        <select name="import_mode">
+          <option value="integrate">Integrate (update matches, add new rows)</option>
+          <option value="replace">Replace entire P-db</option>
+        </select>
+      </label>
+      <label>Upload CSV file
+        <input type="file" id="pm-csv-file" accept=".csv,text/csv" />
+      </label>
+      <label class="pm-csv-paste">Paste CSV
+        <textarea name="import_csv" id="pm-csv-text" rows="8" placeholder="Transaction Date, Transaction Type, Present Location, ..."></textarea>
+      </label>
+      <button type="submit">Upload / update P-db</button>
+    </form>
+  </section>
+
+  <section class="pm-panel-card dashboard-card gm-panel" id="pm-panel-edit" data-pm-section="edit" hidden>
+    <div class="dashboard-card__header gm-panel-header">Edit Parts</div>
+    <p class="dashboard-note">Select a row in the General Parts Database below, or search here, then edit in landscape format. Warehouse 1 and all branch locations are writable.</p>
+    <form method="post" action="#" class="form" id="pm-edit-form">
+      <input type="hidden" name="id" id="pm-edit-id" value="" />
+      <label>Transaction Date
+        <input type="date" name="transaction_date" id="pm-edit-date" required />
+      </label>
+      <label>Transaction Number
+        <input type="text" id="pm-edit-txn" value="" readonly />
+      </label>
+      <label>Transaction Type
+        <select name="transaction_type" id="pm-edit-type" required>
+          <% transactionTypes.forEach((t) => { %>
+            <option value="<%= t %>"><%= displayPartsTransactionType(t) %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>Present Location
+        <select name="present_location" id="pm-edit-location" required>
+          <% locations.forEach((name) => { %>
+            <option value="<%= name %>"><%= name %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>Part Number
+        <input type="text" name="part_number" id="pm-edit-part-number" required />
+      </label>
+      <label>Part Name
+        <input type="text" name="part_name" id="pm-edit-part-name" required />
+      </label>
+      <label>Sub-ID
+        <input type="text" name="sub_id" id="pm-edit-sub-id" />
+      </label>
+      <label>Generic / Description
+        <input type="text" name="generic" id="pm-edit-generic" />
+      </label>
+      <label>Supplier
+        <input type="text" name="supplier" id="pm-edit-supplier" />
+      </label>
+      <label>Unit
+        <input type="text" name="unit" id="pm-edit-unit" />
+      </label>
+      <label>Qty
+        <input type="number" name="qty" id="pm-edit-qty" step="any" required />
+      </label>
+      <label>Cost Price (₱)
+        <input type="number" name="cost_price" id="pm-edit-cost" step="0.01" min="0" />
+      </label>
+      <label>Markup (%)
+        <input type="number" name="markup" id="pm-edit-markup" step="0.01" min="0" />
+      </label>
+      <label>Retail Price (₱)
+        <input type="number" name="retail_price" id="pm-edit-retail" step="0.01" min="0" />
+      </label>
+      <label>Sold To — Work Order #
+        <input type="text" name="sold_to" id="pm-edit-sold-to" />
+      </label>
+      <button type="submit">Save part</button>
+    </form>
+  </section>
+
+  <section class="pm-panel-card dashboard-card gm-panel" id="pm-panel-vitals" data-pm-section="vitals" hidden>
+    <div class="dashboard-card__header gm-panel-header">Fast moving, idle, volume, and cost vitals</div>
+    <div class="stm-vitals pm-vitals">
+      <article class="gm-kpi-card"><p class="gm-kpi-label">SKUs</p><h2 class="gm-kpi-value"><%= cards.skuCount || 0 %></h2></article>
+      <article class="gm-kpi-card"><p class="gm-kpi-label">Locations</p><h2 class="gm-kpi-value"><%= cards.locationCount || 0 %></h2></article>
+      <article class="gm-kpi-card"><p class="gm-kpi-label">Warehouse 1 SKUs</p><h2 class="gm-kpi-value"><%= cards.warehouse1Skus || 0 %></h2></article>
+      <article class="gm-kpi-card"><p class="gm-kpi-label">W1 Inventory Value</p><h2 class="gm-kpi-value"><%= fmtMoney(cards.warehouse1Value) %></h2></article>
+      <article class="gm-kpi-card"><p class="gm-kpi-label">On-hand Value</p><h2 class="gm-kpi-value"><%= fmtMoney(cards.totalOnHandValue) %></h2></article>
+      <article class="gm-kpi-card"><p class="gm-kpi-label">Sold Retail Total</p><h2 class="gm-kpi-value"><%= fmtMoney(cards.totalSoldRetail) %></h2></article>
+      <article class="gm-kpi-card"><p class="gm-kpi-label">Low stock</p><h2 class="gm-kpi-value"><%= cards.lowStock || 0 %></h2></article>
+    </div>
+    <div class="pm-split-grid">
+      <article class="dashboard-card gm-panel">
+        <div class="dashboard-card__header gm-panel-header">Fast moving (90 days)</div>
+        <div class="table-scroll">
+          <table class="list">
+            <thead><tr><th>Part #</th><th>Name</th><th>Location</th><th>Sold Qty</th><th>Sold Retail</th></tr></thead>
+            <tbody>
+              <% if (!(v.fastMoving || []).length) { %><tr><td colspan="5">No fast-moving parts in the last 90 days.</td></tr><% } %>
+              <% (v.fastMoving || []).forEach((row) => { %>
+                <tr>
+                  <td><%= row.part_number %></td>
+                  <td><%= row.part_name || '—' %></td>
+                  <td><%= row.location %></td>
+                  <td style="text-align:right;"><%= row.sold_qty %></td>
+                  <td style="text-align:right;"><%= fmtMoney(row.sold_retail) %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </article>
+      <article class="dashboard-card gm-panel">
+        <div class="dashboard-card__header gm-panel-header">Idle / slow (90+ days, still on hand)</div>
+        <div class="table-scroll">
+          <table class="list">
+            <thead><tr><th>Part #</th><th>Name</th><th>Location</th><th>On-hand</th><th>Tied cost</th></tr></thead>
+            <tbody>
+              <% if (!(v.idle || []).length) { %><tr><td colspan="5">No idle stock over 90 days.</td></tr><% } %>
+              <% (v.idle || []).forEach((row) => { %>
+                <tr>
+                  <td><%= row.part_number %></td>
+                  <td><%= row.part_name || '—' %></td>
+                  <td><%= row.location %></td>
+                  <td style="text-align:right;"><%= row.qty %></td>
+                  <td style="text-align:right;"><%= fmtMoney(row.qty * row.cost_price) %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </article>
+      <article class="dashboard-card gm-panel">
+        <div class="dashboard-card__header gm-panel-header">Most volumes (sold qty)</div>
+        <div class="table-scroll">
+          <table class="list">
+            <thead><tr><th>Part #</th><th>Name</th><th>Location</th><th>Sold Qty</th></tr></thead>
+            <tbody>
+              <% (v.mostVolume || []).forEach((row) => { %>
+                <tr>
+                  <td><%= row.part_number %></td>
+                  <td><%= row.part_name || '—' %></td>
+                  <td><%= row.location %></td>
+                  <td style="text-align:right;"><%= row.sold_qty %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </article>
+      <article class="dashboard-card gm-panel">
+        <div class="dashboard-card__header gm-panel-header">Most costly on-hand totals</div>
+        <div class="table-scroll">
+          <table class="list">
+            <thead><tr><th>Part #</th><th>Name</th><th>Location</th><th>On-hand</th><th>Value</th></tr></thead>
+            <tbody>
+              <% (v.mostCostlyOnHand || []).forEach((row) => { %>
+                <tr>
+                  <td><%= row.part_number %></td>
+                  <td><%= row.part_name || '—' %></td>
+                  <td><%= row.location %></td>
+                  <td style="text-align:right;"><%= row.qty %></td>
+                  <td style="text-align:right;"><%= fmtMoney(row.inventory_value) %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="pm-panel-card dashboard-card gm-panel" id="pm-panel-approvals" data-pm-section="approvals" hidden>
+    <div class="dashboard-card__header gm-panel-header">Approvals, purchasing, transfers, and printable footprints</div>
+    <p class="dashboard-note">Pending: <%= approvalDesk.pendingRequestCount || 0 %> branch requests · <%= approvalDesk.pendingTransferCount || 0 %> transfers · <%= approvalDesk.pendingPoCount || 0 %> POs. Every transaction carries a number/serial plus date-time stamp.</p>
+    <div class="pm-split-grid">
+      <article class="dashboard-card gm-panel">
+        <div class="dashboard-card__header gm-panel-header">Branch / location requests</div>
+        <div class="table-scroll">
+          <table class="list">
+            <thead><tr><th>Location</th><th>WO #</th><th>Part #</th><th>Qty</th><th>By</th><th></th></tr></thead>
+            <tbody>
+              <% if (!(approvalDesk.requests || []).length) { %><tr><td colspan="6">No pending requests.</td></tr><% } %>
+              <% (approvalDesk.requests || []).forEach((row) => { %>
+                <tr>
+                  <td><%= row.requesting_branch || row.branch || '—' %></td>
+                  <td><%= row.work_order_number || row.sold_to || '—' %></td>
+                  <td><%= row.part_number %></td>
+                  <td style="text-align:right;"><%= row.qty %></td>
+                  <td><%= row.requested_by || row.editor || '—' %></td>
+                  <td style="white-space:nowrap;">
+                    <button type="button" class="btn" data-pm-resolve="<%= row.id %>" data-decision="approved">Approve</button>
+                    <button type="button" class="btn" data-pm-resolve="<%= row.id %>" data-decision="rejected" style="background:#c0392b;">Reject</button>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="dashboard-card gm-panel">
+        <div class="dashboard-card__header gm-panel-header">Transaction records</div>
+        <div class="table-scroll">
+          <table class="list">
+            <thead><tr><th>Stamp</th><th>Serial / PTN</th><th>Type</th><th>Location</th><th>Part #</th><th>Qty</th></tr></thead>
+            <tbody>
+              <% if (!(approvalDesk.transactions || []).length) { %><tr><td colspan="6">No transactions yet.</td></tr><% } %>
+              <% (approvalDesk.transactions || []).forEach((row) => { %>
+                <tr>
+                  <td style="white-space:nowrap;"><%= row.created_at || row.transaction_date || '' %></td>
+                  <td style="white-space:nowrap;"><%= row.transaction_number || row.id %></td>
+                  <td><%= row.transaction_type_label || row.transaction_type %></td>
+                  <td><%= row.present_location || '—' %></td>
+                  <td><%= row.part_number %></td>
+                  <td style="text-align:right;"><%= row.qty %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="dashboard-card gm-panel">
+        <div class="dashboard-card__header gm-panel-header">Transfers + printable lists</div>
+        <form method="post" action="/parts-manager/transfer" class="form pm-mini-form">
+          <label>From
+            <select name="from_branch" required>
+              <% locations.forEach((name) => { %>
+                <option value="<%= name %>" <%= name === warehouseLabel ? 'selected' : '' %>><%= name %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>To
+            <select name="to_branch" required>
+              <option value="">Select destination</option>
+              <% locations.forEach((name) => { %>
+                <option value="<%= name %>"><%= name %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>Part Number <input name="part_number" required /></label>
+          <label>Part Name <input name="part_name" /></label>
+          <label>Qty <input name="qty" type="number" min="1" step="1" required /></label>
+          <button type="submit">File transfer</button>
+        </form>
+        <div class="table-scroll">
+          <table class="list">
+            <thead><tr><th>PTN</th><th>Packing / Transmittal</th><th>Route</th><th>Stamp</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <% if (!(approvalDesk.transfers || []).length) { %><tr><td colspan="6">No transfers.</td></tr><% } %>
+              <% (approvalDesk.transfers || []).forEach((row) => { %>
+                <tr>
+                  <td><%= row.transaction_number || '—' %></td>
+                  <td>
+                    <a href="/parts-manager/print/packing/<%= encodeURIComponent(row.id) %>" target="_blank" rel="noopener"><%= row.packing_list_number || 'Packing' %></a>
+                    /
+                    <a href="/parts-manager/print/transmittal/<%= encodeURIComponent(row.id) %>" target="_blank" rel="noopener"><%= row.transmittal_number || 'Transmittal' %></a>
+                  </td>
+                  <td><%= row.from_branch %> → <%= row.to_branch %></td>
+                  <td style="white-space:nowrap;"><%= row.stamped_label || row.stamped_at || row.created_at || '' %></td>
+                  <td><%= row.status || '' %></td>
+                  <td>
+                    <% if (String(row.status || '').toLowerCase() !== 'completed') { %>
+                      <button type="button" class="btn" data-pm-complete-transfer="<%= row.id %>">Complete</button>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="dashboard-card gm-panel">
+        <div class="dashboard-card__header gm-panel-header">Purchasing</div>
+        <form method="post" action="/parts-manager/purchase-orders" class="form pm-mini-form">
+          <label>Supplier <input name="supplier" required /></label>
+          <label>Deliver to
+            <select name="branch">
+              <% locations.forEach((name) => { %>
+                <option value="<%= name %>" <%= name === warehouseLabel ? 'selected' : '' %>><%= name %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>Part Number <input name="part_number" /></label>
+          <label>Part Name <input name="part_name" /></label>
+          <label>Qty <input name="qty" type="number" min="1" step="1" /></label>
+          <label>Notes <input name="notes" /></label>
+          <button type="submit">Create PO</button>
+        </form>
+        <div class="table-scroll">
+          <table class="list">
+            <thead><tr><th>PO Serial</th><th>PTN</th><th>Supplier</th><th>Location</th><th>Stamp</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <% if (!(approvalDesk.purchaseOrders || []).length) { %><tr><td colspan="7">No purchase orders.</td></tr><% } %>
+              <% (approvalDesk.purchaseOrders || []).forEach((row) => { %>
+                <tr>
+                  <td><a href="/parts-manager/print/po/<%= encodeURIComponent(row.id) %>" target="_blank" rel="noopener"><%= row.po_number || row.id %></a></td>
+                  <td><%= row.transaction_number || '—' %></td>
+                  <td><%= row.supplier || '—' %></td>
+                  <td><%= row.branch || row.present_location || '—' %></td>
+                  <td style="white-space:nowrap;"><%= row.stamped_label || row.stamped_at || row.created_at || '' %></td>
+                  <td><%= row.status || '' %></td>
+                  <td>
+                    <% if (String(row.status || '').toLowerCase() === 'pending') { %>
+                      <button type="button" class="btn" data-pm-receive-po="<%= row.id %>">Receive</button>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="dashboard-card gm-panel pm-database" id="pm-database">
+    <div class="dashboard-card__header gm-panel-header"><%= view.label || 'All branches + Warehouse 1 General Parts Database' %></div>
+    <form method="get" action="/parts-manager" class="form pm-db-filter">
+      <label style="margin:0;">Search
+        <input name="q" value="<%= q %>" placeholder="Part #, name, Sub-ID, supplier, work order..." style="min-width:220px;" />
+      </label>
+      <label style="margin:0;">Type
+        <select name="type">
+          <option value="">All Types</option>
+          <% transactionTypes.forEach(t => { %>
+            <option value="<%= t %>" <%= (typeof normalizePartsTransactionType === 'function' ? normalizePartsTransactionType(filterType) : filterType) === t ? 'selected' : '' %>><%= displayPartsTransactionType(t) %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label style="margin:0;">Location
+        <select name="location">
+          <option value="">All branches + <%= warehouseLabel %></option>
+          <% locations.forEach((name) => { %>
+            <option value="<%= name %>" <%= locationFilter === name ? 'selected' : '' %>><%= name %></option>
+          <% }) %>
+        </select>
+      </label>
+      <button type="submit">Filter</button>
+      <a class="btn" href="/parts-manager">Clear</a>
+      <span class="dashboard-note" style="margin:0;">Visible records: <strong><%= total %></strong></span>
+    </form>
+
+    <div id="parts-records" class="table-scroll" style="overflow-x:auto;max-height:72vh;overflow-y:auto;">
+      <table class="list" style="min-width:max-content;font-size:12px;">
+        <thead style="position:sticky;top:0;z-index:5;">
+          <tr>
+            <th>#</th>
+            <th style="white-space:nowrap;">Transaction Date</th>
+            <th style="white-space:nowrap;">Transaction Type</th>
+            <th style="white-space:nowrap;">Present Location</th>
+            <th style="white-space:nowrap;">Editor</th>
+            <th style="white-space:nowrap;">Part Number</th>
+            <th style="white-space:nowrap;">Part Name</th>
+            <th style="white-space:nowrap;">Sub-ID</th>
+            <th style="white-space:nowrap;">Generic</th>
+            <th style="white-space:nowrap;">Supplier</th>
+            <th style="white-space:nowrap;">Qty</th>
+            <th style="white-space:nowrap;">On-Hand</th>
+            <th style="white-space:nowrap;">Cost Price</th>
+            <th style="white-space:nowrap;">Markup (%)</th>
+            <th style="white-space:nowrap;">Retail Price</th>
+            <th style="white-space:nowrap;">Sold To (WO#)</th>
+            <th style="white-space:nowrap;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!parts.length) { %>
+            <tr><td colspan="17" style="text-align:center;padding:20px;">No records found.</td></tr>
+          <% } %>
+          <% parts.forEach((p, i) => { %>
+            <tr class="pm-db-row" data-id="<%= p.id %>" data-part="<%= p.part_number || '' %>">
+              <td><%= i + 1 %></td>
+              <td style="white-space:nowrap;"><%= p.transaction_date || '' %></td>
+              <td style="white-space:nowrap;">
+                <span style="font-weight:700;">
+                  <%= displayPartsTransactionType(p.transaction_type) %>
+                </span>
+              </td>
+              <td style="white-space:nowrap;">
+                <%= p.present_location || p.branch || p.requesting_branch || '—' %>
+              </td>
+              <td style="white-space:nowrap;"><%= p.editor || '' %></td>
+              <td style="white-space:nowrap;"><%= p.part_number || '' %></td>
+              <td style="white-space:nowrap;"><%= p.part_name || '' %></td>
+              <td style="white-space:nowrap;"><%= p.sub_id || '' %></td>
+              <td style="white-space:nowrap;"><%= p.generic || '' %></td>
+              <td style="white-space:nowrap;"><%= p.supplier || '' %></td>
+              <td style="text-align:right;"><%= p.qty != null ? p.qty : '' %></td>
+              <td style="text-align:right;"><%= p.on_hand != null ? p.on_hand : '' %></td>
+              <td style="text-align:right;"><%= p.cost_price != null ? Number(p.cost_price).toFixed(2) : '' %></td>
+              <td style="text-align:right;"><%= p.markup != null ? p.markup : '' %></td>
+              <td style="text-align:right;"><%= p.retail_price != null ? Number(p.retail_price).toFixed(2) : '' %></td>
+              <td style="white-space:nowrap;"><%= p.sold_to || '' %></td>
+              <td style="white-space:nowrap;">
+                <a class="btn" href="/parts/history/<%= encodeURIComponent(p.part_number || '') %>" style="font-size:11px;padding:4px 8px;">History</a>
+                <button type="button" class="btn" data-pm-edit="<%= p.id %>" style="font-size:11px;padding:4px 8px;">EditParts</button>
+                <form method="post" action="/parts-manager/parts/<%= p.id %>/delete" style="display:inline;" onsubmit="return confirm('Delete this entry?')">
+                  <button type="submit" class="btn" style="font-size:11px;padding:4px 8px;background:#c0392b;">Del</button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
+
+<script src="/js/pm-workspace.js"></script>
+<%- include('../partials/footer') %>
