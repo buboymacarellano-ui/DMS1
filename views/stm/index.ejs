@@ -1,8 +1,7 @@
 <%- include('../partials/header') %>
-
 <%
   function fmtMoney(value) {
-    return 'P ' + Number(value || 0).toFixed(2);
+    return '₱' + Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
   function fmtPct(value) {
     return Number(value || 0).toFixed(1) + '%';
@@ -10,230 +9,358 @@
   function fmtHours(value) {
     return Number(value || 0).toFixed(2);
   }
+  const bars = (typeof pacingBars !== 'undefined' && pacingBars) ? pacingBars : { bars: [], monthLabel: '', branch: 'All branches' };
+  const techRows = Array.isArray(technicians) ? technicians : [];
+  const laborRows = laborByBranch && Array.isArray(laborByBranch.rows) ? laborByBranch.rows : [];
+  const laborTotals = (laborByBranch && laborByBranch.totals) || {};
+  const liveRows = Array.isArray(openWorkOrders) ? openWorkOrders : [];
+  const randomRows = Array.isArray(liveRandom) ? liveRandom : [];
+  const approvalRows = Array.isArray(pendingApprovals) ? pendingApprovals : [];
+  const fteRows = Array.isArray(fteHistory) ? fteHistory : [];
+  const v = (typeof vitals !== 'undefined' && vitals) ? vitals : {};
+  const branchList = Array.isArray(branches) ? branches : [];
 %>
 
-<section class="dashboard-shell gm-shell">
-  <% const isStmOwner = currentUser && String(currentUser.role || '').toLowerCase() === 'service_technical_manager'; %>
-  <% if (isStmOwner) { %>
-  <div class="stm-action-toolbar" aria-label="STM workspace actions">
-    <button id="btnRestartTunnel" type="button" class="px-4 py-2 bg-amber-700 hover:bg-amber-600 text-white rounded font-medium transition shadow flex items-center gap-2">
-      <span>🔄</span> Restart Network Tunnel
-    </button>
-  </div>
-  <% } %>
-  <div class="dashboard-title gm-title role-dashboard-title"><span>STM</span> <span class="role-dashboard-title__suffix">Dashboard</span></div>
-  <p class="dashboard-note" style="margin-bottom:10px;">Period: <strong><%= metrics.period.monthLabel %></strong> | Standard Hourly Rate: <strong><%= fmtMoney(metrics.period.hourlyRate) %></strong></p>
-
-  <div class="sa-grid sa-grid--4">
-    <article class="gm-kpi-card sa-card">
-      <div class="sa-card-title">TRANSACTIONS</div>
-      <div class="sa-card-body">
-        <p class="sa-line"><strong>Work Orders:</strong> [<%= workOrdersCount %>]</p>
-        <p class="sa-line">Customers: [<%= customersCount %>] | Vehicles: [<%= vehiclesCount %>]</p>
-      </div>
-      <div class="sa-open-row">
-        <a class="btn" href="/work-order-transactions" aria-label="Open Transactions">OPEN</a>
-      </div>
-    </article>
-
-    <article class="gm-kpi-card sa-card">
-      <div class="sa-card-title">PARTS</div>
-      <div class="sa-card-body">
-        <p class="sa-line">Transaction &amp; Record Center</p>
-        <p class="sa-line">Real-time Stock Levels</p>
-      </div>
-      <div class="sa-open-row">
-        <a class="btn" href="/parts">ACCESS DATABASE</a>
-      </div>
-    </article>
-
-    <article class="gm-kpi-card sa-card">
-      <div class="sa-card-title">HELPER</div>
-      <div class="sa-card-body">
-        <p class="sa-line">Search Parts, Customer Info, Technicians, &amp; App Data.</p>
-        <p class="sa-line">Integrated Helpdesk &amp; KB.</p>
-      </div>
-      <div class="sa-open-row">
-        <a class="btn" href="/helper">SEARCH/OPEN</a>
-      </div>
-    </article>
-
-    <article class="gm-kpi-card sa-card">
-      <div class="sa-card-title">FTE</div>
-      <div class="sa-card-body">
-        <p class="sa-line">Facility, Tool &amp; Equipment Tracking</p>
-        <p class="sa-line">Log repairs, PM, and expense issues.</p>
-      </div>
-      <div class="sa-open-row">
-        <a class="btn" href="/gm/fte?log=1" aria-label="Log FTE Issue">+ LOG FTE ISSUE</a>
-      </div>
-    </article>
+<section class="dashboard-shell gm-shell stm-shell" id="stm-dashboard" data-print-all="/stm/print-technicians?branch=all">
+  <div class="stm-head">
+    <div class="dashboard-title gm-title role-dashboard-title"><span>STM</span> <span class="role-dashboard-title__suffix">Monitor</span></div>
+    <label class="stm-branch-filter">
+      <span>View</span>
+      <select id="stm-branch-filter" aria-label="Filter by branch">
+        <option value="ALL">All branches</option>
+        <% branchList.forEach((name) => { %>
+          <option value="<%= name %>"><%= name %></option>
+        <% }) %>
+      </select>
+    </label>
   </div>
 
-  <div class="gm-kpi-grid">
-    <article class="gm-kpi-card"><p class="gm-kpi-label">Technician Productivity</p><h2 class="gm-kpi-value"><%= fmtPct(metrics.technicianLabor.technicianProductivityPct) %></h2></article>
-    <article class="gm-kpi-card"><p class="gm-kpi-label">Technician Efficiency</p><h2 class="gm-kpi-value"><%= fmtPct(metrics.technicianLabor.technicianEfficiencyPct) %></h2></article>
-    <article class="gm-kpi-card"><p class="gm-kpi-label">Technician Utilization</p><h2 class="gm-kpi-value"><%= fmtPct(metrics.technicianLabor.technicianUtilizationPct) %></h2></article>
-    <article class="gm-kpi-card"><p class="gm-kpi-label">Effective Labor Rate (ELR)</p><h2 class="gm-kpi-value"><%= fmtMoney(metrics.technicianLabor.effectiveLaborRate) %></h2></article>
-    <article class="gm-kpi-card"><p class="gm-kpi-label">Average Repair Order (ARO)</p><h2 class="gm-kpi-value"><%= fmtMoney(metrics.financial.averageRepairOrderValue) %></h2></article>
-    <article class="gm-kpi-card"><p class="gm-kpi-label">Hours Sold Per RO</p><h2 class="gm-kpi-value"><%= fmtHours(metrics.financial.hoursSoldPerRepairOrder) %></h2></article>
-    <article class="gm-kpi-card"><p class="gm-kpi-label">Avg Service TAT (Hours)</p><h2 class="gm-kpi-value"><%= fmtHours(metrics.operations.serviceTurnaroundHoursAvg) %></h2></article>
-    <article class="gm-kpi-card"><p class="gm-kpi-label">RO Volume (MTD)</p><h2 class="gm-kpi-value"><%= metrics.operations.carCountRoVolume %></h2></article>
-  </div>
+  <section class="sa-home-group sa-mtd-group stm-section" id="sa-mtd-bars" aria-label="Sales pacing">
+    <div class="stm-section__title-row">
+      <h3 class="sa-home-group__title">5. Sales pacing behaviour</h3>
+      <p class="dashboard-note stm-section__note" id="stm-pacing-caption">Month-to-date · <%= bars.monthLabel || 'This month' %> · <%= bars.branch || 'All branches' %></p>
+    </div>
+    <div class="sa-mtd-bars">
+      <% (bars.bars || []).forEach((bar) => { %>
+        <article class="sa-mtd-bar sa-mtd-bar--<%= bar.tone %>" data-key="<%= bar.key %>" data-fill="<%= bar.fillPct %>" data-tone="<%= bar.tone %>">
+          <p class="sa-mtd-bar__label"><%= bar.label %></p>
+          <p class="sa-mtd-bar__value"><%= bar.valueText %></p>
+          <div class="sa-mtd-bar__track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= bar.fillPct %>" aria-label="<%= bar.label %>">
+            <span class="sa-mtd-bar__fill"></span>
+          </div>
+          <p class="sa-mtd-bar__meta"><%= bar.meta %></p>
+        </article>
+      <% }) %>
+    </div>
+  </section>
 
-  <div class="gm-grid-2">
-    <article class="dashboard-card gm-panel">
-      <div class="dashboard-card__header gm-panel-header">Technician &amp; Labor Efficiency Metrics</div>
-      <div class="table-scroll">
-        <table class="list gm-table">
-          <tbody>
-            <tr><th>Active Technicians</th><td><%= metrics.technicianLabor.activeTechnicians %></td></tr>
-            <tr><th>Available Hours (MTD)</th><td><%= fmtHours(metrics.technicianLabor.availableHours) %></td></tr>
-            <tr><th>Actual Hours Worked (MTD)</th><td><%= fmtHours(metrics.technicianLabor.actualHoursWorked) %></td></tr>
-            <tr><th>Billed Hours (MTD)</th><td><%= fmtHours(metrics.technicianLabor.billedHours) %></td></tr>
-            <tr><th>Technician Productivity</th><td><%= fmtPct(metrics.technicianLabor.technicianProductivityPct) %></td></tr>
-            <tr><th>Technician Efficiency</th><td><%= fmtPct(metrics.technicianLabor.technicianEfficiencyPct) %></td></tr>
-            <tr><th>Technician Utilization Rate</th><td><%= fmtPct(metrics.technicianLabor.technicianUtilizationPct) %></td></tr>
-            <tr><th>Effective Labor Rate (ELR)</th><td><%= fmtMoney(metrics.technicianLabor.effectiveLaborRate) %></td></tr>
-          </tbody>
-        </table>
+  <section class="stm-section" aria-label="Vital statistics">
+    <h3 class="sa-home-group__title">8. Vital statistics</h3>
+    <div class="stm-vitals">
+      <article class="gm-kpi-card"><p class="gm-kpi-label">Tech Efficiency</p><h2 class="gm-kpi-value"><%= fmtPct(v.technicianEfficiencyPct) %></h2></article>
+      <article class="gm-kpi-card"><p class="gm-kpi-label">Tech Productivity</p><h2 class="gm-kpi-value"><%= fmtPct(v.technicianProductivityPct) %></h2></article>
+      <article class="gm-kpi-card"><p class="gm-kpi-label">Utilization</p><h2 class="gm-kpi-value"><%= fmtPct(v.technicianUtilizationPct) %></h2></article>
+      <article class="gm-kpi-card"><p class="gm-kpi-label">ELR vs ₱<%= Number(v.hourlyRate || 0).toFixed(0) %></p><h2 class="gm-kpi-value"><%= fmtMoney(v.effectiveLaborRate) %></h2></article>
+      <article class="gm-kpi-card"><p class="gm-kpi-label">ARO</p><h2 class="gm-kpi-value"><%= fmtMoney(v.averageRepairOrderValue) %></h2></article>
+      <article class="gm-kpi-card"><p class="gm-kpi-label">Hours / RO</p><h2 class="gm-kpi-value"><%= fmtHours(v.hoursSoldPerRepairOrder) %></h2></article>
+      <article class="gm-kpi-card"><p class="gm-kpi-label">Avg TAT</p><h2 class="gm-kpi-value"><%= fmtHours(v.serviceTurnaroundHoursAvg) %>h</h2></article>
+      <article class="gm-kpi-card"><p class="gm-kpi-label">FTFR</p><h2 class="gm-kpi-value"><%= fmtPct(v.firstTimeFixRatePct) %></h2></article>
+      <article class="gm-kpi-card"><p class="gm-kpi-label">Comeback</p><h2 class="gm-kpi-value"><%= fmtPct(v.comebackRatePct) %></h2></article>
+      <article class="gm-kpi-card"><p class="gm-kpi-label">Assign delay</p><h2 class="gm-kpi-value"><%= Number(v.assignmentAverage || 0).toFixed(1) %>m</h2></article>
+      <article class="gm-kpi-card"><p class="gm-kpi-label">Open WOs</p><h2 class="gm-kpi-value"><%= v.openRoCount || 0 %></h2></article>
+      <article class="gm-kpi-card"><p class="gm-kpi-label">Unassigned &gt;10m</p><h2 class="gm-kpi-value"><%= v.unassignedOverdue || 0 %></h2></article>
+      <article class="gm-kpi-card"><p class="gm-kpi-label">Pending billing</p><h2 class="gm-kpi-value"><%= v.pendingBillingCount || 0 %></h2></article>
+      <article class="gm-kpi-card"><p class="gm-kpi-label">RO volume MTD</p><h2 class="gm-kpi-value"><%= v.carCountRoVolume || 0 %></h2></article>
+    </div>
+  </section>
+
+  <section class="stm-section dashboard-card gm-panel" aria-label="Technician daily activities">
+    <div class="stm-section__title-row">
+      <div>
+        <h3 class="sa-home-group__title">1. Technician present daily activities</h3>
+        <p class="dashboard-note">Live status across every branch. Print a dated evaluation record for one branch or all branches.</p>
       </div>
-      <p class="dashboard-note dashboard-note--small">Productivity uses MTD actual/proxy worked hours against available hours (8h/day x active technicians).</p>
-    </article>
-
-    <article class="dashboard-card gm-panel">
-      <div class="dashboard-card__header gm-panel-header">Financial &amp; Sales Performance</div>
-      <div class="table-scroll">
-        <table class="list gm-table">
-          <tbody>
-            <tr><th>Total Revenue (MTD)</th><td><%= fmtMoney(metrics.financial.totalRevenue) %></td></tr>
-            <tr><th>Labor Revenue (MTD)</th><td><%= fmtMoney(metrics.financial.laborRevenue) %></td></tr>
-            <tr><th>Parts Revenue (MTD)</th><td><%= fmtMoney(metrics.financial.partsRevenue) %></td></tr>
-            <tr><th>Average Repair Order (ARO)</th><td><%= fmtMoney(metrics.financial.averageRepairOrderValue) %></td></tr>
-            <tr><th>Hours Sold per RO (H/RO)</th><td><%= fmtHours(metrics.financial.hoursSoldPerRepairOrder) %></td></tr>
-            <tr><th>Labor-to-Parts Ratio</th><td><%= metrics.financial.laborToPartsRatio == null ? 'N/A' : Number(metrics.financial.laborToPartsRatio).toFixed(2) + ' : 1' %></td></tr>
-            <tr><th>Gross Profit Margin (Labor)</th><td>N/A (requires labor cost/wage data)</td></tr>
-            <tr><th>Gross Profit Margin (Parts)</th><td><%= metrics.financial.partsGrossProfitMarginPct == null ? 'N/A' : fmtPct(metrics.financial.partsGrossProfitMarginPct) %></td></tr>
-          </tbody>
-        </table>
+      <div class="stm-print-actions">
+        <a class="btn" id="stm-print-filtered" href="/stm/print-technicians?branch=all">Print this view</a>
+        <a class="btn" href="/stm/print-technicians?branch=all">Print all branches</a>
       </div>
-    </article>
-  </div>
+    </div>
+    <div class="table-scroll stm-table-scroll">
+      <table class="list gm-table" id="stm-tech-table">
+        <thead>
+          <tr>
+            <th>Technician</th>
+            <th>Branch</th>
+            <th>Status</th>
+            <th>Present WO</th>
+            <th>Vehicle</th>
+            <th>Time on job</th>
+            <th>Labor MTD</th>
+            <th>WOs MTD</th>
+            <th>Completion</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!techRows.length) { %>
+            <tr><td colspan="9" style="text-align:center;">No technician activity yet.</td></tr>
+          <% } %>
+          <% techRows.forEach((row) => { %>
+            <tr data-branch="<%= row.branch %>">
+              <td><%= row.technician %></td>
+              <td><%= row.branch %></td>
+              <td><%= row.live_status %></td>
+              <td>
+                <% if (row.present_wo_id) { %>
+                  <a href="/work-orders/<%= row.present_wo_id %>/edit">WO <%= row.present_wo %></a>
+                <% } else { %>—<% } %>
+              </td>
+              <td><%= row.current_car %></td>
+              <td><%= row.current_job_time %></td>
+              <td><%= fmtMoney(row.labor_mtd) %></td>
+              <td><%= row.work_orders_mtd %></td>
+              <td><%= fmtPct(row.completion_rate) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </section>
 
-  <div class="gm-grid-2">
-    <article class="dashboard-card gm-panel">
-      <div class="dashboard-card__header gm-panel-header">Operational &amp; Workshop Flow Metrics</div>
-      <div class="table-scroll">
-        <table class="list gm-table">
-          <tbody>
-            <tr><th>Service Turnaround Time (Avg Hours)</th><td><%= fmtHours(metrics.operations.serviceTurnaroundHoursAvg) %></td></tr>
-            <tr><th>TAT Sample Size (Closed RO)</th><td><%= metrics.operations.serviceTurnaroundSampleSize %></td></tr>
-            <tr><th>Car Count / RO Volume (MTD)</th><td><%= metrics.operations.carCountRoVolume %></td></tr>
-            <tr><th>Open RO (MTD)</th><td><%= metrics.operations.openRoCount %></td></tr>
-            <tr><th>Closed RO (MTD)</th><td><%= metrics.operations.closedRoCount %></td></tr>
-            <tr><th>Parts Inventory Turnover Rate</th><td><%= Number(metrics.operations.partsInventoryTurnoverRate || 0).toFixed(2) %></td></tr>
-            <tr><th>Parts Sold Qty (MTD)</th><td><%= Number(metrics.operations.soldQtyMtd || 0).toFixed(0) %></td></tr>
-            <tr><th>Average Inventory Qty (Proxy)</th><td><%= Number(metrics.operations.averageInventoryQty || 0).toFixed(2) %></td></tr>
-          </tbody>
-        </table>
+  <section class="stm-section dashboard-card gm-panel" aria-label="Labor efficiency">
+    <h3 class="sa-home-group__title">2. Labor efficiency / technician behaviour</h3>
+    <p class="dashboard-note">Company rates from billed hours vs time on jobs. Per-technician completion and cycle time come from the same activity board as the technician portal.</p>
+    <div class="stm-efficiency-kpis">
+      <span>Productivity <strong><%= fmtPct(v.technicianProductivityPct) %></strong></span>
+      <span>Efficiency <strong><%= fmtPct(v.technicianEfficiencyPct) %></strong></span>
+      <span>Utilization <strong><%= fmtPct(v.technicianUtilizationPct) %></strong></span>
+      <span>Avg cycle <strong><%= fmtHours(techRows.reduce((sum, row) => sum + Number(row.average_cycle_hours || 0), 0) / Math.max(1, techRows.filter((row) => row.average_cycle_hours).length)) %>h</strong></span>
+    </div>
+    <div class="table-scroll stm-table-scroll">
+      <table class="list gm-table" id="stm-behaviour-table">
+        <thead>
+          <tr>
+            <th>Technician</th>
+            <th>Branch</th>
+            <th>Behaviour</th>
+            <th>Active jobs</th>
+            <th>Hours on jobs</th>
+            <th>Avg cycle</th>
+            <th>Completed MTD</th>
+            <th>Completion %</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% techRows.forEach((row) => { %>
+            <tr data-branch="<%= row.branch %>">
+              <td><%= row.technician %></td>
+              <td><%= row.branch %></td>
+              <td><%= row.live_status %></td>
+              <td><%= row.active_count %></td>
+              <td><%= fmtHours(row.hours_active) %></td>
+              <td><%= fmtHours(row.average_cycle_hours) %></td>
+              <td><%= row.completed_mtd %></td>
+              <td><%= fmtPct(row.completion_rate) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="stm-section dashboard-card gm-panel" aria-label="Labor rate ratio">
+    <h3 class="sa-home-group__title">3. Technician ratio vs true labor rate / hours / labor generation</h3>
+    <p class="dashboard-note">Standard hourly rate <strong><%= fmtMoney(laborByBranch && laborByBranch.hourlyRate) %></strong>. ELR is MTD labor revenue ÷ billed hours. Rate attainment is ELR vs the shop standard.</p>
+    <div class="table-scroll stm-table-scroll">
+      <table class="list gm-table" id="stm-labor-table">
+        <thead>
+          <tr>
+            <th>Branch</th>
+            <th>Technicians</th>
+            <th>Working now</th>
+            <th>Open jobs</th>
+            <th>Tech : job</th>
+            <th>Billed hours</th>
+            <th>Time on jobs</th>
+            <th>Labor generated</th>
+            <th>ELR</th>
+            <th>Rate attainment</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% laborRows.forEach((row) => { %>
+            <tr data-branch="<%= row.branch %>">
+              <td><%= row.branch %></td>
+              <td><%= row.technicians %></td>
+              <td><%= row.working %></td>
+              <td><%= row.openJobs %></td>
+              <td><%= Number(row.techToJobRatio || 0).toFixed(2) %></td>
+              <td><%= fmtHours(row.billedHours) %></td>
+              <td><%= fmtHours(row.actualHours) %></td>
+              <td><%= fmtMoney(row.laborRevenue) %></td>
+              <td><%= fmtMoney(row.elr) %></td>
+              <td><%= fmtPct(row.rateAttainmentPct) %></td>
+            </tr>
+          <% }) %>
+          <tr class="gm-matrix-row--total" data-branch="ALL">
+            <td>All branches</td>
+            <td><%= laborTotals.technicians || 0 %></td>
+            <td><%= laborTotals.working || 0 %></td>
+            <td><%= laborTotals.openJobs || 0 %></td>
+            <td><%= Number(laborTotals.techToJobRatio || 0).toFixed(2) %></td>
+            <td><%= fmtHours(laborTotals.billedHours) %></td>
+            <td><%= fmtHours(laborTotals.actualHours) %></td>
+            <td><%= fmtMoney(laborTotals.laborRevenue) %></td>
+            <td><%= fmtMoney(laborTotals.elr) %></td>
+            <td><%= fmtPct(laborTotals.rateAttainmentPct) %></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="stm-section dashboard-card gm-panel" aria-label="Live work order transactions">
+    <h3 class="sa-home-group__title">4. Live work-order transactions (all branches)</h3>
+    <p class="dashboard-note">Open jobs refresh live. The sample row set rotates so STM can scan random work across the network.</p>
+    <div class="stm-live-random" id="stm-live-random">
+      <% randomRows.forEach((row) => { %>
+        <a class="stm-live-chip" href="<%= row.href %>" data-branch="<%= row.branch %>">
+          <strong>WO <%= row.work_order_number %></strong>
+          <span><%= row.branch %></span>
+          <em><%= row.status %></em>
+        </a>
+      <% }) %>
+      <% if (!randomRows.length) { %>
+        <p class="dashboard-note">No open work orders right now.</p>
+      <% } %>
+    </div>
+    <div class="table-scroll stm-table-scroll">
+      <table class="list gm-table" id="stm-wo-table">
+        <thead>
+          <tr>
+            <th>WO</th>
+            <th>Branch</th>
+            <th>Status</th>
+            <th>Technician</th>
+            <th>SR</th>
+            <th>Customer</th>
+            <th>Vehicle</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% liveRows.forEach((row) => { %>
+            <tr data-branch="<%= row.branch %>">
+              <td><a href="<%= row.href %>">WO <%= row.work_order_number %></a></td>
+              <td><%= row.branch %></td>
+              <td><%= row.status %></td>
+              <td><%= row.technician %></td>
+              <td><%= row.advisor %></td>
+              <td><%= row.customer %></td>
+              <td><%= row.vehicle %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="stm-section dashboard-card gm-panel" aria-label="FTE maintenance">
+    <div class="stm-section__title-row">
+      <div>
+        <h3 class="sa-home-group__title">6. FTE maintenance activities</h3>
+        <p class="dashboard-note">Create logs, watch open jobs, and keep saved history. Open the FTE workspace to add a new activity.</p>
       </div>
-    </article>
+      <a class="btn" href="/gm/fte?log=1">Log FTE activity</a>
+    </div>
+    <p class="dashboard-note">Open / pending FTE records: <strong><%= typeof fteOpenCount !== 'undefined' ? fteOpenCount : 0 %></strong></p>
+    <div class="table-scroll stm-table-scroll">
+      <table class="list gm-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Branch</th>
+            <th>Asset</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Total</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!fteRows.length) { %>
+            <tr><td colspan="7" style="text-align:center;">No FTE history saved yet.</td></tr>
+          <% } %>
+          <% fteRows.forEach((row) => { %>
+            <tr>
+              <td><%= row.Transaction_Date || '—' %></td>
+              <td><%= row.Branch_Name || '—' %></td>
+              <td><%= row.Asset_Name || '—' %></td>
+              <td><%= row.Transaction_Type || '—' %></td>
+              <td><%= row.Description || '—' %></td>
+              <td><%= fmtMoney(row.total) %></td>
+              <td><%= row.Status || '—' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </section>
 
-    <article class="dashboard-card gm-panel">
-      <div class="dashboard-card__header gm-panel-header">Quality &amp; Customer Satisfaction</div>
-      <div class="table-scroll">
-        <table class="list gm-table">
-          <tbody>
-            <tr><th>First-Time Fix Rate (FTFR)</th><td><%= fmtPct(metrics.quality.firstTimeFixRatePct) %></td></tr>
-            <tr><th>Comeback Rate</th><td><%= fmtPct(metrics.quality.comebackRatePct) %></td></tr>
-            <tr><th>Comeback Count</th><td><%= metrics.quality.comebackCount %></td></tr>
-            <tr><th>Customer Retention Rate</th><td><%= fmtPct(metrics.quality.customerRetentionRatePct) %></td></tr>
-            <tr><th>NPS / CSI</th><td><%= metrics.quality.npsOrCsi == null ? 'N/A (survey data not yet captured)' : metrics.quality.npsOrCsi %></td></tr>
-          </tbody>
-        </table>
+  <section class="stm-section dashboard-card gm-panel" aria-label="Approval desk">
+    <div class="stm-section__title-row">
+      <div>
+        <h3 class="sa-home-group__title">7. Approval desk</h3>
+        <p class="dashboard-note">Pending CBD and RWO requests from the network. Full history stays on the approval desk.</p>
       </div>
-      <p class="dashboard-note dashboard-note--small">Comeback/FTFR uses closed and active MTD repair orders, a 30-day same-customer-and-vehicle return heuristic, and Back Job flags from work orders and transaction database records.</p>
-    </article>
-  </div>
-
-  <article class="dashboard-card gm-panel">
-    <div class="dashboard-card__header gm-panel-header">SR-to-Technician Assignment Delay</div>
-    <p class="dashboard-note">Average time from work order creation to technician assignment: <strong><%= Number(metrics.assignment.averageMinutesToAssignTechnician || 0).toFixed(1) %> minutes</strong></p>
-    <p class="dashboard-note">Target: <strong><%= metrics.period.assignTargetMinutes %> minutes</strong> | Delayed: <strong><%= metrics.assignment.delayedCount %></strong> / <%= metrics.assignment.sampleSize %></p>
-
-    <% if (!metrics.assignment.rows.length) { %>
-      <p class="dashboard-note">No assignment samples available yet for this month.</p>
+      <a class="btn" href="/approvals">Open approval desk<%= approvalRows.length ? ` (${approvalRows.length})` : '' %></a>
+    </div>
+    <% if (!approvalRows.length) { %>
+      <p class="dashboard-note">No pending requests.</p>
     <% } else { %>
-      <div class="table-scroll">
+      <div class="table-scroll stm-table-scroll">
         <table class="list gm-table">
           <thead>
             <tr>
-              <th>Work Order</th>
-              <th>SR</th>
-              <th>Technician</th>
-              <th>Minutes to Assign</th>
-              <th>Within Target</th>
+              <th>Type</th>
+              <th>From</th>
+              <th>Details</th>
+              <th>Reason</th>
+              <th>Requested</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
-            <% metrics.assignment.rows.forEach((row) => { %>
+            <% approvalRows.forEach((request) => { %>
               <tr>
-                <td><%= row.work_order_number %></td>
-                <td><%= row.service_advisor %></td>
-                <td><%= row.technician %></td>
-                <td><%= row.minutes_to_assign %></td>
-                <td><%= row.within_target ? 'YES' : 'NO' %></td>
+                <td><strong><%= request.type %></strong></td>
+                <td><%= request.requested_by %><br><small><%= request.requested_by_role %></small></td>
+                <td>
+                  <% if (request.type === 'CBD') { %>
+                    <%= request.employee_name || request.employee_id %>: <%= request.current_branch || '—' %> → <%= request.target_branch %>
+                  <% } else { %>
+                    WO <%= request.work_order_number %> | <%= request.branch || '—' %>
+                  <% } %>
+                </td>
+                <td><%= request.reason || '—' %></td>
+                <td><%= request.created_at ? new Date(request.created_at).toLocaleString('en-PH') : '—' %></td>
+                <td>
+                  <form method="post" action="/approvals/<%= request.id %>/resolve" style="display:inline">
+                    <input type="hidden" name="decision" value="approved">
+                    <button type="submit">Approve</button>
+                  </form>
+                  <form method="post" action="/approvals/<%= request.id %>/resolve" style="display:inline">
+                    <input type="hidden" name="decision" value="rejected">
+                    <button type="submit">Reject</button>
+                  </form>
+                </td>
               </tr>
             <% }) %>
           </tbody>
         </table>
       </div>
     <% } %>
-  </article>
+  </section>
 </section>
 
-<script>
-(function setupRestartTunnelButton() {
-  const button = document.getElementById('btnRestartTunnel');
-  if (!button) return;
-
-  const idleHtml = button.innerHTML;
-
-  button.addEventListener('click', async function onRestartTunnelClick(event) {
-    event.preventDefault();
-    if (button.disabled) return;
-
-    const confirmed = window.confirm(
-      'Confirm tunnel recycle? Remote branch users will lose connectivity for roughly 5 to 10 seconds.'
-    );
-    if (!confirmed) return;
-
-    button.disabled = true;
-    button.textContent = 'Recycling Tunnel... Please Wait.';
-
-    let notice = 'Tunnel recycle failed. Try again or check the server process.';
-    try {
-      const response = await fetch('/api/admin/restart-tunnel', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { Accept: 'application/json' },
-      });
-      const payload = await response.json().catch(function () { return {}; });
-      if (response.ok) {
-        notice = 'Tunnel command dispatched successfully.';
-      } else if (payload && (payload.message || payload.error)) {
-        notice = String(payload.message || payload.error);
-      }
-    } catch (error) {
-      notice = 'Tunnel recycle failed. Try again or check the server process.';
-    }
-
-    window.setTimeout(function restoreTunnelButton() {
-      button.disabled = false;
-      button.innerHTML = idleHtml;
-      window.alert(notice);
-    }, 5000);
-  });
-})();
-</script>
+<script type="application/json" id="stm-pacing-json"><%- JSON.stringify(typeof pacingByScope !== 'undefined' ? pacingByScope : {}).replace(/</g, '\\u003c') %></script>
+<script src="/js/stm-dashboard.js"></script>
 <%- include('../partials/footer') %>

@@ -1,0 +1,551 @@
+<%- include('../partials/header') %>
+<%
+  const clampPct = (value) => Math.max(0, Math.min(100, Number(value) || 0));
+  const fadeRight = (weight) =>
+    `background-image:linear-gradient(to right, rgba(78, 205, 232, 0.38), rgba(78, 205, 232, 0)) !important;background-size:${weight}% 100% !important;background-repeat:no-repeat !important;background-position:left center !important;`;
+  const fadeLeft = (weight) =>
+    `background-image:linear-gradient(to left, rgba(184, 230, 76, 0.34), rgba(184, 230, 76, 0)) !important;background-size:${weight}% 100% !important;background-repeat:no-repeat !important;background-position:right center !important;`;
+%>
+
+<section class="dashboard-shell gm-shell gm-shell--dense gm-analytics gm-interprise">
+  <div class="gm-analytics__head">
+    <div class="dashboard-title gm-title role-dashboard-title"><span>My Enterprises</span></div>
+    <div class="gm-analytics__controls">
+      <div class="gm-range-pills" id="gm-timeline-filters" aria-label="Reporting range">
+        <% ['H', 'D', 'W', 'M', 'Y', 'ALL'].forEach((code) => { %>
+          <button
+            type="button"
+            data-duration="<%= code %>"
+            class="<%= activeDuration === code ? 'is-active' : '' %>"
+            aria-pressed="<%= activeDuration === code ? 'true' : 'false' %>"
+          ><%= code %></button>
+        <% }) %>
+      </div>
+      <form method="get" action="/gm/enterprise" class="gm-reporting-form gm-reporting-form--compact">
+        <label for="gm-reporting-date">Reporting Date</label>
+        <input id="gm-reporting-date" type="date" name="date" value="<%= reportingDate %>" />
+        <input type="hidden" name="duration" id="gm-reporting-duration" value="<%= activeDuration %>" />
+        <button type="submit" class="btn">Apply</button>
+        <a class="btn gm-dense-link" href="/gm?date=<%= reportingDate %>&duration=<%= activeDuration %>">← GM Dashboard</a>
+      </form>
+    </div>
+  </div>
+
+  <div id="targetConfigPanel" class="bg-slate-900 border border-blue-500/30 p-4 rounded-lg mb-6 gm-target-panel<%= typeof targetsSaved !== 'undefined' && targetsSaved ? '' : ' hidden' %>">
+    <div class="flex justify-between items-center mb-4 gm-target-panel__head">
+      <h4 class="text-md font-bold text-orange-400">Set Branch Gross Sales Targets for <%= branchSalesTargets.monthLabel || 'August 2026' %></h4>
+      <button type="button" onclick="toggleTargetPanel()" class="text-gray-400 hover:text-white gm-target-panel__close" aria-label="Close target panel">✕</button>
+    </div>
+    <% if (typeof targetsSaved !== 'undefined' && targetsSaved) { %>
+      <p class="dashboard-note">Targets saved. Dashboard pacing now uses the new monthly peso goals.</p>
+    <% } %>
+    <form id="targetForm" method="post" action="/gm/branch-targets" class="grid grid-cols-1 md:grid-cols-4 gap-4 gm-target-form">
+      <input type="hidden" name="date" value="<%= reportingDate %>" />
+      <input type="hidden" name="duration" id="gm-target-duration" value="<%= activeDuration %>" />
+      <input type="hidden" name="return_to" value="enterprise" />
+      <% ['Carx2', 'Carmen', 'CebuCity', 'Lapux2', 'Bogo', 'Toledo', 'ITPark'].forEach((branchName) => { %>
+        <div>
+          <label class="block text-xs font-medium text-gray-300"><%= branchName %> Target (₱)</label>
+          <input
+            type="number"
+            name="<%= branchName %>"
+            min="0"
+            step="1000"
+            value="<%= Number((branchSalesTargets.branches && branchSalesTargets.branches[branchName]) || 0) %>"
+            class="w-full bg-slate-800 border border-gray-600 rounded p-1.5 text-white text-sm"
+          />
+        </div>
+      <% }) %>
+      <div class="md:col-span-4 flex justify-end mt-2 gm-target-form__actions">
+        <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded shadow">
+          Save & Recalculate Dashboard
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div class="gm-interprise-grid">
+    <div class="gm-interprise-tools gm-interprise-tools--ops">
+      <article class="dashboard-card gm-panel gm-interprise-tool">
+        <div class="dashboard-card__header gm-panel-header">GM Dashboard</div>
+        <p class="dashboard-note">Return to KPIs, Target Pacing Mix, and Branch Revenue Performance.</p>
+        <div class="gm-interprise-tool__open">
+          <a class="btn" href="/gm?date=<%= reportingDate %>&duration=<%= activeDuration %>">OPEN</a>
+        </div>
+      </article>
+      <article class="dashboard-card gm-panel gm-interprise-tool">
+        <div class="dashboard-card__header gm-panel-header">Targets</div>
+        <p class="dashboard-note">Set monthly gross sales targets for each branch. Saved values drive GM pacing.</p>
+        <div class="gm-interprise-tool__open">
+          <button type="button" class="btn" id="btnToggleTargets" onclick="toggleTargetPanel()">OPEN</button>
+        </div>
+      </article>
+      <article class="dashboard-card gm-panel gm-interprise-tool">
+        <div class="dashboard-card__header gm-panel-header">Performance &amp; Incentives</div>
+        <p class="dashboard-note">Technician and employee incentive rates, plus current billed transactions.</p>
+        <div class="gm-interprise-tool__open">
+          <a class="btn" href="/gm/performance-incentives?date=<%= reportingDate %>">OPEN</a>
+        </div>
+      </article>
+      <article class="dashboard-card gm-panel gm-interprise-tool">
+        <div class="dashboard-card__header gm-panel-header">DX Catalog</div>
+        <p class="dashboard-note">DEMO DMS DX catalog for parts, labor, and service lookup.</p>
+        <div class="gm-interprise-tool__open">
+          <a class="btn" href="/gm/catalog">OPEN</a>
+        </div>
+      </article>
+      <article class="dashboard-card gm-panel gm-interprise-tool">
+        <div class="dashboard-card__header gm-panel-header">FTE Tracking</div>
+        <p class="dashboard-note">Facility, tool, and equipment tracking panel for all branches.</p>
+        <div class="gm-interprise-tool__open">
+          <a class="btn" href="/gm/fte">OPEN</a>
+        </div>
+      </article>
+      <article class="dashboard-card gm-panel gm-interprise-tool">
+        <div class="dashboard-card__header gm-panel-header">Employee DB</div>
+        <p class="dashboard-note">Employee records, job codes, and branch assignments.</p>
+        <div class="gm-interprise-tool__open">
+          <a class="btn" href="/employees">OPEN</a>
+        </div>
+      </article>
+      <article class="dashboard-card gm-panel gm-interprise-tool">
+        <div class="dashboard-card__header gm-panel-header">Approvals<% if (typeof pendingApprovalCount !== 'undefined' && pendingApprovalCount > 0) { %> (<%= pendingApprovalCount %>)<% } %></div>
+        <p class="dashboard-note">Review and act on pending approval requests.</p>
+        <div class="gm-interprise-tool__open">
+          <a class="btn" href="/approvals">OPEN</a>
+        </div>
+      </article>
+    </div>
+
+    <h3 class="gm-interprise-section">Department Workspaces</h3>
+    <div class="gm-interprise-tools gm-interprise-tools--workspaces">
+      <article class="dashboard-card gm-panel gm-interprise-tool">
+        <div class="dashboard-card__header gm-panel-header">PM Workspace</div>
+        <p class="dashboard-note">Parts Manager operational workspace.</p>
+        <div class="gm-interprise-tool__open">
+          <a class="btn" href="/parts-manager/dashboard">OPEN</a>
+        </div>
+      </article>
+      <article class="dashboard-card gm-panel gm-interprise-tool">
+        <div class="dashboard-card__header gm-panel-header">STM Workspace</div>
+        <p class="dashboard-note">Service &amp; Technical Manager operational workspace.</p>
+        <div class="gm-interprise-tool__open">
+          <a class="btn" href="/stm">OPEN</a>
+        </div>
+      </article>
+      <article class="dashboard-card gm-panel gm-interprise-tool">
+        <div class="dashboard-card__header gm-panel-header">Admin Workspace</div>
+        <p class="dashboard-note">Admin operational workspace and system controls.</p>
+        <div class="gm-interprise-tool__open">
+          <a class="btn" href="/admin">OPEN</a>
+        </div>
+      </article>
+      <article class="dashboard-card gm-panel gm-interprise-tool">
+        <div class="dashboard-card__header gm-panel-header">HR Workspace</div>
+        <p class="dashboard-note">Human Resources operational workspace.</p>
+        <div class="gm-interprise-tool__open">
+          <a class="btn" href="/hr">OPEN</a>
+        </div>
+      </article>
+    </div>
+
+    <article class="dashboard-card gm-panel gm-matrix-panel gm-analytics__card gm-interprise-matrix">
+      <div class="dashboard-card__header gm-panel-header">Multi-Branch Data Matrix</div>
+      <div class="gm-matrix-wrap">
+        <table class="list gm-table gm-matrix-table">
+          <thead>
+            <tr>
+              <th>Branch Name</th>
+              <th>Open Work Orders</th>
+              <th>Live Accumulated Revenue</th>
+              <th>Target Pacing %</th>
+              <th>Labor Gross Margin %</th>
+              <th>Parts Gross Margin %</th>
+              <th>Status Warning</th>
+            </tr>
+          </thead>
+          <tbody id="gm-matrix-body">
+            <% if (!branchRows.length) { %>
+              <tr><td colspan="7" style="text-align:center;">No branch records available.</td></tr>
+            <% } %>
+            <% branchRows.forEach((branch) => { %>
+              <%
+                const openWorkOrders = Number(branch.openWorkOrders != null ? branch.openWorkOrders : 0);
+                const pacing = Number(branch.targetPacingPct != null ? branch.targetPacingPct : branch.milestonePercent || 0);
+                const laborGm = Number(branch.laborGrossMarginPct || 0);
+                const partsGm = Number(branch.partsGrossMarginPct || 0);
+              %>
+              <tr>
+                <td><%= branch.branch || '—' %></td>
+                <td style="<%= fadeRight(clampPct((openWorkOrders / maxOpenWorkOrders) * 100)) %>"><%= openWorkOrders %></td>
+                <td>P <%= Number(branch.liveAccumulatedRevenue || branch.todayRevenue || 0).toFixed(2) %></td>
+                <td style="<%= fadeRight(clampPct(pacing)) %>">
+                  <span style="display:inline-flex;align-items:center;justify-content:center;background:#b8e64c;color:#10243d;border-radius:999px;padding:2px 8px;font-weight:700;font-size:11px;line-height:1.2;">
+                    <%= pacing.toFixed(1) %>%
+                  </span>
+                </td>
+                <td style="<%= fadeLeft(clampPct(laborGm)) %>"><%= laborGm.toFixed(1) %>%</td>
+                <td style="<%= fadeLeft(clampPct(partsGm)) %>"><%= partsGm.toFixed(1) %>%</td>
+                <td>
+                  <span class="gm-status-flag gm-status-flag--<%= branch.statusWarningCode || 'ok' %>">
+                    <%= branch.statusWarning || 'OK' %>
+                  </span>
+                </td>
+              </tr>
+            <% }) %>
+            <% if (branchRows.length) { %>
+              <tr class="gm-matrix-row--total">
+                <td>Total</td>
+                <td><%= matrixTotals.openWorkOrders %></td>
+                <td>P <%= Number(matrixTotals.liveAccumulatedRevenue).toFixed(2) %></td>
+                <td><%= (matrixTotals.targetPacingPct / branchCount).toFixed(1) %>%</td>
+                <td><%= (matrixTotals.laborGrossMarginPct / branchCount).toFixed(1) %>%</td>
+                <td><%= (matrixTotals.partsGrossMarginPct / branchCount).toFixed(1) %>%</td>
+                <td><span class="gm-status-flag gm-status-flag--ok">TOTAL</span></td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="dashboard-card gm-panel gm-matrix-panel gm-analytics__card gm-ocpd-panel gm-interprise-ocpd">
+      <div class="dashboard-card__header gm-panel-header gm-ocpd-header">
+        <span>OCPD Reporting</span>
+        <div class="gm-ocpd-nav" role="group" aria-label="OCPD report date">
+          <button type="button" id="gm-ocpd-prev" aria-label="Previous day">&lt;</button>
+          <strong id="gm-ocpd-date-label"><%= ocpdReport.dateLabel %></strong>
+          <button type="button" id="gm-ocpd-next" aria-label="Next day" <%= ocpdReport.canGoNext ? '' : 'disabled' %>>&gt;</button>
+        </div>
+      </div>
+      <div class="gm-ocpd-wrap">
+        <table class="list gm-table gm-matrix-table gm-ocpd-table">
+          <thead>
+            <tr>
+              <% ocpdReport.columns.forEach((column) => { %>
+                <th><%= column.header %></th>
+              <% }) %>
+            </tr>
+          </thead>
+          <tbody id="gm-ocpd-body" data-date="<%= ocpdReport.date %>" data-today="<%= ocpdReport.today %>">
+            <% ocpdReport.rows.forEach((row) => { %>
+              <tr>
+                <% ocpdReport.columns.forEach((column) => { %>
+                  <td><%= column.key === 'date' ? ocpdReport.dateLabel : (row[column.key] == null ? '0' : row[column.key]) %></td>
+                <% }) %>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <div class="gm-action-grid gm-interprise-actions">
+      <article class="dashboard-card gm-panel gm-action-panel">
+        <div class="dashboard-card__header gm-panel-header">Risk Alerts (Open > 24 Hours)</div>
+        <% if (!metrics.riskAlerts.length) { %>
+          <p class="dashboard-note">No high-age work order alerts right now.</p>
+        <% } else { %>
+          <div class="gm-action-feed" aria-label="Risk alerts feed">
+            <% metrics.riskAlerts.forEach((entry) => { %>
+              <div class="gm-action-feed__item gm-action-feed__item--risk">
+                <strong>WO <%= entry.work_order_number %></strong>
+                <span><%= entry.status || 'open' %></span>
+                <em><%= entry.ageHours %>h</em>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+      </article>
+
+      <article class="dashboard-card gm-panel gm-action-panel">
+        <div class="dashboard-card__header gm-panel-header">Top Services (Revenue)</div>
+        <% if (!metrics.topServices.length) { %>
+          <p class="dashboard-note">No service revenue data yet.</p>
+        <% } else { %>
+          <div class="gm-action-feed gm-action-feed--table">
+            <table class="list gm-table gm-action-table">
+              <thead>
+                <tr>
+                  <th>Service</th>
+                  <th>Count</th>
+                  <th>Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% metrics.topServices.forEach((entry) => { %>
+                  <tr>
+                    <td><%= entry.service %></td>
+                    <td><%= entry.count %></td>
+                    <td>P <%= Number(entry.revenue || 0).toFixed(2) %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </article>
+
+      <article class="dashboard-card gm-panel gm-action-panel">
+        <div class="dashboard-card__header gm-panel-header">Top Technicians (Closed Revenue)</div>
+        <% if (!metrics.topTechnicians.length) { %>
+          <p class="dashboard-note">No technician performance data yet.</p>
+        <% } else { %>
+          <div class="gm-action-feed gm-action-feed--table">
+            <table class="list gm-table gm-action-table">
+              <thead>
+                <tr>
+                  <th>Technician</th>
+                  <th>Closed</th>
+                  <th>Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% metrics.topTechnicians.forEach((entry) => { %>
+                  <tr>
+                    <td><%= entry.technician %></td>
+                    <td><%= entry.closedCount %></td>
+                    <td>P <%= Number(entry.revenue || 0).toFixed(2) %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </article>
+    </div>
+  </div>
+</section>
+
+<script>
+function toggleTargetPanel() {
+  const panel = document.getElementById('targetConfigPanel');
+  if (!panel) return;
+  panel.classList.toggle('hidden');
+}
+
+function setupTimelineFilters() {
+  const pills = document.getElementById('gm-timeline-filters');
+  const dateInput = document.getElementById('gm-reporting-date');
+  const durationInput = document.getElementById('gm-reporting-duration');
+  if (!pills) return;
+
+  const buttons = Array.from(pills.querySelectorAll('button[data-duration]'));
+  if (!buttons.length) return;
+
+  function money(value) {
+    return 'P ' + Number(value || 0).toFixed(2);
+  }
+
+  function clampPct(value) {
+    return Math.max(0, Math.min(100, Number(value) || 0));
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function fadeRight(weight) {
+    return 'background-image:linear-gradient(to right, rgba(78, 205, 232, 0.38), rgba(78, 205, 232, 0)) !important;background-size:' + clampPct(weight) + '% 100% !important;background-repeat:no-repeat !important;background-position:left center !important;';
+  }
+
+  function fadeLeft(weight) {
+    return 'background-image:linear-gradient(to left, rgba(184, 230, 76, 0.34), rgba(184, 230, 76, 0)) !important;background-size:' + clampPct(weight) + '% 100% !important;background-repeat:no-repeat !important;background-position:right center !important;';
+  }
+
+  function setActiveButton(code) {
+    buttons.forEach((button) => {
+      const isActive = button.getAttribute('data-duration') === code;
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+    if (durationInput) durationInput.value = code;
+    const targetDuration = document.getElementById('gm-target-duration');
+    if (targetDuration) targetDuration.value = code;
+  }
+
+  function updateCards(payload) {
+    const matrix = payload && payload.matrix ? payload.matrix : { rows: [], totals: {} };
+    const rows = Array.isArray(matrix.rows) ? matrix.rows : [];
+    const totals = matrix.totals || {};
+    const branchCount = rows.length || 1;
+    const maxOpen = Math.max.apply(null, rows.map((row) => Number(row.openWorkOrders || 0)).concat([1]));
+    const matrixBody = document.getElementById('gm-matrix-body');
+    if (!matrixBody) return;
+    if (!rows.length) {
+      matrixBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No branch records available.</td></tr>';
+      return;
+    }
+
+    const rowHtml = rows.map((row) => {
+      const openWorkOrders = Number(row.openWorkOrders || 0);
+      const pacingPct = Number(row.targetPacingPct || 0);
+      const laborGm = Number(row.laborGrossMarginPct || 0);
+      const partsGm = Number(row.partsGrossMarginPct || 0);
+      const statusCode = /^(ok|watch|alert)$/i.test(String(row.statusWarningCode || ''))
+        ? String(row.statusWarningCode).toLowerCase()
+        : 'ok';
+      return (
+        '<tr>' +
+          '<td>' + escapeHtml(row.branch || '—') + '</td>' +
+          '<td style="' + fadeRight((openWorkOrders / maxOpen) * 100) + '">' + openWorkOrders + '</td>' +
+          '<td>' + money(row.liveAccumulatedRevenue) + '</td>' +
+          '<td style="' + fadeRight(pacingPct) + '">' +
+            '<span style="display:inline-flex;align-items:center;justify-content:center;background:#b8e64c;color:#10243d;border-radius:999px;padding:2px 8px;font-weight:700;font-size:11px;line-height:1.2;">' +
+              pacingPct.toFixed(1) + '%' +
+            '</span>' +
+          '</td>' +
+          '<td style="' + fadeLeft(laborGm) + '">' + laborGm.toFixed(1) + '%</td>' +
+          '<td style="' + fadeLeft(partsGm) + '">' + partsGm.toFixed(1) + '%</td>' +
+          '<td><span class="gm-status-flag gm-status-flag--' + statusCode + '">' + escapeHtml(row.statusWarning || 'OK') + '</span></td>' +
+        '</tr>'
+      );
+    }).join('');
+
+    matrixBody.innerHTML = rowHtml +
+      '<tr class="gm-matrix-row--total">' +
+        '<td>Total</td>' +
+        '<td>' + Number(totals.openWorkOrders || 0) + '</td>' +
+        '<td>' + money(totals.liveAccumulatedRevenue) + '</td>' +
+        '<td>' + (Number(totals.targetPacingPct || 0) / branchCount).toFixed(1) + '%</td>' +
+        '<td>' + (Number(totals.laborGrossMarginPct || 0) / branchCount).toFixed(1) + '%</td>' +
+        '<td>' + (Number(totals.partsGrossMarginPct || 0) / branchCount).toFixed(1) + '%</td>' +
+        '<td><span class="gm-status-flag gm-status-flag--ok">TOTAL</span></td>' +
+      '</tr>';
+  }
+
+  async function fetchMetrics(duration) {
+    const date = dateInput && dateInput.value ? dateInput.value : '';
+    const params = new URLSearchParams();
+    params.set('duration', duration);
+    if (date) params.set('date', date);
+    const response = await fetch('/api/dashboard/metrics?' + params.toString(), {
+      headers: { Accept: 'application/json' },
+      credentials: 'same-origin',
+    });
+    if (!response.ok) throw new Error('Unable to load dashboard metrics');
+    return response.json();
+  }
+
+  buttons.forEach((button) => {
+    button.addEventListener('click', async () => {
+      const duration = String(button.getAttribute('data-duration') || 'D').toUpperCase();
+      setActiveButton(duration);
+      buttons.forEach((item) => { item.disabled = true; });
+      try {
+        updateCards(await fetchMetrics(duration));
+      } catch (error) {
+        console.error(error);
+      } finally {
+        buttons.forEach((item) => { item.disabled = false; });
+      }
+    });
+  });
+
+  async function refreshLiveMetrics() {
+    if (document.visibilityState === 'hidden') return;
+    const duration = durationInput && durationInput.value
+      ? String(durationInput.value).toUpperCase()
+      : 'D';
+    try {
+      updateCards(await fetchMetrics(duration));
+    } catch (error) {
+      console.error(error);
+    }
+    if (typeof window.__gmRefreshOcpdToday === 'function') window.__gmRefreshOcpdToday();
+  }
+
+  setInterval(refreshLiveMetrics, 12000);
+}
+
+function setupOcpdDateNav() {
+  const body = document.getElementById('gm-ocpd-body');
+  const label = document.getElementById('gm-ocpd-date-label');
+  const prev = document.getElementById('gm-ocpd-prev');
+  const next = document.getElementById('gm-ocpd-next');
+  if (!body || !label || !prev || !next) return;
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function renderReport(report) {
+    if (!report || !Array.isArray(report.rows)) return;
+    body.setAttribute('data-date', report.date || '');
+    body.setAttribute('data-today', report.today || '');
+    label.textContent = report.dateLabel || report.date || '';
+    next.disabled = !report.canGoNext;
+    const columns = Array.isArray(report.columns) ? report.columns : [];
+    body.innerHTML = report.rows.map((row) => {
+      const cells = columns.map((column) => {
+        const key = column && column.key;
+        const value = key === 'date' ? (report.dateLabel || row.date || '') : (row[key] == null ? 0 : row[key]);
+        return '<td>' + escapeHtml(value) + '</td>';
+      }).join('');
+      return '<tr>' + cells + '</tr>';
+    }).join('');
+  }
+
+  async function loadDate(date) {
+    prev.disabled = true;
+    next.disabled = true;
+    try {
+      const params = new URLSearchParams();
+      if (date) params.set('date', date);
+      const response = await fetch('/api/gm/ocpd?' + params.toString(), {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+      });
+      if (!response.ok) throw new Error('Unable to load OCPD reporting');
+      renderReport(await response.json());
+    } catch (error) {
+      console.error(error);
+      next.disabled = String(body.getAttribute('data-date') || '') >= String(body.getAttribute('data-today') || '');
+    } finally {
+      prev.disabled = false;
+    }
+  }
+
+  prev.addEventListener('click', () => {
+    const current = body.getAttribute('data-date');
+    if (!current) return;
+    const [year, month, day] = current.split('-').map(Number);
+    loadDate(new Date(Date.UTC(year, month - 1, day - 1)).toISOString().slice(0, 10));
+  });
+
+  next.addEventListener('click', () => {
+    const current = body.getAttribute('data-date');
+    const today = body.getAttribute('data-today');
+    if (!current || current >= today) return;
+    const [year, month, day] = current.split('-').map(Number);
+    loadDate(new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10));
+  });
+
+  window.__gmRefreshOcpdToday = function refreshOcpdToday() {
+    if (document.visibilityState === 'hidden') return;
+    const current = body.getAttribute('data-date');
+    const today = body.getAttribute('data-today');
+    if (!current || !today || current !== today) return;
+    loadDate(current);
+  };
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    setupTimelineFilters();
+    setupOcpdDateNav();
+  });
+} else {
+  setupTimelineFilters();
+  setupOcpdDateNav();
+}
+</script>
+<%- include('../partials/footer') %>

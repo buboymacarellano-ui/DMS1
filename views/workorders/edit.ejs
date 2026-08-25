@@ -101,16 +101,32 @@
         <option value="<%= tech.name %>" data-branch="<%= tech.branch || '' %>"></option>
       <% }) %>
     </datalist>
+    <% if (String(wo.technician || '').trim()) { %>
+      <small><a href="/work-order-transactions/technicians/<%= encodeURIComponent(wo.technician) %>">Open technician activity</a></small>
+    <% } %>
   </label>
   <label>Time Start <input id="time-in-input" name="time_in" value="<%= wo.time_in || '' %>"></label>
   <label>TimeOut <input name="time_out" value="<%= wo.time_out || '' %>"></label>
   <label>Description <textarea name="description" class="description-faded"><%= wo.description %></textarea></label>
+<% const currentStatusKey = String(wo.status || 'open').trim().toLowerCase(); %>
+<% const statusLocked = currentStatusKey === 'completed' || isClosed; %>
   <label>Status
-    <select name="status">
-      <option value="open" <%= wo.status === 'open' ? 'selected' : '' %>>open</option>
-      <option value="in-progress" <%= wo.status === 'in-progress' ? 'selected' : '' %>>in-progress</option>
-      <option value="completed" <%= wo.status === 'completed' ? 'selected' : '' %>>completed</option>
+    <% if (statusLocked) { %>
+      <input type="hidden" name="status" value="<%= currentStatusKey %>">
+    <% } %>
+    <select id="wo-status-select" name="status" <%= statusLocked ? 'disabled data-locked="1"' : '' %>>
+      <% (typeof workOrderStatusOptions !== 'undefined' ? workOrderStatusOptions : [
+        { value: 'open', label: 'Open' },
+        { value: 'in-progress', label: 'In Progress' },
+        { value: 'waiting-parts', label: 'Waiting Parts' },
+        { value: 'break', label: 'Break' },
+        { value: 'on-other-priority', label: 'On Other Priority' },
+        { value: 'completed', label: 'Completed' }
+      ]).forEach((option) => { %>
+        <option value="<%= option.value %>" <%= currentStatusKey === option.value ? 'selected' : '' %>><%= option.label %></option>
+      <% }) %>
     </select>
+    <small>Open is set when the work order number is created. In Progress is set when a technician is assigned. Waiting Parts, Break, and On Other Priority are operator-selected. Completed is set when the technician reports done from the phone.</small>
   </label>
   <button type="submit" <%= isClosed ? 'disabled' : '' %>>Save</button>
   <a href="/work-orders">Cancel</a>
@@ -155,6 +171,7 @@
 </section>
 
 <script src="/js/vehicle-type-catalog.js"></script>
+<script src="/js/work-order-status.js"></script>
 <script>
   const technicianDirectory = <%- JSON.stringify(techDirectorySafe) %>;
   const vehicleCatalog = <%- JSON.stringify(vehicleCatalogData) %>;
@@ -355,6 +372,8 @@
     technicianInput.addEventListener('blur', maybeFillTimeIn);
     maybeFillTimeIn();
   })();
+
+  if (window.DmsWorkOrderStatus) window.DmsWorkOrderStatus.bindWorkOrderStatusSequence();
 </script>
 
 <%- include('../partials/footer') %>

@@ -59,14 +59,6 @@
 <% const safeCustomerContacts = (typeof customerContacts !== 'undefined' && customerContacts) ? customerContacts : []; %>
 
 <div class="workorder-nav-grid">
-  <a class="workorder-nav-card workorder-nav-card--blue" href="/work-orders">
-    <div class="workorder-nav-card__icon">&#9881;</div>
-    <div class="workorder-nav-card__body">
-      <h3>Work Orders</h3>
-      <p><%= workOrdersCount %></p>
-      <span>Open Work Orders</span>
-    </div>
-  </a>
   <a class="workorder-nav-card workorder-nav-card--orange" href="/customers">
     <div class="workorder-nav-card__icon">&#128101;</div>
     <div class="workorder-nav-card__body">
@@ -89,54 +81,6 @@
       <h3>Closed WO Search</h3>
       <p>Find &amp; print billing for any closed work order.</p>
       <span>Open Search</span>
-    </div>
-  </a>
-  <a class="workorder-nav-card workorder-nav-card--brown" href="/pricing/new" aria-label="Create Labor Charge">
-    <div class="workorder-nav-card__icon">&#128179;</div>
-    <div class="workorder-nav-card__body">
-      <h3>Create Labor Charge</h3>
-      <p>Add a labor charge by unit type and service hours</p>
-      <span>Open Form</span>
-    </div>
-  </a>
-  <a class="workorder-nav-card workorder-nav-card--orange" href="/parts/create" aria-label="Create Parts">
-    <div class="workorder-nav-card__icon">&#128230;</div>
-    <div class="workorder-nav-card__body">
-      <h3>Create Parts</h3>
-      <p>Add a part with date and branch. Empty part number is auto-created</p>
-      <span>Open Form</span>
-    </div>
-  </a>
-  <a class="workorder-nav-card workorder-nav-card--blue" href="/parts" aria-label="Open branch Parts Database">
-    <div class="workorder-nav-card__icon">&#128230;</div>
-    <div class="workorder-nav-card__body">
-      <h3>Parts Database</h3>
-      <p>This branch parts and transactions only</p>
-      <span>Default view</span>
-    </div>
-  </a>
-  <a class="workorder-nav-card workorder-nav-card--yellow" href="/parts?scope=warehouse1" aria-label="Open Warehouse 1 Parts Database">
-    <div class="workorder-nav-card__icon">&#127970;</div>
-    <div class="workorder-nav-card__body">
-      <h3>Warehouse 1</h3>
-      <p>View Warehouse 1 parts database</p>
-      <span>Read-only lookup</span>
-    </div>
-  </a>
-  <a class="workorder-nav-card workorder-nav-card--orange" href="/branch-parts" aria-label="Open Branch Parts DB">
-    <div class="workorder-nav-card__icon">&#128230;</div>
-    <div class="workorder-nav-card__body">
-      <h3>Branch Parts Orders</h3>
-      <p>Branch stock, low-stock monitor, Warehouse 1 orders</p>
-      <span>Open Panel</span>
-    </div>
-  </a>
-  <a class="workorder-nav-card workorder-nav-card--blue" href="/gm/fte" aria-label="Open FTE Tracking Panel">
-    <div class="workorder-nav-card__icon">&#128736;</div>
-    <div class="workorder-nav-card__body">
-      <h3>FTE WORKSPACE</h3>
-      <p>Transaction &amp; Record Center</p>
-      <span>Real-time Branch Logging: [CebuCity] · OPEN PANEL</span>
     </div>
   </a>
 </div>
@@ -282,6 +226,7 @@
           <tr>
             <th>Technician</th>
             <th>Live Status</th>
+            <th>Present WO</th>
             <th>Assigned Car (Current)</th>
             <th>Time Spent (Present Job)</th>
             <th>Total Labor (Accumulated)</th>
@@ -292,8 +237,13 @@
         <tbody>
           <% safeTechStats.forEach(stat => { %>
             <tr>
-              <td><%= stat.technician %></td>
-              <td><%= stat.live_status || 'Working' %></td>
+              <td><a href="/work-order-transactions/technicians/<%= encodeURIComponent(stat.technician) %>"><%= stat.technician %></a></td>
+              <td><%= stat.live_status || 'Idle' %></td>
+              <td>
+                <% if (stat.present_wo_id) { %>
+                  <a href="/work-orders/<%= stat.present_wo_id %>/edit">WO <%= stat.present_wo %></a>
+                <% } else { %>—<% } %>
+              </td>
               <td><%= stat.current_car %></td>
               <td><%= stat.current_job_time %></td>
               <td>₱<%= Number(stat.total_labor_accumulated || 0).toFixed(2) %></td>

@@ -3,97 +3,137 @@
 <section class="dashboard-shell admin-shell sa-shell">
   <% const dashRole = String((typeof roleLabel !== 'undefined' && roleLabel) || (currentUser && currentUser.role) || '').toLowerCase(); %>
   <% const dashLabel = dashRole === 'sa' || dashRole === 'service_advisor' ? 'SA' : (dashRole === 'ssr' || dashRole === 'senior_service_receptionist' ? 'SSR' : (dashRole === 'sr' || dashRole === 'service_receptionist' ? 'SR' : (String((typeof roleLabel !== 'undefined' && roleLabel) || 'SA').toUpperCase()))); %>
-  <div class="dashboard-title admin-title sa-title role-dashboard-title"><span><%= dashLabel %> <%= branch %></span> <span class="role-dashboard-title__suffix">Dashboard</span></div>
+  <% const openCount = typeof openWorkOrdersCount !== 'undefined' ? openWorkOrdersCount : work_orders.filter((wo) => String(wo.status || '').trim().toLowerCase() !== 'closed').length; %>
   <% const safeTechStats = (typeof technicianStats !== 'undefined' && technicianStats) ? technicianStats : []; %>
-  <div class="sa-grid sa-grid--4">
-    <article class="gm-kpi-card sa-card">
-      <div class="sa-card-title">TRANSACTIONS</div>
-      <div class="sa-card-body">
-        <p class="sa-line"><strong>Open Work Orders:</strong> [<%= work_orders.length %>] <span class="dashboard-status">[↑ Active]</span></p>
-        <p class="sa-line">Customers: [<%= customers.length %>] | Vehicles: [<%= vehicles.length %>] <span class="dashboard-status">[→ Active]</span></p>
-      </div>
-      <div class="sa-open-row">
-        <a class="btn" href="/work-order-transactions" aria-label="Open Transactions">OPEN</a>
-      </div>
-    </article>
+  <div class="dashboard-title admin-title sa-title role-dashboard-title"><span><%= dashLabel %> <%= branch %></span> <span class="role-dashboard-title__suffix">Dashboard</span></div>
+  <% const revenueBars = (typeof branchRevenueBars !== 'undefined' && branchRevenueBars) ? branchRevenueBars : { bars: [], monthLabel: '', branch: branch }; %>
 
-    <article class="gm-kpi-card sa-card">
-      <div class="sa-card-title">PARTS</div>
-      <div class="sa-card-body">
-        <p class="sa-line"><%= branch || 'Your branch' %> parts database and transactions</p>
-        <p class="sa-line">Default view is this branch only. <span class="dashboard-status">[Updated just now]</span></p>
-      </div>
-      <div class="sa-open-row">
-        <a class="btn" href="/parts">ACCESS DATABASE</a>
-      </div>
-    </article>
+  <section class="sa-home-group sa-mtd-group" id="sa-mtd-bars" aria-label="Branch month-to-date revenue">
+    <h3 class="sa-home-group__title">Month-to-date · <%= revenueBars.monthLabel || 'This month' %> · <%= revenueBars.branch || branch %></h3>
+    <div class="sa-mtd-bars">
+      <% (revenueBars.bars || []).forEach((bar) => { %>
+        <article class="sa-mtd-bar sa-mtd-bar--<%= bar.tone %>" data-key="<%= bar.key %>" data-fill="<%= bar.fillPct %>" data-tone="<%= bar.tone %>">
+          <p class="sa-mtd-bar__label"><%= bar.label %></p>
+          <p class="sa-mtd-bar__value"><%= bar.valueText %></p>
+          <div
+            class="sa-mtd-bar__track"
+            role="progressbar"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="<%= bar.fillPct %>"
+            aria-label="<%= bar.label %>"
+          >
+            <span class="sa-mtd-bar__fill"></span>
+          </div>
+          <p class="sa-mtd-bar__meta"><%= bar.meta %></p>
+        </article>
+      <% }) %>
+    </div>
+  </section>
 
-    <article class="gm-kpi-card sa-card">
-      <div class="sa-card-title">CREATE PARTS</div>
-      <div class="sa-card-body">
-        <p class="sa-line">Create a part for all branches with date and branch</p>
-        <p class="sa-line">Saves stock at your branch; Warehouse 1 / PM log the transaction <span class="dashboard-status">[Live]</span></p>
-      </div>
-      <div class="sa-open-row">
-        <a class="btn" href="/parts/create" aria-label="Create Parts">OPEN</a>
-      </div>
-    </article>
+  <section class="sa-home-group">
+    <h3 class="sa-home-group__title">1. Shop floor</h3>
+    <div class="sa-grid sa-grid--4">
+      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card sa-home-card--kpi" href="/work-orders" aria-label="Open Work Orders">
+        <div class="workorder-nav-card__icon">&#9881;</div>
+        <div class="workorder-nav-card__body">
+          <h3>Work Orders</h3>
+          <p><%= openCount %></p>
+          <span>Open list · create WO, parts, labor</span>
+        </div>
+      </a>
+      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card sa-home-card--kpi" href="/work-order-transactions/technicians" aria-label="Open Technician Portal">
+        <div class="workorder-nav-card__icon">&#128295;</div>
+        <div class="workorder-nav-card__body">
+          <h3>Technicians</h3>
+          <p><%= safeTechStats.length %></p>
+          <span>Status · assignments</span>
+        </div>
+      </a>
+      <a class="workorder-nav-card workorder-nav-card--orange sa-home-card sa-home-card--kpi" href="/customers" aria-label="Open Customers">
+        <div class="workorder-nav-card__icon">&#128101;</div>
+        <div class="workorder-nav-card__body">
+          <h3>Customers</h3>
+          <p><%= customers.length %></p>
+          <span>Directory · Viber</span>
+        </div>
+      </a>
+      <a class="workorder-nav-card workorder-nav-card--yellow sa-home-card" href="/transactions" aria-label="Search closed work orders">
+        <div class="workorder-nav-card__icon">&#128269;</div>
+        <div class="workorder-nav-card__body">
+          <h3>Closed WO Search</h3>
+          <p>Find a billed job and reprint</p>
+          <span>Billing lookup</span>
+        </div>
+      </a>
+    </div>
+  </section>
 
-    <article class="gm-kpi-card sa-card">
-      <div class="sa-card-title">WAREHOUSE 1</div>
-      <div class="sa-card-body">
-        <p class="sa-line">View Warehouse 1 parts database and transactions</p>
-        <p class="sa-line">Read-only lookup for warehouse stock</p>
-      </div>
-      <div class="sa-open-row">
-        <a class="btn" href="/parts?scope=warehouse1">VIEW WAREHOUSE 1</a>
-      </div>
-    </article>
+  <section class="sa-home-group">
+    <h3 class="sa-home-group__title">2. Parts</h3>
+    <div class="sa-grid sa-grid--4">
+      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/parts" aria-label="Open branch Parts Database">
+        <div class="workorder-nav-card__icon">&#128230;</div>
+        <div class="workorder-nav-card__body">
+          <h3>Parts Database</h3>
+          <p><%= branch || 'This branch' %> stock and history</p>
+          <span>Branch lookup</span>
+        </div>
+      </a>
+      <a class="workorder-nav-card workorder-nav-card--yellow sa-home-card" href="/parts?scope=warehouse1" aria-label="Open Warehouse 1">
+        <div class="workorder-nav-card__icon">&#127970;</div>
+        <div class="workorder-nav-card__body">
+          <h3>Warehouse 1</h3>
+          <p>Read-only warehouse stock</p>
+          <span>Lookup only</span>
+        </div>
+      </a>
+      <a class="workorder-nav-card workorder-nav-card--orange sa-home-card" href="/branch-parts" aria-label="Open Branch Parts Orders">
+        <div class="workorder-nav-card__icon">&#128203;</div>
+        <div class="workorder-nav-card__body">
+          <h3>Branch Parts Orders</h3>
+          <p>Low stock · send order to PM</p>
+          <span>Order panel</span>
+        </div>
+      </a>
+    </div>
+  </section>
 
-    <article class="gm-kpi-card sa-card">
-      <div class="sa-card-title">HELPER</div>
-      <div class="sa-card-body">
-        <p class="sa-line">Search Parts, Customer Info, Technicians, &amp; App Data.</p>
-        <p class="sa-line">Integrated Helpdesk &amp; KB.</p>
-      </div>
-      <div class="sa-open-row">
-        <a class="btn" href="/helper">SEARCH/OPEN</a>
-      </div>
-    </article>
-
-    <article class="gm-kpi-card sa-card">
-      <div class="sa-card-title">BRANCH PARTS DB</div>
-      <div class="sa-card-body">
-        <p class="sa-line">This branch Parts Database, low-stock monitor, Warehouse 1 orders</p>
-        <p class="sa-line">Save drafts · Send to Parts Manager</p>
-      </div>
-      <div class="sa-open-row">
-        <a class="btn" href="/branch-parts" aria-label="Open Branch Parts DB">OPEN PANEL</a>
-      </div>
-    </article>
-    <article class="gm-kpi-card sa-card">
-      <div class="sa-card-title">FTE WORKSPACE</div>
-      <div class="sa-card-body">
-        <p class="sa-line">Transaction &amp; Record Center</p>
-        <p class="sa-line">Real-time Branch Logging: <strong>[CebuCity]</strong></p>
-      </div>
-      <div class="sa-open-row">
-        <a class="btn" href="/gm/fte" aria-label="Open FTE Tracking Panel">OPEN PANEL</a>
-      </div>
-    </article>
-  </div>
+  <section class="sa-home-group">
+    <h3 class="sa-home-group__title">3. Tools</h3>
+    <div class="sa-grid sa-grid--4">
+      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/helper" aria-label="Open Helper search">
+        <div class="workorder-nav-card__icon">&#128270;</div>
+        <div class="workorder-nav-card__body">
+          <h3>Helper</h3>
+          <p>Search customers, parts, work orders</p>
+          <span>Search</span>
+        </div>
+      </a>
+      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/gm/fte" aria-label="Open FTE workspace">
+        <div class="workorder-nav-card__icon">&#128736;</div>
+        <div class="workorder-nav-card__body">
+          <h3>FTE Workspace</h3>
+          <p>Log branch issues and time</p>
+          <span>Records</span>
+        </div>
+      </a>
+    </div>
+  </section>
 
   <article class="dashboard-card admin-panel sa-tech-panel sa-tech-panel--fill">
-    <div class="dashboard-card__header admin-panel-header">TECHNICIAN</div>
-    <p class="dashboard-note admin-note">Live Technician Summary &amp; MTD Performance Metrics.</p>
+    <div class="dashboard-card__header admin-panel-header">Live technicians</div>
+    <p class="dashboard-note admin-note">Status, present WO, vehicle, and labor from the same board as Technician Portal. Names open technician activity; present WO opens the work order.</p>
     <% if (!safeTechStats.length) { %>
-      <p class="dashboard-note admin-note">[Graph placeholder: Top Techs | Total Hours Billed: 1,450 | Avg Efficiency: 92%]</p>
+      <p class="dashboard-note admin-note">No technician assignments yet.</p>
     <% } else { %>
       <div class="table-scroll sa-tech-panel__scroll">
         <table class="list">
           <thead>
             <tr>
               <th>Technician</th>
+              <th>Status</th>
+              <th>Present WO</th>
               <th>Assigned Car (Current)</th>
               <th>Time Spent (Present Job)</th>
               <th>Total Labor (Accumulated)</th>
@@ -104,7 +144,13 @@
           <tbody>
             <% safeTechStats.forEach(stat => { %>
               <tr>
-                <td><%= stat.technician %></td>
+                <td><a href="/work-order-transactions/technicians/<%= encodeURIComponent(stat.technician) %>"><%= stat.technician %></a></td>
+                <td><%= stat.live_status || 'Idle' %></td>
+                <td>
+                  <% if (stat.present_wo_id) { %>
+                    <a href="/work-orders/<%= stat.present_wo_id %>/edit">WO <%= stat.present_wo %></a>
+                  <% } else { %>—<% } %>
+                </td>
                 <td><%= stat.current_car %></td>
                 <td><%= stat.current_job_time %></td>
                 <td>₱<%= Number(stat.total_labor_accumulated || 0).toFixed(2) %></td>
@@ -119,4 +165,5 @@
   </article>
 </section>
 
+<script src="/js/sa-revenue-bars.js"></script>
 <%- include('partials/footer') %>

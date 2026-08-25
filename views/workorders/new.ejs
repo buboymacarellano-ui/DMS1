@@ -90,17 +90,26 @@
   <label>TimeOut <input name="time_out" placeholder="17:00"></label>
   <label>Description <textarea name="description" class="description-faded"></textarea></label>
   <label>Status
-    <select name="status">
-      <option>open</option>
-      <option>in-progress</option>
-      <option>completed</option>
+    <select id="wo-status-select" name="status">
+      <% (typeof workOrderStatusOptions !== 'undefined' ? workOrderStatusOptions : [
+        { value: 'open', label: 'Open' },
+        { value: 'in-progress', label: 'In Progress' },
+        { value: 'waiting-parts', label: 'Waiting Parts' },
+        { value: 'break', label: 'Break' },
+        { value: 'on-other-priority', label: 'On Other Priority' },
+        { value: 'completed', label: 'Completed' }
+      ]).forEach((option) => { %>
+        <option value="<%= option.value %>" <%= option.value === 'open' ? 'selected' : '' %>><%= option.label %></option>
+      <% }) %>
     </select>
+    <small>Open is set when the work order number is created. In Progress is set when a technician is assigned. Waiting Parts, Break, and On Other Priority are operator-selected. Completed is set when the technician reports done from the phone.</small>
   </label>
   <button type="submit">Create</button>
   <a href="/work-orders">Cancel</a>
 </form>
 
 <script src="/js/vehicle-type-catalog.js"></script>
+<script src="/js/work-order-status.js"></script>
 <script>
   const vehicleCatalog = <%- JSON.stringify(vehicleCatalogData || { brandOptions: [], modelsByBrand: {} }) %>;
   const technicianDirectory = <%- JSON.stringify(techDirectorySafe) %>;
@@ -425,6 +434,8 @@
     technicianInput.addEventListener('blur', syncTimeIn);
     syncTimeIn();
   })();
+
+  if (window.DmsWorkOrderStatus) window.DmsWorkOrderStatus.bindWorkOrderStatusSequence();
 </script>
 
 <%- include('../partials/footer') %>

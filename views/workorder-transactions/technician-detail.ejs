@@ -6,34 +6,89 @@
   <% if (success) { %><p class="success"><%= success %></p><% } %>
   <% if (error) { %><p class="error"><%= error %></p><% } %>
 
+  <% const board = technician.board_status || { label: technician.current_order ? 'On-Going' : 'Idle', tone: technician.current_order ? 'ongoing' : 'idle' }; %>
+  <% const present = technician.current_order; %>
+  <% const assignedOrders = Array.isArray(technician.assigned_orders) ? technician.assigned_orders : []; %>
+  <% const peso = (value) => Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); %>
   <article class="technician-monitor__card">
     <header>
       <div><h2><%= technician.technician %></h2><p><%= technician.job_title || 'Technician' %> | <%= technician.branch || 'Unassigned branch' %></p></div>
-      <span class="technician-monitor__status"><%= technician.live_status %></span>
+      <span class="technician-monitor__status technician-monitor__status--<%= board.tone %>"><%= board.label %></span>
     </header>
 
     <div class="technician-monitor__kpis">
-      <div><span>Active</span><strong><%= technician.active_count %></strong></div>
-      <div><span>Pending</span><strong><%= technician.pending_orders.length %></strong></div>
+      <div><span>Present WO</span><strong><%= present ? present.work_order_number : '—' %></strong></div>
+      <div><span>Active WOs</span><strong><%= technician.active_count %></strong></div>
+      <div><span>Assigned WOs</span><strong><%= technician.assigned_count || assignedOrders.length %></strong></div>
       <div><span>Completed MTD</span><strong><%= technician.completed_mtd %></strong></div>
-      <div><span>Completion Rate</span><strong><%= technician.completion_rate.toFixed(1) %>%</strong></div>
-      <div><span>Active Hours Trail</span><strong><%= technician.hours_active.toFixed(1) %>h</strong></div>
-      <div><span>Avg Cycle</span><strong><%= technician.average_cycle_hours.toFixed(1) %>h</strong></div>
-      <div><span>Labor MTD</span><strong>₱<%= Number(technician.labor_mtd).toLocaleString('en-PH', { maximumFractionDigits: 2 }) %></strong></div>
+      <div><span>Completion Rate</span><strong><%= Number(technician.completion_rate || 0).toFixed(1) %>%</strong></div>
+      <div><span>Active Hours</span><strong><%= Number(technician.hours_active || 0).toFixed(1) %>h</strong></div>
+      <div><span>Avg Cycle</span><strong><%= Number(technician.average_cycle_hours || 0).toFixed(1) %>h</strong></div>
+      <div><span>Present Labor</span><strong>₱<%= peso(technician.labor_present) %></strong></div>
+      <div><span>Labor Acc.</span><strong>₱<%= peso(technician.labor_accumulated) %></strong></div>
+      <div><span>Labor MTD</span><strong>₱<%= peso(technician.labor_mtd) %></strong></div>
     </div>
 
     <section class="technician-monitor__current">
-      <h3>Present Work</h3>
-      <% if (!technician.current_order) { %><p>No work order currently marked as working.</p><% } else { %>
-        <p><strong>WO <%= technician.current_order.work_order_number %></strong> | <%= technician.current_order.vehicle || 'Vehicle not recorded' %></p>
-        <p><%= technician.current_order.branch || 'No branch' %> | <%= technician.current_order.hours_open.toFixed(1) %> hours since assignment</p>
-        <a href="/work-orders/<%= technician.current_order.id %>/edit">Open Work Order</a>
+      <h3>Present Work Order</h3>
+      <% if (!present) { %><p>No active work order assigned.</p><% } else { %>
+        <p><strong><a href="/work-orders/<%= present.id %>/edit">WO <%= present.work_order_number %></a></strong> | <%= present.status_label || present.status || '—' %></p>
+        <p>Vehicle: <%= present.vehicle || '—' %> | Customer: <%= present.customer || '—' %></p>
+        <p><%= present.branch || 'No branch' %> | Time in: <%= present.time_in || '—' %> | <%= Number(present.hours_open || 0).toFixed(1) %> hours since assignment</p>
+        <p>Labor ₱<%= peso(present.labor) %> | Parts ₱<%= peso(present.parts) %> | Total ₱<%= peso(present.total) %></p>
+        <% if (present.services && present.services.length) { %><p>Services: <%= present.services.join(' · ') %></p><% } %>
+        <p>
+          <a href="/work-orders/<%= present.id %>/edit">Open Work Order</a>
+          · <a href="/work-orders/<%= present.id %>/service">Services</a>
+        </p>
       <% } %>
     </section>
 
+    <details open><summary>Assigned Work Orders (<%= assignedOrders.length %>)</summary>
+      <% if (!assignedOrders.length) { %><p>No work orders assigned to this technician.</p><% } else { %>
+        <div class="table-scroll">
+          <table class="list technician-monitor__orders">
+            <thead>
+              <tr>
+                <th>WO</th>
+                <th>Status</th>
+                <th>Vehicle</th>
+                <th>Customer</th>
+                <th>Time In</th>
+                <th>Hours</th>
+                <th>Labor</th>
+                <th>Parts</th>
+                <th>Total</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% assignedOrders.forEach((order) => { %>
+                <tr>
+                  <td><a href="/work-orders/<%= order.id %>/edit">WO <%= order.work_order_number %></a></td>
+                  <td><%= order.status_label || order.status || '—' %></td>
+                  <td><%= order.vehicle || '—' %></td>
+                  <td><%= order.customer || '—' %></td>
+                  <td><%= order.time_in || '—' %></td>
+                  <td><%= Number(order.hours_open || 0).toFixed(1) %>h</td>
+                  <td>₱<%= peso(order.labor) %></td>
+                  <td>₱<%= peso(order.parts) %></td>
+                  <td>₱<%= peso(order.total) %></td>
+                  <td>
+                    <a href="/work-orders/<%= order.id %>/edit">Edit</a>
+                    · <a href="/work-orders/<%= order.id %>/service">Services</a>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </details>
+
     <details open><summary>Pending Work Orders (<%= technician.pending_orders.length %>)</summary>
-      <% if (!technician.pending_orders.length) { %><p>No pending assigned work.</p><% } %>
-      <% technician.pending_orders.forEach(order => { %><div class="technician-monitor__pending-row"><div><strong>WO <%= order.work_order_number %></strong> | <%= order.vehicle || 'Vehicle not recorded' %></div><div><%= order.reason %><%= order.note ? `: ${order.note}` : '' %> | <%= order.hours_open.toFixed(1) %>h</div><a href="/work-orders/<%= order.id %>/edit">Details</a></div><% }) %>
+      <% if (!technician.pending_orders.length) { %><p>No other assigned work besides the present job.</p><% } %>
+      <% technician.pending_orders.forEach(order => { %><div class="technician-monitor__pending-row"><div><strong><a href="/work-orders/<%= order.id %>/edit">WO <%= order.work_order_number %></a></strong> | <%= order.vehicle || 'Vehicle not recorded' %></div><div><%= order.status_label || order.reason %> | Labor ₱<%= peso(order.labor) %> | <%= Number(order.hours_open || 0).toFixed(1) %>h</div><a href="/work-orders/<%= order.id %>/edit">Details</a></div><% }) %>
     </details>
 
     <details open><summary>Hours / Activity Trail</summary>
@@ -44,8 +99,15 @@
     <form method="post" action="/work-order-transactions/technicians/status" class="technician-monitor__status-form">
       <input type="hidden" name="technician_name" value="<%= technician.technician %>">
       <input type="hidden" name="return_to" value="/work-order-transactions/technicians/<%= encodeURIComponent(technician.technician) %>">
-      <label>Status<select name="status_action" required><option value="working">Working</option><option value="waiting_parts">Waiting for Parts</option><option value="absent">Absent</option><option value="training">Training</option><option value="assigned_transfer">Assigned / Transfer Work Order</option><option value="for_approval">For Approval</option><option value="break">Break</option><option value="other">Other</option></select></label>
-      <label>Related Work Order<select name="work_order_id"><option value="">General technician status</option><% [technician.current_order, ...technician.pending_orders].filter(Boolean).forEach(order => { %><option value="<%= order.id %>">WO <%= order.work_order_number %></option><% }) %></select></label>
+      <label>Status<select name="status_action" required>
+        <option value="working">Working / In Progress</option>
+        <option value="waiting_parts">Waiting for Parts</option>
+        <option value="break">On Break</option>
+        <option value="on_other_priority">On Other Priority</option>
+        <option value="day_off">Day off</option>
+        <option value="absent">Absent</option>
+      </select></label>
+      <label>Related Work Order<select name="work_order_id"><option value="">Present / general</option><% [technician.current_order, ...technician.pending_orders].filter(Boolean).forEach(order => { %><option value="<%= order.id %>">WO <%= order.work_order_number %></option><% }) %></select></label>
       <label>Reason / Note<input name="note" placeholder="Details, blocker or next action"></label>
       <button type="submit" class="btn">Record Activity</button>
     </form>

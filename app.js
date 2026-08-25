@@ -20,6 +20,7 @@ const helperRouter = require('./routes/helper');
 const branchPartsRouter = require('./routes/branch-parts');
 const technicianRouter = require('./routes/technician');
 const adminRouter = require('./routes/admin');
+const hrRouter = require('./routes/hr');
 const authRouter = require('./routes/auth');
 const kpiRouter = require('./routes/kpi');
 const approvalsRouter = require('./routes/approvals');
@@ -33,11 +34,20 @@ const {
   resolveBranchCatalog,
   averageOperationalBranchMetric,
   normalizeBranchKey,
+  canonicalizeBranchName,
   isPipelineBranch,
   DEFAULT_OPERATIONAL_BRANCHES,
   PRIMARY_BRANCH_NAME,
 } = require('./lib/branches');
 const { buildOcpdReport } = require('./lib/ocpd-reporting');
+const { buildTechnicianOperations, toDashboardStats } = require('./lib/technician-activity');
+const { getFteSeedTransactions } = require('./lib/fte-seed');
+const {
+  envLoginDisabled,
+  isLoginAuthDisabled,
+  isOpenLoginEnabled,
+  loadLoginAuthState,
+} = require('./lib/login-auth');
 
 const ROLE_GENERAL_MANAGER = 'general_manager';
 const ROLE_ADMIN = 'admin';
@@ -68,9 +78,9 @@ const BYPASS_ROLES = new Set([
 const HR_SEED_USERNAME = 'HR';
 const HR_SEED_PASSWORD = 'Hr123456';
 
-// Temporary dev toggle: set DISABLE_LOGIN=1 to bypass auth in local dev.
-// Default is normal login for all roles.
-const AUTH_DISABLED = String(process.env.DISABLE_LOGIN || '0').trim() === '1';
+// Temporary env toggle: set DISABLE_LOGIN=1 to auto-bypass login in local dev.
+// HR Sign Up also has a Disable Login Auth button for empty-form login while building.
+const AUTH_DISABLED = envLoginDisabled();
 const requestedBypassRole = String(process.env.BYPASS_ROLE || ROLE_SERVICE_RECEPTIONIST).trim().toLowerCase();
 const BYPASS_ROLE = BYPASS_ROLES.has(requestedBypassRole) ? requestedBypassRole : ROLE_SERVICE_RECEPTIONIST;
 
@@ -156,6 +166,8 @@ app.use(async (req, res, next) => {
   }
   res.locals.currentUser = req.session.user || null;
   res.locals.globalError = req.session.globalError || '';
+  res.locals.loginAuthDisabled = isLoginAuthDisabled();
+  res.locals.openLoginEnabled = isOpenLoginEnabled();
   res.locals.deletePasswordEnabled = await store.isDeletePasswordEnabled();
   res.locals.currentPath = req.path || '';
   res.locals.currentQuery = req.query || {};
@@ -184,7 +196,7 @@ app.get('/healthz', (req, res) => {
 app.use('/auth', authLimiter, authRouter);
 
 app.use((req, res, next) => {
-  if (AUTH_DISABLED) return next();
+  if (envLoginDisabled()) return next();
   if (req.path.startsWith('/auth/')) return next();
   if (req.session.user) return next();
   if (req.path.startsWith('/api/')) {
@@ -209,10 +221,11 @@ app.use((req, res, next) => {
 });
 
 app.use(async (req, res, next) => {
+  if (isLoginAuthDisabled()) return next();
   const user = req.session && req.session.user ? req.session.user : {};
   if (!isFrontlineRole(user.role)) return next();
 
-  const branch = String(user.branch || '').trim();
+  const branch = canonicalizeBranchName(String(user.branch || '').trim());
   if (!branch) return res.status(403).send('Assigned branch is required. Please log in again.');
 
   if (req.method === 'POST' && req.path === '/work-orders/new') {
@@ -224,7 +237,7 @@ app.use(async (req, res, next) => {
   if (!workOrderMatch || workOrderMatch[1] === 'new') return next();
   const workOrder = await store.getById('work_orders', decodeURIComponent(workOrderMatch[1]));
   if (!workOrder) return next();
-  if (normalizeBranchAccess(workOrder.branch) !== normalizeBranchAccess(branch)) {
+  if (normalizeBranchKey(workOrder.branch) !== normalizeBranchKey(branch)) {
     return res.status(403).send('This work order belongs to another branch.');
   }
   if (req.method === 'POST' && /\/edit\/?$/i.test(req.path)) {
@@ -266,7 +279,7 @@ app.use(async (req, res, next) => {
 
 function requireRole(role) {
   return (req, res, next) => {
-    if (AUTH_DISABLED) return next();
+    if (isLoginAuthDisabled()) return next();
     const activeRole = String(req.session.user && req.session.user.role || '').trim().toLowerCase();
     if (activeRole === role) return next();
     if (req.path.startsWith('/api/')) {
@@ -278,15 +291,18 @@ function requireRole(role) {
 
 function requireAnyRole(...roles) {
   return (req, res, next) => {
-    if (AUTH_DISABLED) return next();
+    if (isLoginAuthDisabled()) return next();
     const activeRole = String(req.session.user && req.session.user.role || '').trim().toLowerCase();
     if (roles.includes(activeRole)) return next();
+    if (req.path.startsWith('/api/')) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
     return res.redirect('/');
   };
 }
 
 function requirePartsManager(req, res, next) {
-  if (AUTH_DISABLED) return next();
+  if (isLoginAuthDisabled()) return next();
   const activeRole = String(req.session.user && req.session.user.role || '').trim().toLowerCase();
   // GM has full supervisory read/write access to PM workspace
   if (isPartsManagerRole(activeRole) || activeRole === ROLE_GENERAL_MANAGER) return next();
@@ -363,7 +379,12 @@ function getStartOfWeek(date) {
 
 function isWorkOrderOpen(wo) {
   const status = String(wo && wo.status || '').trim().toLowerCase();
-  return status === 'open' || status === 'in-progress' || status === 'completed';
+  return status === 'open'
+    || status === 'in-progress'
+    || status === 'waiting-parts'
+    || status === 'break'
+    || status === 'on-other-priority'
+    || status === 'completed';
 }
 
 function isWorkOrderClosed(wo) {
@@ -481,6 +502,222 @@ function isDateInGmWindow(date, rangeWindow) {
 
 function normalizeGmBranchKey(value) {
   return normalizeBranchKey(value);
+}
+
+function formatDashboardPeso(value) {
+  return '₱' + Number(value || 0).toLocaleString('en-PH', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function roundOneDecimal(value) {
+  return Math.round((Number(value) || 0) * 10) / 10;
+}
+
+function clampDisplayPct(value) {
+  return Math.max(0, Math.min(100, Number(value) || 0));
+}
+
+function pacingHealthStatus(pct) {
+  if (pct >= 100) return 'ahead';
+  if (pct >= 90) return 'on-pace';
+  if (pct >= 70) return 'watch';
+  return 'behind';
+}
+
+function resolveFrontlineDashboardBranch(user) {
+  const fromUser = canonicalizeBranchName(String(user && user.branch || '').trim());
+  return fromUser || PRIMARY_BRANCH_NAME;
+}
+
+function monthPacingWindow() {
+  const period = resolveGmReportPeriod();
+  const daysInMonth = Math.max(1, Math.round((period.endOfMonth.getTime() - period.startOfMonth.getTime()) / 86400000));
+  const elapsedDays = Math.min(
+    daysInMonth,
+    Math.max(1, Math.round((period.endOfDay.getTime() - period.startOfMonth.getTime()) / 86400000))
+  );
+  return {
+    period,
+    daysInMonth,
+    elapsedDays,
+    expectedPct: (elapsedDays / daysInMonth) * 100,
+  };
+}
+
+function buildRevenueBarsFromTotals(opts) {
+  const laborRevenue = Number(opts.laborRevenue || 0);
+  const partsRevenue = Number(opts.partsRevenue || 0);
+  const totalGross = Number(opts.totalGross || 0);
+  const monthlyTarget = Number(opts.monthlyTarget || 0);
+  const expectedPct = Number(opts.expectedPct != null ? opts.expectedPct : monthPacingWindow().expectedPct);
+  const actualPct = monthlyTarget > 0 ? (totalGross / monthlyTarget) * 100 : 0;
+  const pacingHealthPct = expectedPct > 0 ? (actualPct / expectedPct) * 100 : 0;
+  const healthStatus = pacingHealthStatus(pacingHealthPct);
+  const targetShare = (amount) => (monthlyTarget > 0 ? (amount / monthlyTarget) * 100 : 0);
+  const noTargetMeta = 'Set this branch target in GM My Enterprises';
+  const monthLabel = opts.monthLabel || '';
+
+  return {
+    monthLabel,
+    monthKey: opts.monthKey || '',
+    branch: opts.branchLabel || '',
+    laborRevenue,
+    partsRevenue,
+    totalGross,
+    monthlyTarget,
+    pacingHealthPct: roundOneDecimal(pacingHealthPct),
+    expectedPct: roundOneDecimal(expectedPct),
+    actualPct: roundOneDecimal(actualPct),
+    bars: [
+      {
+        key: 'labor',
+        label: 'MTD Labor Revenue',
+        valueText: formatDashboardPeso(laborRevenue),
+        meta: monthlyTarget > 0
+          ? `${roundOneDecimal(targetShare(laborRevenue)).toFixed(1)}% of month target`
+          : noTargetMeta,
+        fillPct: roundOneDecimal(clampDisplayPct(targetShare(laborRevenue))),
+        tone: 'labor',
+      },
+      {
+        key: 'parts',
+        label: 'MTD Parts Revenue',
+        valueText: formatDashboardPeso(partsRevenue),
+        meta: monthlyTarget > 0
+          ? `${roundOneDecimal(targetShare(partsRevenue)).toFixed(1)}% of month target`
+          : noTargetMeta,
+        fillPct: roundOneDecimal(clampDisplayPct(targetShare(partsRevenue))),
+        tone: 'parts',
+      },
+      {
+        key: 'gross',
+        label: 'MTD Total Gross Revenue',
+        valueText: formatDashboardPeso(totalGross),
+        meta: monthlyTarget > 0
+          ? `${roundOneDecimal(actualPct).toFixed(1)}% of month target`
+          : noTargetMeta,
+        fillPct: roundOneDecimal(clampDisplayPct(actualPct)),
+        tone: 'gross',
+      },
+      {
+        key: 'target',
+        label: 'Month Total Gross Revenue Target',
+        valueText: formatDashboardPeso(monthlyTarget),
+        meta: monthlyTarget > 0
+          ? `GM target · ${monthLabel || 'this month'}`
+          : noTargetMeta,
+        fillPct: monthlyTarget > 0 ? 100 : 0,
+        tone: 'target',
+      },
+      {
+        key: 'pacing',
+        label: 'Pacing Health%',
+        valueText: `${roundOneDecimal(pacingHealthPct).toFixed(1)}%`,
+        meta: monthlyTarget > 0
+          ? `Expected ${roundOneDecimal(expectedPct).toFixed(1)}% of target by today`
+          : noTargetMeta,
+        fillPct: roundOneDecimal(clampDisplayPct(pacingHealthPct)),
+        tone: healthStatus,
+      },
+    ],
+  };
+}
+
+function buildFrontlineBranchRevenueBars(branchName, transactionRecords, pricingSettings) {
+  const window = monthPacingWindow();
+  const snapshots = getLatestTransactionSnapshots(transactionRecords, window.period.endOfDay);
+  const canonical = canonicalizeBranchName(branchName) || String(branchName || '').trim();
+  const branchKey = normalizeGmBranchKey(canonical);
+  const salesTargets = resolveGmBranchSalesTargets(pricingSettings);
+  const monthlyTarget = Number(
+    (salesTargets.branches && (
+      salesTargets.branches[canonical] != null
+        ? salesTargets.branches[canonical]
+        : salesTargets.branches[branchName]
+    )) || 0
+  );
+
+  let laborRevenue = 0;
+  let partsRevenue = 0;
+  let totalGross = 0;
+  for (const { record, date } of snapshots) {
+    if (date < window.period.startOfMonth || date >= window.period.endOfDay) continue;
+    if (normalizeGmBranchKey(record && record.Branch) !== branchKey) continue;
+    laborRevenue += toNumber(record['Total Labor']);
+    partsRevenue += toNumber(record['Total Parts']);
+    totalGross += getTransactionRecordTotal(record);
+  }
+
+  return buildRevenueBarsFromTotals({
+    laborRevenue,
+    partsRevenue,
+    totalGross,
+    monthlyTarget,
+    expectedPct: window.expectedPct,
+    monthLabel: salesTargets.monthLabel,
+    monthKey: salesTargets.monthKey,
+    branchLabel: canonical,
+  });
+}
+
+function buildPacingByScope(transactionRecords, pricingSettings) {
+  const window = monthPacingWindow();
+  const snapshots = getLatestTransactionSnapshots(transactionRecords, window.period.endOfDay);
+  const salesTargets = resolveGmBranchSalesTargets(pricingSettings);
+  const buckets = new Map(
+    DEFAULT_OPERATIONAL_BRANCHES.map((name) => [normalizeGmBranchKey(name), {
+      name,
+      laborRevenue: 0,
+      partsRevenue: 0,
+      totalGross: 0,
+      monthlyTarget: Number((salesTargets.branches && salesTargets.branches[name]) || 0),
+    }])
+  );
+
+  for (const { record, date } of snapshots) {
+    if (date < window.period.startOfMonth || date >= window.period.endOfDay) continue;
+    const entry = buckets.get(normalizeGmBranchKey(record && record.Branch));
+    if (!entry) continue;
+    entry.laborRevenue += toNumber(record['Total Labor']);
+    entry.partsRevenue += toNumber(record['Total Parts']);
+    entry.totalGross += getTransactionRecordTotal(record);
+  }
+
+  const scopes = { ALL: null };
+  let allLabor = 0;
+  let allParts = 0;
+  let allGross = 0;
+  let allTarget = 0;
+  DEFAULT_OPERATIONAL_BRANCHES.forEach((name) => {
+    const entry = buckets.get(normalizeGmBranchKey(name));
+    scopes[name] = buildRevenueBarsFromTotals({
+      laborRevenue: entry.laborRevenue,
+      partsRevenue: entry.partsRevenue,
+      totalGross: entry.totalGross,
+      monthlyTarget: entry.monthlyTarget,
+      expectedPct: window.expectedPct,
+      monthLabel: salesTargets.monthLabel,
+      monthKey: salesTargets.monthKey,
+      branchLabel: name,
+    });
+    allLabor += entry.laborRevenue;
+    allParts += entry.partsRevenue;
+    allGross += entry.totalGross;
+    allTarget += entry.monthlyTarget;
+  });
+  scopes.ALL = buildRevenueBarsFromTotals({
+    laborRevenue: allLabor,
+    partsRevenue: allParts,
+    totalGross: allGross,
+    monthlyTarget: allTarget,
+    expectedPct: window.expectedPct,
+    monthLabel: salesTargets.monthLabel,
+    monthKey: salesTargets.monthKey,
+    branchLabel: 'All branches',
+  });
+  return scopes;
 }
 
 function getTransactionRecordDate(record) {
@@ -836,7 +1073,7 @@ function buildBranchMilestones(workOrders, transactionSnapshots, period, branchC
     if (inWindow) entry.periodWorkOrders += 1;
     entry.totalWorkOrders += 1;
 
-    if (isWorkOrderOpen(wo) && inWindow) {
+    if (isWorkOrderOpen(wo)) {
       entry.openWorkOrders += 1;
       const ageHours = Math.floor(Math.max(0, now.getTime() - createdAt.getTime()) / 3600000);
       if (ageHours > 24) entry.openRiskCount += 1;
@@ -1080,6 +1317,82 @@ function buildGmMetrics(workOrders, transactionRecords, employees, pricingSettin
   };
 }
 
+function gmDashboardTemplateVars(metrics) {
+  const allBranchRows = Array.isArray(metrics.branchMilestones) ? metrics.branchMilestones : [];
+  const branchRows = allBranchRows.filter((row) => !row.isPipeline && String(row.branch || '').trim().toLowerCase() !== 'proposed location');
+  const matrixTotals = branchRows.reduce((acc, row) => {
+    acc.openWorkOrders += Number(row.openWorkOrders || 0);
+    acc.liveAccumulatedRevenue += Number(row.liveAccumulatedRevenue != null ? row.liveAccumulatedRevenue : row.todayRevenue || 0);
+    acc.targetPacingPct += Number(row.targetPacingPct != null ? row.targetPacingPct : row.milestonePercent || 0);
+    acc.laborGrossMarginPct += Number(row.laborGrossMarginPct || 0);
+    acc.partsGrossMarginPct += Number(row.partsGrossMarginPct || 0);
+    return acc;
+  }, {
+    openWorkOrders: 0,
+    liveAccumulatedRevenue: 0,
+    targetPacingPct: 0,
+    laborGrossMarginPct: 0,
+    partsGrossMarginPct: 0,
+  });
+  const branchCount = branchRows.length || 1;
+  const avgLabor = matrixTotals.laborGrossMarginPct / branchCount;
+  const avgParts = matrixTotals.partsGrossMarginPct / branchCount;
+  const avgPacing = matrixTotals.targetPacingPct / branchCount;
+  const clampPct = (value) => Math.max(0, Math.min(100, Number(value) || 0));
+  const reporting = metrics.reporting || {};
+  const kpis = metrics.kpis || {};
+  return {
+    branchRows,
+    matrixTotals,
+    branchCount,
+    avgPacing,
+    avgLabor,
+    avgParts,
+    segA: clampPct(avgLabor * 0.45),
+    segB: clampPct(clampPct(avgLabor * 0.45) + (avgParts * 0.35)),
+    segC: clampPct(clampPct(clampPct(avgLabor * 0.45) + (avgParts * 0.35)) + (avgPacing * 0.35)),
+    maxRevenue: Math.max.apply(null, branchRows.map((row) => Number(row.liveAccumulatedRevenue != null ? row.liveAccumulatedRevenue : row.todayRevenue || 0)).concat([1])),
+    maxOpenWorkOrders: Math.max.apply(null, branchRows.map((row) => Number(row.openWorkOrders || 0)).concat([1])),
+    activeDuration: String(metrics.duration || reporting.duration || 'D').toUpperCase(),
+    sparkHeights: Array.isArray(kpis.pendingSpark) && kpis.pendingSpark.length ? kpis.pendingSpark : [36, 52, 44, 70, 58, 82, 64],
+    revenueLabel: reporting.revenueLabel || ('Revenue on ' + (reporting.label || '')),
+    revenueDelta: reporting.revenueDelta || '▲ Daily close',
+    cumulativeLabel: reporting.cumulativeLabel || ('Week Through ' + (reporting.label || '')),
+    cumulativeDelta: reporting.cumulativeDelta || '▲ Week to date',
+    branchSalesTargets: metrics.branchSalesTargets || resolveGmBranchSalesTargets(null),
+    reportingDate: reporting.date || '',
+  };
+}
+
+async function loadGmDashboardPage(req) {
+  const [customers, vehicles, workOrders, transactionRecords, employees, pricingSettings, branches] = await Promise.all([
+    store.getAll('customers'),
+    store.getAll('vehicles'),
+    store.getAll('work_orders'),
+    store.getAll('transaction_records'),
+    store.getAll('employees'),
+    store.getPricingSettings(),
+    store.getAll('branches'),
+  ]);
+  const metrics = buildGmMetrics(
+    workOrders,
+    transactionRecords,
+    employees,
+    pricingSettings,
+    req.query.date,
+    branches,
+    req.query.duration
+  );
+  return Object.assign({
+    customersCount: customers.length,
+    vehiclesCount: vehicles.length,
+    totalWorkOrders: workOrders.length,
+    metrics,
+    ocpdReport: buildOcpdReport(req.query.date, workOrders, vehicles),
+    targetsSaved: String(req.query.targetsSaved || '') === '1',
+  }, gmDashboardTemplateVars(metrics));
+}
+
 function serializeGmDashboardPayload(metrics) {
   const allBranchRows = Array.isArray(metrics.branchMilestones) ? metrics.branchMilestones : [];
   const branchRows = allBranchRows.filter((row) => !row.isPipeline && String(row.branch || '').trim().toLowerCase() !== 'proposed location');
@@ -1139,18 +1452,6 @@ function serializeGmDashboardPayload(metrics) {
       totals,
     },
   };
-}
-
-function parseTimeToday(value) {
-  const text = String(value || '').trim();
-  const match = text.match(/^(\d{1,2}):(\d{2})$/);
-  if (!match) return null;
-  const h = Number(match[1]);
-  const m = Number(match[2]);
-  if (!Number.isFinite(h) || !Number.isFinite(m) || h < 0 || h > 23 || m < 0 || m > 59) return null;
-  const now = new Date();
-  const dt = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0);
-  return dt;
 }
 
 function parseClockOnDate(referenceDate, value) {
@@ -1304,7 +1605,7 @@ function buildStmMetrics(workOrders, transactionRecords, partsInventory, pricing
   const availableHours = technicianSet.size * elapsedDays * 8;
   const totalRevenue = laborRevenue + partsRevenue;
 
-  const openStatuses = new Set(['open', 'in-progress']);
+  const openStatuses = new Set(['open', 'in-progress', 'waiting-parts', 'break', 'on-other-priority']);
   const closedStatuses = new Set(['closed']);
   const closeMap = buildCloseTimestampMap(transactionRecords || []);
   const closedMtd = workOrdersMtd.filter((wo) => closedStatuses.has(String(wo.status || '').trim().toLowerCase()));
@@ -1414,82 +1715,6 @@ function buildStmMetrics(workOrders, transactionRecords, partsInventory, pricing
   };
 }
 
-function formatElapsed(fromDate, toDate) {
-  if (!fromDate || !toDate) return '-';
-  const diffMs = Math.max(0, toDate.getTime() - fromDate.getTime());
-  const totalMinutes = Math.floor(diffMs / 60000);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-}
-
-function buildTechnicianStats(workOrders, vehicles) {
-  const byId = new Map(vehicles.map(vehicle => [vehicle.id, vehicle]));
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth();
-  const groups = new Map();
-
-  for (const wo of workOrders) {
-    const techName = String(wo.technician || '').trim();
-    if (!techName) continue;
-
-    if (!groups.has(techName)) {
-      groups.set(techName, {
-        technician: techName,
-        current_car: '-',
-        current_job_time: '-',
-        total_labor_accumulated: 0,
-        total_labor_mtd: 0,
-        work_orders_mtd: 0,
-        _activeSource: null,
-      });
-    }
-
-    const group = groups.get(techName);
-    const items = wo.service_items || [];
-    const laborTotal = items.reduce((sum, item) => sum + (toNumber(item.labor_price) * Math.max(1, toNumber(item.service_qty) || 1)), 0);
-    group.total_labor_accumulated += laborTotal;
-
-    const created = new Date(wo.created_at || 0);
-    const isCurrentMonth = created.getFullYear() === currentYear && created.getMonth() === currentMonth;
-    if (isCurrentMonth) {
-      group.total_labor_mtd += laborTotal;
-      group.work_orders_mtd += 1;
-    }
-
-    const status = String(wo.status || '').toLowerCase();
-    const isActive = status === 'open' || status === 'in-progress';
-    if (!isActive) continue;
-
-    const sourceTime = new Date(wo.created_at || 0).getTime();
-    if (group._activeSource != null && sourceTime <= group._activeSource) continue;
-
-    const vehicle = byId.get(wo.vehicle_id) || {};
-    const brand = String(wo.car_brand || vehicle.make || '').trim();
-    const model = String(wo.car_model || vehicle.model || '').trim();
-    const plate = String(wo.plate_number || vehicle.license_plate || '').trim();
-    const carLabel = [brand, model].filter(Boolean).join(' ') || '-';
-    group.current_car = plate ? `${carLabel} (${plate})` : carLabel;
-
-    const start = parseTimeToday(wo.time_in);
-    const end = parseTimeToday(wo.time_out) || now;
-    group.current_job_time = start ? formatElapsed(start, end) : '-';
-    group._activeSource = sourceTime;
-  }
-
-  return Array.from(groups.values())
-    .map(group => ({
-      technician: group.technician,
-      current_car: group.current_car,
-      current_job_time: group.current_job_time,
-      total_labor_accumulated: group.total_labor_accumulated,
-      total_labor_mtd: group.total_labor_mtd,
-      work_orders_mtd: group.work_orders_mtd,
-    }))
-    .sort((a, b) => a.technician.localeCompare(b.technician));
-}
-
 // Role landing page
 app.get('/', async (req, res) => {
   const activeRole = String(req.session.user && req.session.user.role || '').trim().toLowerCase();
@@ -1520,25 +1745,57 @@ app.get('/', async (req, res) => {
 
 app.get('/service-receptionist', requireAnyRole(ROLE_SERVICE_ADVISOR, ROLE_SERVICE_RECEPTIONIST, ROLE_SENIOR_SERVICE_RECEPTIONIST), async (req, res) => {
   const user = req.session && req.session.user ? req.session.user : {};
-  const branchKey = normalizeBranchAccess(user.branch);
-  const allWorkOrders = await store.getAll('work_orders');
-  const workOrders = allWorkOrders.filter(wo => normalizeBranchAccess(wo.branch) === branchKey);
-  const customerIds = new Set(workOrders.map(wo => wo.customer_id).filter(Boolean));
-  const vehicleIds = new Set(workOrders.map(wo => wo.vehicle_id).filter(Boolean));
-  const customers = (await store.getAll('customers')).filter(customer => (
-    customerIds.has(customer.id) || normalizeBranchAccess(customer.branch) === branchKey
+  const branchName = resolveFrontlineDashboardBranch(user);
+  const branchKey = normalizeBranchKey(branchName);
+  const [allWorkOrders, allCustomers, allVehicles, employees, technicianUpdates, transactionRecords, pricingSettings] = await Promise.all([
+    store.getAll('work_orders'),
+    store.getAll('customers'),
+    store.getAll('vehicles'),
+    store.getAll('employees'),
+    store.getAll('technician_updates'),
+    store.getAll('transaction_records'),
+    store.getPricingSettings(),
+  ]);
+  const workOrders = allWorkOrders.filter((wo) => normalizeBranchKey(wo.branch) === branchKey);
+  const customerIds = new Set(workOrders.map((wo) => wo.customer_id).filter(Boolean));
+  const vehicleIds = new Set(workOrders.map((wo) => wo.vehicle_id).filter(Boolean));
+  const customers = allCustomers.filter((customer) => (
+    customerIds.has(customer.id) || normalizeBranchKey(customer.branch) === branchKey
   ));
-  const vehicles = (await store.getAll('vehicles')).filter(vehicle => (
-    vehicleIds.has(vehicle.id) || normalizeBranchAccess(vehicle.branch) === branchKey
+  const vehicles = allVehicles.filter((vehicle) => (
+    vehicleIds.has(vehicle.id) || normalizeBranchKey(vehicle.branch) === branchKey
   ));
+  const scopedEmployees = employees.filter((employee) => (
+    normalizeBranchKey(employee.work_location_branch_id) === branchKey
+  ));
+  const openWorkOrdersCount = workOrders.filter((wo) => !isWorkOrderClosed(wo)).length;
   return res.render('index', {
     work_orders: workOrders,
     customers,
     vehicles,
-    technicianStats: buildTechnicianStats(workOrders, vehicles),
+    technicianStats: toDashboardStats(
+      buildTechnicianOperations(workOrders, vehicles, technicianUpdates, scopedEmployees, customers)
+    ),
     roleLabel: frontlineRoleLabel(user.role) || 'SA',
-    branch: user.branch,
+    branch: branchName,
+    openWorkOrdersCount,
+    branchRevenueBars: buildFrontlineBranchRevenueBars(branchName, transactionRecords, pricingSettings),
   });
+});
+
+app.get('/api/service-receptionist/revenue-bars', requireAnyRole(ROLE_SERVICE_ADVISOR, ROLE_SERVICE_RECEPTIONIST, ROLE_SENIOR_SERVICE_RECEPTIONIST), async (req, res) => {
+  try {
+    const user = req.session && req.session.user ? req.session.user : {};
+    const branchName = resolveFrontlineDashboardBranch(user);
+    const [transactionRecords, pricingSettings] = await Promise.all([
+      store.getAll('transaction_records'),
+      store.getPricingSettings(),
+    ]);
+    return res.json(buildFrontlineBranchRevenueBars(branchName, transactionRecords, pricingSettings));
+  } catch (error) {
+    console.error('GET /api/service-receptionist/revenue-bars failed', error);
+    return res.status(500).json({ error: 'Unable to load branch revenue bars' });
+  }
 });
 
 app.get('/api/dashboard/metrics', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
@@ -1566,8 +1823,17 @@ app.get('/api/dashboard/metrics', requireRole(ROLE_GENERAL_MANAGER), async (req,
   }
 });
 
-app.get('/api/gm/ocpd', requireRole(ROLE_GENERAL_MANAGER), (req, res) => {
-  return res.json(buildOcpdReport(req.query.date));
+app.get('/api/gm/ocpd', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
+  try {
+    const [workOrders, vehicles] = await Promise.all([
+      store.getAll('work_orders'),
+      store.getAll('vehicles'),
+    ]);
+    return res.json(buildOcpdReport(req.query.date, workOrders, vehicles));
+  } catch (error) {
+    console.error('GET /api/gm/ocpd failed', error);
+    return res.status(500).json({ error: 'Unable to load OCPD reporting' });
+  }
 });
 
 app.post('/gm/branch-targets', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
@@ -1593,28 +1859,17 @@ app.post('/gm/branch-targets', requireRole(ROLE_GENERAL_MANAGER), async (req, re
   if (date) params.set('date', date);
   if (duration) params.set('duration', duration);
   params.set('targetsSaved', '1');
-  return res.redirect('/gm?' + params.toString());
+  const returnTo = String((req.body && req.body.return_to) || '').trim().toLowerCase();
+  const dest = returnTo === 'enterprise' ? '/gm/enterprise' : '/gm';
+  return res.redirect(dest + '?' + params.toString());
 });
 
 app.get('/gm', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
-  const [customers, vehicles, workOrders, transactionRecords, employees, pricingSettings, branches] = await Promise.all([
-    store.getAll('customers'),
-    store.getAll('vehicles'),
-    store.getAll('work_orders'),
-    store.getAll('transaction_records'),
-    store.getAll('employees'),
-    store.getPricingSettings(),
-    store.getAll('branches'),
-  ]);
-  const metrics = buildGmMetrics(workOrders, transactionRecords, employees, pricingSettings, req.query.date, branches, req.query.duration);
-  res.render('gm/index', {
-    customersCount: customers.length,
-    vehiclesCount: vehicles.length,
-    totalWorkOrders: workOrders.length,
-    metrics,
-    ocpdReport: buildOcpdReport(),
-    targetsSaved: String(req.query.targetsSaved || '') === '1',
-  });
+  return res.render('gm/index', await loadGmDashboardPage(req));
+});
+
+app.get('/gm/enterprise', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
+  return res.render('gm/enterprise', await loadGmDashboardPage(req));
 });
 
 app.get(
@@ -1626,7 +1881,7 @@ app.get(
     ? branchRows.map((row) => String(row.name || row.branch || '').trim()).filter(Boolean)
     : DEFAULT_OPERATIONAL_BRANCHES.slice();
   const viewerRole = String(
-    (req.session.user && req.session.user.role) || (AUTH_DISABLED ? BYPASS_ROLE : '') || ''
+    (req.session.user && req.session.user.role) || (isLoginAuthDisabled() ? BYPASS_ROLE : '') || ''
   ).trim().toLowerCase();
   const canApproveFte = viewerRole === ROLE_GENERAL_MANAGER;
   const isFrontlineFte = isFrontlineRole(viewerRole);
@@ -1952,51 +2207,257 @@ app.post('/api/admin/restart-tunnel', requireRole(ROLE_STM), (req, res) => {
   );
 });
 
-app.get('/stm', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_STM), async (req, res) => {
-  const [workOrders, customers, vehicles, transactionRecords, partsInventory] = await Promise.all([
+function shuffleCopy(list) {
+  const copy = Array.isArray(list) ? list.slice() : [];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = copy[i];
+    copy[i] = copy[j];
+    copy[j] = tmp;
+  }
+  return copy;
+}
+
+function serializeStmWorkOrder(wo, customerById, vehicleById) {
+  const customer = (wo && wo.customer_id && customerById.get(wo.customer_id)) || {};
+  const vehicle = (wo && wo.vehicle_id && vehicleById.get(wo.vehicle_id)) || {};
+  const plate = String((wo && wo.plate_number) || vehicle.license_plate || '').trim();
+  const vehicleLabel = [wo && wo.car_brand, wo && wo.car_model, plate].filter(Boolean).join(' ') || '—';
+  return {
+    id: wo && wo.id,
+    work_order_number: (wo && (wo.work_order_number || wo.id)) || '—',
+    branch: canonicalizeBranchName(wo && wo.branch) || String((wo && wo.branch) || '').trim() || '—',
+    status: String((wo && wo.status) || '').trim() || 'open',
+    technician: String((wo && wo.technician) || '').trim() || 'Unassigned',
+    advisor: String((wo && wo.service_advisor) || '').trim() || '—',
+    customer: String(customer.name || wo.customer_entry || '').trim() || '—',
+    vehicle: vehicleLabel,
+    created_at: wo && wo.created_at,
+    href: wo && wo.id ? `/work-orders/${encodeURIComponent(wo.id)}/edit` : '',
+  };
+}
+
+function emptyStmLaborRow(name) {
+  return {
+    branch: name,
+    technicians: 0,
+    working: 0,
+    openJobs: 0,
+    billedHours: 0,
+    actualHours: 0,
+    laborRevenue: 0,
+    techToJobRatio: 0,
+    elr: 0,
+    rateAttainmentPct: 0,
+  };
+}
+
+function finalizeStmLaborRow(row, hourlyRate) {
+  row.techToJobRatio = row.openJobs > 0 ? row.technicians / row.openJobs : row.technicians;
+  row.elr = row.billedHours > 0 ? row.laborRevenue / row.billedHours : 0;
+  row.rateAttainmentPct = hourlyRate > 0 && row.elr > 0 ? (row.elr / hourlyRate) * 100 : 0;
+  return row;
+}
+
+function buildStmLaborByBranch(technicians, workOrders, hourlyRate) {
+  const rate = Math.max(1, Number(hourlyRate) || 350);
+  const byBranch = new Map(DEFAULT_OPERATIONAL_BRANCHES.map((name) => [normalizeBranchKey(name), emptyStmLaborRow(name)]));
+  const totals = emptyStmLaborRow('All branches');
+
+  (technicians || []).forEach((tech) => {
+    const entry = byBranch.get(normalizeBranchKey(tech.branch));
+    if (!entry) return;
+    entry.technicians += 1;
+    totals.technicians += 1;
+    const working = compactKeyStatus(tech.live_status) === 'ongoing' || Number(tech.active_count || 0) > 0;
+    if (working) {
+      entry.working += 1;
+      totals.working += 1;
+    }
+    const labor = Number(tech.labor_mtd || 0);
+    const billed = labor / rate;
+    const actual = Number(tech.hours_active || 0) || billed;
+    entry.laborRevenue += labor;
+    entry.billedHours += billed;
+    entry.actualHours += actual;
+    totals.laborRevenue += labor;
+    totals.billedHours += billed;
+    totals.actualHours += actual;
+  });
+
+  (workOrders || []).forEach((wo) => {
+    if (!isWorkOrderOpen(wo)) return;
+    const entry = byBranch.get(normalizeBranchKey(wo.branch));
+    if (!entry) return;
+    entry.openJobs += 1;
+    totals.openJobs += 1;
+  });
+
+  const rows = DEFAULT_OPERATIONAL_BRANCHES.map((name) => (
+    finalizeStmLaborRow(byBranch.get(normalizeBranchKey(name)), rate)
+  ));
+  return { rows, totals: finalizeStmLaborRow(totals, rate), hourlyRate: rate };
+}
+
+function compactKeyStatus(value) {
+  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function serializeStmTechnician(tech) {
+  const board = (tech && tech.board_status) || {};
+  return {
+    technician: tech.technician,
+    employee_id: tech.employee_id || '',
+    branch: canonicalizeBranchName(tech.branch) || tech.branch || '—',
+    live_status: board.label || tech.live_status || 'Idle',
+    present_wo: tech.current_order ? tech.current_order.work_order_number : '—',
+    present_wo_id: tech.current_order ? tech.current_order.id : '',
+    current_car: tech.current_order ? tech.current_order.vehicle : '—',
+    current_job_time: tech.current_order ? `${Number(tech.current_order.hours_open || 0).toFixed(1)}h` : '—',
+    labor_mtd: Number(tech.labor_mtd || 0),
+    labor_accumulated: Number(tech.labor_accumulated || 0),
+    work_orders_mtd: Number(tech.work_orders_mtd || 0),
+    completed_mtd: Number(tech.completed_mtd || 0),
+    completion_rate: Number(tech.completion_rate || 0),
+    hours_active: Number(tech.hours_active || 0),
+    average_cycle_hours: Number(tech.average_cycle_hours || 0),
+    active_count: Number(tech.active_count || 0),
+  };
+}
+
+async function loadStmDashboardPage() {
+  const [
+    workOrders,
+    customers,
+    vehicles,
+    transactionRecords,
+    partsInventory,
+    employees,
+    technicianUpdates,
+    approvalRequests,
+    pricingSettings,
+  ] = await Promise.all([
     store.getAll('work_orders'),
     store.getAll('customers'),
     store.getAll('vehicles'),
     store.getAll('transaction_records'),
     store.getAll('parts_inventory'),
+    store.getAll('employees'),
+    store.getAll('technician_updates'),
+    store.getAll('approval_requests'),
+    store.getPricingSettings(),
   ]);
-  const pricingSettings = await store.getPricingSettings();
+
   const metrics = buildStmMetrics(workOrders, transactionRecords, partsInventory, pricingSettings);
-  res.render('stm/index', {
+  const technicians = buildTechnicianOperations(workOrders, vehicles, technicianUpdates, employees, customers)
+    .map(serializeStmTechnician);
+  const laborByBranch = buildStmLaborByBranch(
+    technicians,
+    workOrders,
+    metrics.period && metrics.period.hourlyRate
+  );
+  const pacingByScope = buildPacingByScope(transactionRecords, pricingSettings);
+  const customerById = new Map((customers || []).map((row) => [row.id, row]));
+  const vehicleById = new Map((vehicles || []).map((row) => [row.id, row]));
+  const openWorkOrders = (workOrders || []).filter(isWorkOrderOpen).map((wo) => (
+    serializeStmWorkOrder(wo, customerById, vehicleById)
+  ));
+  const liveRandom = shuffleCopy(openWorkOrders).slice(0, 12);
+  const pendingApprovals = (approvalRequests || [])
+    .filter((request) => String(request.status || '').toLowerCase() === 'pending')
+    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  const fteHistory = getFteSeedTransactions().slice().sort((a, b) => (
+    String(b.Transaction_Date || '').localeCompare(String(a.Transaction_Date || ''))
+  ));
+  const now = Date.now();
+  const unassignedOverdue = (workOrders || []).filter((wo) => {
+    if (!isWorkOrderOpen(wo)) return false;
+    if (String(wo.technician || '').trim()) return false;
+    return (now - new Date(wo.created_at || 0).getTime()) >= 10 * 60 * 1000;
+  }).length;
+
+  return {
     metrics,
-    workOrdersCount: workOrders.length,
-    customersCount: customers.length,
-    vehiclesCount: vehicles.length,
-  });
+    technicians,
+    laborByBranch,
+    pacingByScope,
+    pacingBars: pacingByScope.ALL,
+    openWorkOrders,
+    liveRandom,
+    pendingApprovals,
+    fteHistory: fteHistory.slice(0, 12),
+    fteOpenCount: fteHistory.filter((row) => /pending|open|in progress/i.test(String(row.Status || ''))).length,
+    branches: DEFAULT_OPERATIONAL_BRANCHES.slice(),
+    vitals: {
+      technicianProductivityPct: metrics.technicianLabor.technicianProductivityPct,
+      technicianEfficiencyPct: metrics.technicianLabor.technicianEfficiencyPct,
+      technicianUtilizationPct: metrics.technicianLabor.technicianUtilizationPct,
+      effectiveLaborRate: metrics.technicianLabor.effectiveLaborRate,
+      hourlyRate: metrics.period.hourlyRate,
+      averageRepairOrderValue: metrics.financial.averageRepairOrderValue,
+      hoursSoldPerRepairOrder: metrics.financial.hoursSoldPerRepairOrder,
+      serviceTurnaroundHoursAvg: metrics.operations.serviceTurnaroundHoursAvg,
+      carCountRoVolume: metrics.operations.carCountRoVolume,
+      openRoCount: (workOrders || []).filter(isWorkOrderOpen).length,
+      firstTimeFixRatePct: metrics.quality.firstTimeFixRatePct,
+      comebackRatePct: metrics.quality.comebackRatePct,
+      assignmentAverage: metrics.assignment.averageMinutesToAssignTechnician,
+      unassignedOverdue,
+      pendingBillingCount: (workOrders || []).filter((wo) => String(wo.status || '').trim().toLowerCase() === 'completed').length,
+    },
+  };
+}
+
+app.get('/stm', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_STM), async (req, res) => {
+  try {
+    return res.render('stm/index', await loadStmDashboardPage());
+  } catch (error) {
+    console.error('GET /stm failed', error);
+    return res.status(500).send('Unable to load STM dashboard.');
+  }
+});
+
+app.get('/stm/print-technicians', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_STM), async (req, res) => {
+  try {
+    const payload = await loadStmDashboardPage();
+    const requested = canonicalizeBranchName(String(req.query.branch || '').trim());
+    const allBranches = !requested || String(req.query.branch || '').trim().toLowerCase() === 'all';
+    const rows = allBranches
+      ? payload.technicians
+      : payload.technicians.filter((row) => normalizeBranchKey(row.branch) === normalizeBranchKey(requested));
+    return res.render('stm/print-technicians', {
+      printDate: new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' }),
+      branchLabel: allBranches ? 'All branches' : requested,
+      technicians: rows,
+      laborByBranch: payload.laborByBranch,
+      showBranchTotals: allBranches,
+    });
+  } catch (error) {
+    console.error('GET /stm/print-technicians failed', error);
+    return res.status(500).send('Unable to load printable technician record.');
+  }
+});
+
+app.get('/api/stm/live', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_STM), async (req, res) => {
+  try {
+    const payload = await loadStmDashboardPage();
+    return res.json({
+      technicians: payload.technicians,
+      openWorkOrders: payload.openWorkOrders,
+      liveRandom: payload.liveRandom,
+      pacingByScope: payload.pacingByScope,
+      pendingApprovalCount: payload.pendingApprovals.length,
+    });
+  } catch (error) {
+    console.error('GET /api/stm/live failed', error);
+    return res.status(500).json({ error: 'Unable to load STM live feed' });
+  }
 });
 
 app.use('/technician', requireRole(ROLE_TECHNICIAN), technicianRouter);
 
 app.use('/admin', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_ADMIN), adminRouter);
-app.use('/hr', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_HR), async (req, res) => {
-  const users = await store.getAll('users');
-  const roleCounts = users.reduce((counts, user) => {
-    const role = String(user.role || '').trim().toLowerCase();
-    counts[role] = (counts[role] || 0) + 1;
-    return counts;
-  }, {
-    service_advisor: 0,
-    service_receptionist: 0,
-    senior_service_receptionist: 0,
-    general_manager: 0,
-    admin: 0,
-    hr: 0,
-    service_technical_manager: 0,
-    parts_manager: 0,
-    technician: 0,
-  });
-
-  res.render('hr/index', {
-    users,
-    roleCounts,
-    totalUsers: users.length,
-  });
-});
+app.use('/hr', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_HR), hrRouter);
 app.use('/employees', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_ADMIN, ROLE_HR), employeesRouter);
 
 app.use('/customers', customersRouter);
@@ -2037,6 +2498,7 @@ app.use('/api/kpi', kpiRouter);
 app.use('/kpi', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_ADMIN, ROLE_STM), kpiRouter);
 
 ensureSeedHrAccount()
+  .then(() => loadLoginAuthState())
   .catch((error) => {
     console.error('Failed to seed HR account:', error);
   })

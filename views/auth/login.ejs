@@ -16,6 +16,11 @@
       </div>
       <p class="auth-subtitle">Choose your access level and log in with your employee ID or account password.</p>
 
+      <% const openAuth = typeof loginAuthDisabled !== 'undefined' && loginAuthDisabled; %>
+      <% if (openAuth) { %>
+        <p class="success">Login auth is disabled. Choose an access level and click Log In — branch, user ID, and password can stay empty.</p>
+      <% } %>
+
       <% if (error) { %>
         <p class="error"><%= error %></p>
       <% } %>
@@ -41,7 +46,7 @@
         </label>
         <label>
           <span id="login-id-label">Username</span>
-          <input id="login-id-input" type="text" name="username" value="<%= username %>" autocomplete="username" required />
+          <input id="login-id-input" type="text" name="username" value="<%= username %>" autocomplete="username" <%= openAuth ? '' : 'required' %> />
         </label>
         <label id="login-branch-field">
           Which branch are you logging in?
@@ -52,11 +57,14 @@
         </label>
         <label>
           Password
-          <input type="password" name="password" autocomplete="current-password" required />
+          <input type="password" name="password" autocomplete="current-password" <%= openAuth ? '' : 'required' %> />
         </label>
         <button type="submit">Log In</button>
       </form>
 
+      <% if (openAuth) { %>
+        <p class="auth-hint">Turn login auth back on from <a href="/auth/register-hr">HR Sign Up</a>.</p>
+      <% } %>
       <% if (!hasAccounts) { %>
         <p class="auth-hint">No account found yet.</p>
       <% } %>
@@ -90,7 +98,7 @@
         input.placeholder = hint ? hint.placeholder : '';
         input.setAttribute('autocomplete', usesEmployeeId ? 'off' : 'username');
         branchField.hidden = !needsBranch;
-        branchInput.required = needsBranch;
+        branchInput.required = needsBranch && !<%= openAuth ? 'true' : 'false' %>;
       }
 
       roleSelect.addEventListener('change', sync);

@@ -3,6 +3,7 @@ const store = require('../data/store');
 const { isIncomingStockType, isPartsActivityLog, TYPE_STOCK, TYPE_SOLD } = require('../lib/parts-request');
 const inventory = require('../lib/parts-inventory-controller');
 const { frontlineSessionBranch } = require('../lib/frontline-roles');
+const { canonicalizeBranchName, normalizeBranchKey } = require('../lib/branches');
 const { WAREHOUSE_1 } = require('../lib/parts-location-scope');
 const { saveBillingPdf, BILLING_WARRANTY_NOTE } = require('../lib/billing-pdf');
 const { loadLaborPriceMatrix } = require('../lib/labor-price-matrix');
@@ -12,11 +13,21 @@ const {
   toStoredVehicleType,
   toUiVehicleType,
 } = require('../lib/vehicle-type-catalog');
+const {
+  workOrderStatusOptions,
+  formatWorkOrderStatusLabel,
+  resolveWorkOrderLifecycleStatus,
+} = require('../lib/work-order-status');
 const router = express.Router();
+
+router.use((req, res, next) => {
+  res.locals.workOrderStatusOptions = workOrderStatusOptions();
+  res.locals.formatWorkOrderStatusLabel = formatWorkOrderStatusLabel;
+  next();
+});
 
 const VAT_RATE = 0.12;
 const WORK_ORDER_NUMBER_PATTERN = /^\d{7}$/;
-const ALLOWED_EDITABLE_STATUSES = new Set(['open', 'in-progress', 'completed']);
 
 function normalizeText(value) {
   return String(value || '').trim();
@@ -24,23 +35,6 @@ function normalizeText(value) {
 
 function normalizeKey(value) {
   return normalizeText(value).toLowerCase();
-}
-
-function normalizeBranchKey(value) {
-  const key = normalizeText(value).toLowerCase().replace(/[^a-z0-9]/g, '');
-  const aliases = {
-    goodyear: 'goodyear',
-    escario: 'escario',
-    carreta: 'carreta',
-    mjcareta: 'carreta',
-    pusok: 'pusok',
-    pusokmain: 'pusok',
-    naga: 'naga',
-    srp1: 'srp1',
-    srp01: 'srp1',
-    banilad: 'banilad',
-  };
-  return aliases[key] || key;
 }
 
 function receptionistBranch(req) {
@@ -631,7 +625,7 @@ function buildTransactionRecord(wo, customer, vehicle, action, audit = {}) {
     action_by: normalizeText(audit.username),
     action_by_role: normalizeText(audit.role),
     'Transaction date': new Date().toISOString(),
-    'Branch': wo.branch || '',
+    'Branch': canonicalizeBranchName(wo.branch || ''),
     'work order Number': normalizeWorkOrderNumber(wo.work_order_number),
     'Customer name': customer.name || '',
     'Telephone number': wo.telephone_number || customer.phone || '',
@@ -697,12 +691,6 @@ function getCurrentTimeHHMM() {
 
 function isClosedWorkOrder(wo) {
   return String((wo && wo.status) || '').trim().toLowerCase() === 'closed';
-}
-
-function normalizeEditableStatus(value, fallback = 'open') {
-  const normalized = String(value || '').trim().toLowerCase();
-  if (ALLOWED_EDITABLE_STATUSES.has(normalized)) return normalized;
-  return fallback;
 }
 
 function getWorkOrderSortValue(wo) {
@@ -828,8 +816,12 @@ router.post('/new', async (req, res) => {
     customer_id,
     vehicle_id,
     description,
-    status: normalizeEditableStatus(status, 'open'),
-    branch: (branch || '').trim(),
+    status: resolveWorkOrderLifecycleStatus({
+      hasTechnician: Boolean(normalizedTechnician),
+      postedStatus: status,
+      currentStatus: 'open',
+    }),
+    branch: canonicalizeBranchName(branch || receptionistBranch(req) || ''),
     work_order_number: normalizeWorkOrderNumber(generatedNumber, generatedNumber),
     service_advisor: (service_advisor || '').trim(),
     technician: normalizedTechnician,
@@ -906,13 +898,17 @@ router.post('/:id/edit', async (req, res) => {
   const currentStatus = String(existingWo.status || '').trim().toLowerCase();
   const nextStatus = isClosedWorkOrder(existingWo)
     ? 'closed'
-    : normalizeEditableStatus(status, currentStatus || 'open');
+    : resolveWorkOrderLifecycleStatus({
+      hasTechnician: hasTechnicianNow,
+      postedStatus: status,
+      currentStatus: currentStatus || 'open',
+    });
   await store.update('work_orders', req.params.id, {
     customer_id,
     vehicle_id,
     description,
     status: nextStatus,
-    branch: (branch || '').trim(),
+    branch: canonicalizeBranchName(branch || receptionistBranch(req) || existingWo.branch || ''),
     work_order_number: normalizeWorkOrderNumber(existingWo.work_order_number, existingWo.id),
     service_advisor: (service_advisor || '').trim(),
     technician: normalizedTechnician,

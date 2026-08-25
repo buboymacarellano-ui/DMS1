@@ -1,33 +1,23 @@
 const express = require('express');
 const store = require('../data/store');
 const { frontlineSessionBranch } = require('../lib/frontline-roles');
+const { normalizeBranchKey } = require('../lib/branches');
+const { normalizeWorkOrderStatus } = require('../lib/work-order-status');
+const {
+  buildTechnicianOperations,
+  findTechnicianRow,
+  toDashboardStats,
+  statusLabelFromUpdate,
+} = require('../lib/technician-activity');
 
 const router = express.Router();
 
-function toNumber(value) {
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : 0;
-}
-
-function parseTimeToday(value) {
-  const text = String(value || '').trim();
-  const match = text.match(/^(\d{1,2}):(\d{2})$/);
-  if (!match) return null;
-  const h = Number(match[1]);
-  const m = Number(match[2]);
-  if (!Number.isFinite(h) || !Number.isFinite(m) || h < 0 || h > 23 || m < 0 || m > 59) return null;
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0);
-}
-
-function formatElapsed(fromDate, toDate) {
-  if (!fromDate || !toDate) return '-';
-  const diffMs = Math.max(0, toDate.getTime() - fromDate.getTime());
-  const totalMinutes = Math.floor(diffMs / 60000);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-}
+const TECHNICIAN_STATUS_TO_WO = {
+  working: 'in-progress',
+  waiting_parts: 'waiting-parts',
+  break: 'break',
+  on_other_priority: 'on-other-priority',
+};
 
 function normalizePhoneDigits(value) {
   return String(value || '').replace(/\D/g, '');
@@ -58,265 +48,63 @@ function normalizeKey(value) {
 
 function filterBySessionBranch(req, records, accessor) {
   const user = req.session && req.session.user ? req.session.user : {};
-  const branch = String(frontlineSessionBranch(user) || '').trim().toLowerCase();
+  const branch = normalizeBranchKey(frontlineSessionBranch(user));
   if (!branch) return records;
-  return (records || []).filter(record => normalizeKey(accessor(record)) === branch);
+  return (records || []).filter((record) => normalizeBranchKey(accessor(record)) === branch);
 }
 
-function canonicalTechnicianName(value) {
-  return String(value || '')
-    .replace(/\s*\([^)]+\)\s*$/, '')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ' ');
+async function loadTechnicianBoard(req) {
+  const [workOrders, vehicles, technicianUpdates, employees, customers] = await Promise.all([
+    store.getAll('work_orders'),
+    store.getAll('vehicles'),
+    store.getAll('technician_updates'),
+    store.getAll('employees'),
+    store.getAll('customers'),
+  ]);
+  const scopedWorkOrders = filterBySessionBranch(req, workOrders, (wo) => wo.branch);
+  const scopedEmployees = filterBySessionBranch(req, employees, (employee) => employee.work_location_branch_id);
+  const technicians = buildTechnicianOperations(
+    scopedWorkOrders,
+    vehicles,
+    technicianUpdates,
+    scopedEmployees,
+    customers
+  );
+  return { technicians, scopedWorkOrders, vehicles, technicianUpdates, scopedEmployees, customers };
 }
 
-function employeeDisplayName(employee) {
-  const name = [employee.first_name, employee.middle_name, employee.last_name]
-    .map(value => String(value || '').trim())
-    .filter(Boolean)
-    .join(' ');
-  const employeeId = String(employee.employee_id || '').trim();
-  return name && employeeId ? `${name} (${employeeId})` : (name || employeeId);
-}
-
-function isTechnicianEmployee(employee) {
-  return /(mechanic|aligner|toolkeeper|carwasher|technician)/i.test(String(employee.job_title || ''));
-}
-
-function statusLabel(update) {
-  const action = normalizeKey(update && update.status_action);
-  const labels = {
-    working: 'Working',
-    waiting_parts: 'Waiting for Parts',
-    absent: 'Absent',
-    training: 'Training',
-    assigned_transfer: 'Assigned / Transfer Work Order',
-    for_approval: 'For Approval',
-    break: 'Break',
-    done: 'Done',
-    other: 'Other',
-  };
-  return labels[action] || resolveLiveStatus(update);
-}
-
-function elapsedHours(startValue, endValue) {
-  const start = new Date(startValue || 0).getTime();
-  const end = new Date(endValue || 0).getTime();
-  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0;
-  return (end - start) / 3600000;
-}
-
-function buildTechnicianOperations(workOrders, vehicles, technicianUpdates, employees) {
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const vehicleById = new Map(vehicles.map(vehicle => [vehicle.id, vehicle]));
-  const roster = new Map();
-
-  (employees || []).filter(employee => (
-    isTechnicianEmployee(employee) && String(employee.employee_id || '').trim()
-  )).forEach(employee => {
-    const displayName = employeeDisplayName(employee);
-    if (!displayName) return;
-    roster.set(canonicalTechnicianName(displayName), {
-      technician: displayName,
-      employee_id: String(employee.employee_id || '').trim(),
-      branch: String(employee.work_location_branch_id || '').trim(),
-      job_title: String(employee.job_title || '').trim(),
-    });
-  });
-  return Array.from(roster.entries()).map(([key, profile]) => {
-    const assignedOrders = (workOrders || [])
-      .filter(wo => canonicalTechnicianName(wo.technician) === key)
-      .sort((a, b) => new Date(b.technician_assigned_at || b.created_at || 0) - new Date(a.technician_assigned_at || a.created_at || 0));
-    const activeOrders = assignedOrders.filter(wo => ['open', 'in-progress'].includes(normalizeKey(wo.status)));
-    const updates = (technicianUpdates || [])
-      .filter(update => canonicalTechnicianName(update.technician_name) === key)
-      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-    const latestGlobalUpdate = updates.find(update => !String(update.work_order_id || '').trim());
-    const latestUpdateFor = workOrderId => updates.find(update => String(update.work_order_id || '').trim() === String(workOrderId || '').trim());
-    const blockingActions = new Set(['waiting_parts', 'absent', 'training', 'for_approval', 'break']);
-    const currentOrder = activeOrders.find(wo => {
-      const action = normalizeKey((latestUpdateFor(wo.id) || latestGlobalUpdate || {}).status_action);
-      return !blockingActions.has(action);
-    }) || null;
-    const pendingOrders = activeOrders.filter(wo => !currentOrder || wo.id !== currentOrder.id);
-    const completedMtd = assignedOrders.filter(wo => {
-      const completedAt = new Date(wo.invoice_date || wo.updated_at || wo.created_at || 0);
-      return ['completed', 'closed'].includes(normalizeKey(wo.status)) && completedAt >= monthStart;
-    });
-        const laborMtd = assignedOrders.reduce((sum, wo) => {
-      const createdAt = new Date(wo.created_at || 0);
-      if (createdAt < monthStart) return sum;
-
-      // 1. Calculate the base labor amount for this work order
-      const baseLabor = (wo.service_items || []).reduce((lineSum, item) => {
-        return lineSum + (toNumber(item.labor_price) * Math.max(1, toNumber(item.service_qty) || 1));
-      }, 0);
-
-      // 2. Identify if the work order or its services represent a "Back Job"
-      const orderType = String(wo.job_type || wo.transaction_type || wo.status || '').toLowerCase();
-      const isBackJob = orderType.includes('back job');
-
-      // 3. Subtract the absolute amount if it's a Back Job, otherwise add it normally
-      return sum + (isBackJob ? -Math.abs(baseLabor) : baseLabor);
-    }, 0);
-    const cycleHours = completedMtd
-      .map(wo => elapsedHours(wo.technician_assigned_at || wo.created_at, wo.invoice_date || wo.updated_at))
-      .filter(hours => hours > 0);
-    const latestUpdate = updates[0] || null;
-    const statusUpdate = latestUpdateFor(currentOrder && currentOrder.id) || latestGlobalUpdate || latestUpdate;
-    const totalMtd = assignedOrders.filter(wo => new Date(wo.created_at || 0) >= monthStart).length;
-
-    function orderDetail(wo) {
-      const vehicle = vehicleById.get(wo.vehicle_id) || {};
-      const update = latestUpdateFor(wo.id) || latestGlobalUpdate;
-      const assignedAt = wo.technician_assigned_at || wo.created_at;
-      return {
-        id: wo.id,
-        work_order_number: wo.work_order_number || wo.id,
-        vehicle: [wo.car_brand || vehicle.make, wo.car_model || vehicle.model, wo.plate_number || vehicle.license_plate].filter(Boolean).join(' '),
-        branch: wo.branch || profile.branch,
-        assigned_at: assignedAt,
-        hours_open: elapsedHours(assignedAt, now),
-        reason: statusLabel(update),
-        note: update ? String(update.message || '').trim() : '',
-      };
-    }
-
-    return {
-      ...profile,
-      live_status: statusLabel(statusUpdate),
-      current_order: currentOrder ? orderDetail(currentOrder) : null,
-      pending_orders: pendingOrders.map(orderDetail),
-      active_count: activeOrders.length,
-      completed_mtd: completedMtd.length,
-      labor_mtd: laborMtd,
-      hours_active: activeOrders.reduce((sum, wo) => sum + elapsedHours(wo.technician_assigned_at || wo.created_at, now), 0),
-      average_cycle_hours: cycleHours.length ? cycleHours.reduce((sum, hours) => sum + hours, 0) / cycleHours.length : 0,
-      completion_rate: totalMtd ? (completedMtd.length / totalMtd) * 100 : 0,
-      recent_updates: updates.slice(0, 8),
-    };
-  }).sort((a, b) => b.active_count - a.active_count || a.technician.localeCompare(b.technician));
-}
-
-function resolveLiveStatus(update) {
-  if (!update) return 'Working';
-  const action = normalizeKey(update.status_action);
-  if (action === 'break') return 'Break';
-  if (action === 'waiting_parts') return 'Waiting Parts';
-  if (action === 'done') return 'Done';
-
-  const flags = update.status_flags || {};
-  if (flags.done) return 'Done';
-  if (flags.on_break) return 'Break';
-  if (flags.waiting_parts) return 'Waiting Parts';
-  return 'Working';
-}
-
-function buildTechnicianStats(workOrders, vehicles, technicianUpdates) {
-  const byId = new Map(vehicles.map(vehicle => [vehicle.id, vehicle]));
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth();
-  const groups = new Map();
-  const latestUpdateByTech = new Map();
-
-  (technicianUpdates || []).forEach((entry) => {
-    if (normalizeKey(entry.sender_role) !== 'technician') return;
-    const techName = String(entry.technician_name || '').trim();
-    if (!techName) return;
-    const key = normalizeKey(techName);
-    const createdAtMs = new Date(entry.created_at || 0).getTime();
-    const previous = latestUpdateByTech.get(key);
-    if (!previous || createdAtMs > previous.createdAtMs) {
-      latestUpdateByTech.set(key, {
-        createdAtMs,
-        entry,
-      });
-    }
-  });
-
-  for (const wo of workOrders) {
-    const techName = String(wo.technician || '').trim();
-    if (!techName) continue;
-
-    if (!groups.has(techName)) {
-      groups.set(techName, {
-        technician: techName,
-        live_status: 'Working',
-        current_car: '-',
-        current_job_time: '-',
-        total_labor_accumulated: 0,
-        total_labor_mtd: 0,
-        work_orders_mtd: 0,
-        _activeSource: null,
-      });
-    }
-
-    const group = groups.get(techName);
-    const items = wo.service_items || [];
-    const laborTotal = items.reduce((sum, item) => sum + (toNumber(item.labor_price) * Math.max(1, toNumber(item.service_qty) || 1)), 0);
-    group.total_labor_accumulated += laborTotal;
-
-    const created = new Date(wo.created_at || 0);
-    const isCurrentMonth = created.getFullYear() === currentYear && created.getMonth() === currentMonth;
-    if (isCurrentMonth) {
-      group.total_labor_mtd += laborTotal;
-      group.work_orders_mtd += 1;
-    }
-
-    const status = String(wo.status || '').toLowerCase();
-    const isActive = status === 'open' || status === 'in-progress';
-    if (!isActive) continue;
-
-    const sourceTime = new Date(wo.created_at || 0).getTime();
-    if (group._activeSource != null && sourceTime <= group._activeSource) continue;
-
-    const vehicle = byId.get(wo.vehicle_id) || {};
-    const brand = String(wo.car_brand || vehicle.make || '').trim();
-    const model = String(wo.car_model || vehicle.model || '').trim();
-    const plate = String(wo.plate_number || vehicle.license_plate || '').trim();
-    const carLabel = [brand, model].filter(Boolean).join(' ') || '-';
-    group.current_car = plate ? `${carLabel} (${plate})` : carLabel;
-
-    const start = parseTimeToday(wo.time_in);
-    const end = parseTimeToday(wo.time_out) || now;
-    group.current_job_time = start ? formatElapsed(start, end) : '-';
-    group._activeSource = sourceTime;
+async function syncWorkOrderStatusFromTechnicianAction(workOrderId, statusAction, req) {
+  const nextStatus = TECHNICIAN_STATUS_TO_WO[statusAction];
+  if (!workOrderId || !nextStatus) return;
+  const workOrder = await store.getById('work_orders', workOrderId);
+  if (!workOrder) return;
+  const user = req.session && req.session.user ? req.session.user : {};
+  if (frontlineSessionBranch(user) && normalizeBranchKey(workOrder.branch) !== normalizeBranchKey(user.branch)) {
+    return;
   }
-
-  return Array.from(groups.values())
-    .map(group => {
-      const latestStatus = latestUpdateByTech.get(normalizeKey(group.technician));
-      return {
-        technician: group.technician,
-        live_status: resolveLiveStatus(latestStatus && latestStatus.entry),
-        current_car: group.current_car,
-        current_job_time: group.current_job_time,
-        total_labor_accumulated: group.total_labor_accumulated,
-        total_labor_mtd: group.total_labor_mtd,
-        work_orders_mtd: group.work_orders_mtd,
-      };
-    })
-    .sort((a, b) => a.technician.localeCompare(b.technician));
+  const current = normalizeWorkOrderStatus(workOrder.status);
+  if (current === 'closed' || current === 'deleted' || current === 'completed') return;
+  await store.update('work_orders', workOrder.id, { status: nextStatus });
 }
 
 router.get('/', async (req, res) => {
   let customers = await store.getAll('customers');
   let vehicles = await store.getAll('vehicles');
-  const workOrders = filterBySessionBranch(req, await store.getAll('work_orders'), wo => wo.branch);
+  const workOrders = filterBySessionBranch(req, await store.getAll('work_orders'), (wo) => wo.branch);
   const user = req.session && req.session.user ? req.session.user : {};
   if (frontlineSessionBranch(user)) {
-    const customerIds = new Set(workOrders.map(wo => wo.customer_id).filter(Boolean));
-    const vehicleIds = new Set(workOrders.map(wo => wo.vehicle_id).filter(Boolean));
-    const branch = normalizeKey(user.branch);
-    customers = customers.filter(customer => customerIds.has(customer.id) || normalizeKey(customer.branch) === branch);
-    vehicles = vehicles.filter(vehicle => vehicleIds.has(vehicle.id) || normalizeKey(vehicle.branch) === branch);
+    const customerIds = new Set(workOrders.map((wo) => wo.customer_id).filter(Boolean));
+    const vehicleIds = new Set(workOrders.map((wo) => wo.vehicle_id).filter(Boolean));
+    const branch = normalizeBranchKey(user.branch);
+    customers = customers.filter((customer) => customerIds.has(customer.id) || normalizeBranchKey(customer.branch) === branch);
+    vehicles = vehicles.filter((vehicle) => vehicleIds.has(vehicle.id) || normalizeBranchKey(vehicle.branch) === branch);
   }
   const technicianUpdates = await store.getAll('technician_updates');
+  const employees = filterBySessionBranch(req, await store.getAll('employees'), (employee) => employee.work_location_branch_id);
   const pricingRules = await store.getAll('pricing_rules');
-  const technicianStats = buildTechnicianStats(workOrders, vehicles, technicianUpdates);
+  const technicianStats = toDashboardStats(
+    buildTechnicianOperations(workOrders, vehicles, technicianUpdates, employees, customers)
+  );
   const latestWorkOrderByCustomerId = new Map();
 
   (workOrders || []).forEach((wo) => {
@@ -369,23 +157,16 @@ router.get('/', async (req, res) => {
 });
 
 router.get('/technicians', async (req, res) => {
-  const [workOrders, vehicles, technicianUpdates, employees] = await Promise.all([
-    store.getAll('work_orders'),
-    store.getAll('vehicles'),
-    store.getAll('technician_updates'),
-    store.getAll('employees'),
-  ]);
-  const scopedWorkOrders = filterBySessionBranch(req, workOrders, wo => wo.branch);
-  const scopedEmployees = filterBySessionBranch(req, employees, employee => employee.work_location_branch_id);
-  const technicians = buildTechnicianOperations(scopedWorkOrders, vehicles, technicianUpdates, scopedEmployees);
+  const { technicians } = await loadTechnicianBoard(req);
   res.render('workorder-transactions/technicians', {
     technicians,
     summary: {
       roster: technicians.length,
-      working: technicians.filter(item => item.current_order).length,
+      working: technicians.filter((item) => item.board_status && item.board_status.tone === 'ongoing').length,
       activeOrders: technicians.reduce((sum, item) => sum + item.active_count, 0),
       pendingOrders: technicians.reduce((sum, item) => sum + item.pending_orders.length, 0),
       laborMtd: technicians.reduce((sum, item) => sum + item.labor_mtd, 0),
+      laborAccumulated: technicians.reduce((sum, item) => sum + item.labor_accumulated, 0),
     },
     success: req.query.success || '',
     error: req.query.error || '',
@@ -393,17 +174,8 @@ router.get('/technicians', async (req, res) => {
 });
 
 router.get('/technicians/:technicianName', async (req, res) => {
-  const [workOrders, vehicles, technicianUpdates, employees] = await Promise.all([
-    store.getAll('work_orders'),
-    store.getAll('vehicles'),
-    store.getAll('technician_updates'),
-    store.getAll('employees'),
-  ]);
-  const technicianKey = canonicalTechnicianName(req.params.technicianName);
-  const scopedWorkOrders = filterBySessionBranch(req, workOrders, wo => wo.branch);
-  const scopedEmployees = filterBySessionBranch(req, employees, employee => employee.work_location_branch_id);
-  const technician = buildTechnicianOperations(scopedWorkOrders, vehicles, technicianUpdates, scopedEmployees)
-    .find(item => canonicalTechnicianName(item.technician) === technicianKey);
+  const { technicians } = await loadTechnicianBoard(req);
+  const technician = findTechnicianRow(technicians, req.params.technicianName);
   if (!technician) return res.status(404).send('Technician not found');
 
   return res.render('workorder-transactions/technician-detail', {
@@ -416,15 +188,31 @@ router.get('/technicians/:technicianName', async (req, res) => {
 router.post('/technicians/status', async (req, res) => {
   const technicianName = String(req.body.technician_name || '').trim();
   const statusAction = normalizeKey(req.body.status_action);
-  const workOrderId = String(req.body.work_order_id || '').trim();
+  let workOrderId = String(req.body.work_order_id || '').trim();
   const note = String(req.body.note || '').trim();
   const returnTo = String(req.body.return_to || '').trim();
   const redirectTarget = returnTo.startsWith('/work-order-transactions/technicians/')
     ? returnTo
     : '/work-order-transactions/technicians';
-  const allowed = new Set(['working', 'waiting_parts', 'absent', 'training', 'assigned_transfer', 'for_approval', 'break', 'other']);
+  const allowed = new Set([
+    'working',
+    'waiting_parts',
+    'absent',
+    'training',
+    'day_off',
+    'assigned_transfer',
+    'for_approval',
+    'break',
+    'on_other_priority',
+    'other',
+  ]);
   if (!technicianName || !allowed.has(statusAction)) {
     return res.redirect(`${redirectTarget}?error=Technician+and+valid+status+are+required.`);
+  }
+  if (!workOrderId && TECHNICIAN_STATUS_TO_WO[statusAction]) {
+    const { technicians } = await loadTechnicianBoard(req);
+    const row = findTechnicianRow(technicians, technicianName);
+    workOrderId = String((row && row.current_order && row.current_order.id) || '').trim();
   }
   if (workOrderId && !await store.getById('work_orders', workOrderId)) {
     return res.redirect(`${redirectTarget}?error=Selected+work+order+was+not+found.`);
@@ -432,14 +220,14 @@ router.post('/technicians/status', async (req, res) => {
   if (workOrderId) {
     const selectedWorkOrder = await store.getById('work_orders', workOrderId);
     const user = req.session && req.session.user ? req.session.user : {};
-    if (frontlineSessionBranch(user) && normalizeKey(selectedWorkOrder.branch) !== normalizeKey(user.branch)) {
+    if (frontlineSessionBranch(user) && normalizeBranchKey(selectedWorkOrder.branch) !== normalizeBranchKey(user.branch)) {
       return res.status(403).send('This work order belongs to another branch.');
     }
   }
   await store.create('technician_updates', {
     work_order_id: workOrderId,
-    sender_role: String(req.session && req.session.user && req.session.user.role || 'service_receptionist').trim().toLowerCase() || 'service_receptionist',
-    sender_username: String(req.session && req.session.user && req.session.user.username || '').trim(),
+    sender_role: String((req.session && req.session.user && req.session.user.role) || 'service_receptionist').trim().toLowerCase() || 'service_receptionist',
+    sender_username: String((req.session && req.session.user && req.session.user.username) || '').trim(),
     technician_name: technicianName,
     status_action: statusAction,
     status_flags: {
@@ -447,8 +235,9 @@ router.post('/technicians/status', async (req, res) => {
       waiting_parts: statusAction === 'waiting_parts',
       done: false,
     },
-    message: note || statusLabel({ status_action: statusAction }),
+    message: note || statusLabelFromUpdate({ status_action: statusAction }),
   });
+  await syncWorkOrderStatusFromTechnicianAction(workOrderId, statusAction, req);
   return res.redirect(`${redirectTarget}?success=Technician+activity+updated.`);
 });
 

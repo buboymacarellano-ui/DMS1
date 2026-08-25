@@ -1,0 +1,69 @@
+<%- include('../partials/header') %>
+<%
+  function fmtMoney(value) {
+    return '₱' + Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function fmtPct(value) {
+    return Number(value || 0).toFixed(1) + '%';
+  }
+  const rows = Array.isArray(technicians) ? technicians : [];
+  const totals = laborByBranch && laborByBranch.totals ? laborByBranch.totals : {};
+%>
+
+<section class="dashboard-shell stm-print-shell">
+  <div class="stm-print-toolbar">
+    <a class="btn" href="/stm">Back to STM</a>
+    <button type="button" class="btn" onclick="window.print()">Print</button>
+  </div>
+  <header class="stm-print-mast">
+    <h1>Technician daily activity — evaluation record</h1>
+    <p><strong>Scope:</strong> <%= branchLabel || 'All branches' %></p>
+    <p><strong>Printed:</strong> <%= printDate %></p>
+  </header>
+
+  <table class="list stm-print-table">
+    <thead>
+      <tr>
+        <th>Technician</th>
+        <th>Branch</th>
+        <th>Status</th>
+        <th>Present WO</th>
+        <th>Vehicle</th>
+        <th>Time on job</th>
+        <th>Labor MTD</th>
+        <th>WOs MTD</th>
+        <th>Completed MTD</th>
+        <th>Completion</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!rows.length) { %>
+        <tr><td colspan="10">No technician records for this scope.</td></tr>
+      <% } %>
+      <% rows.forEach((row) => { %>
+        <tr>
+          <td><%= row.technician %></td>
+          <td><%= row.branch %></td>
+          <td><%= row.live_status %></td>
+          <td><%= row.present_wo %></td>
+          <td><%= row.current_car %></td>
+          <td><%= row.current_job_time %></td>
+          <td><%= fmtMoney(row.labor_mtd) %></td>
+          <td><%= row.work_orders_mtd %></td>
+          <td><%= row.completed_mtd %></td>
+          <td><%= fmtPct(row.completion_rate) %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+
+  <% if (typeof showBranchTotals !== 'undefined' && showBranchTotals && totals) { %>
+    <p class="stm-print-summary">
+      All-branch technicians: <strong><%= totals.technicians || 0 %></strong>
+      · Working now: <strong><%= totals.working || 0 %></strong>
+      · Open jobs: <strong><%= totals.openJobs || 0 %></strong>
+      · Labor generated MTD: <strong><%= fmtMoney(totals.laborRevenue) %></strong>
+    </p>
+  <% } %>
+</section>
+<%- include('../partials/footer') %>

@@ -1,16 +1,35 @@
 <%- include('../partials/header') %>
 
+<%
+  function toViberNumber(value) {
+    const digits = String(value || '').replace(/\D/g, '');
+    if (!digits) return '';
+    if (digits.startsWith('63') && digits.length >= 12) return `+${digits}`;
+    if (digits.startsWith('0') && digits.length >= 11) return `+63${digits.slice(1)}`;
+    if (digits.length === 10 && digits.startsWith('9')) return `+63${digits}`;
+    return `+${digits}`;
+  }
+%>
+
 <h2>Customers</h2>
 <a class="btn" href="/customers/new">+ New Customer</a>
 
 <div class="table-scroll">
 <table class="list">
-  <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th></th></tr></thead>
+  <thead><tr><th>Name</th><th>Phone / Viber</th><th>Email</th><th></th></tr></thead>
   <tbody>
-    <% customers.forEach(c => { %>
+    <% customers.forEach(c => {
+         const viberNumber = toViberNumber(c.phone);
+    %>
       <tr>
         <td><%= c.name %></td>
-        <td><%= c.phone %></td>
+        <td>
+          <% if (viberNumber) { %>
+            <a href="viber://chat?number=<%= encodeURIComponent(viberNumber) %>" title="Open Viber chat"><%= viberNumber %></a>
+          <% } else { %>
+            <%= c.phone || '—' %>
+          <% } %>
+        </td>
         <td><%= c.email %></td>
         <td class="actions">
           <a href="/customers/<%= c.id %>/edit">Edit</a>

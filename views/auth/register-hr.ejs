@@ -13,9 +13,27 @@
       <h1>HR SIGN UP</h1>
       <p class="auth-subtitle">Create a Human Resources account for personnel and staff management.</p>
 
+      <% const openAuth = typeof loginAuthDisabled !== 'undefined' && loginAuthDisabled; %>
+      <% if (typeof success !== 'undefined' && success) { %>
+        <p class="success"><%= success %></p>
+      <% } %>
       <% if (error) { %>
         <p class="error"><%= error %></p>
       <% } %>
+
+      <form method="post" action="/auth/login-auth" class="auth-open-form">
+        <input type="hidden" name="login_auth_disabled" value="<%= openAuth ? '0' : '1' %>">
+        <button type="submit" class="auth-open-toggle<%= openAuth ? ' auth-open-toggle--on' : '' %>">
+          <%= openAuth ? 'Enable Login Auth' : 'Disable Login Auth' %>
+        </button>
+        <p class="auth-hint">
+          <% if (openAuth) { %>
+            Login auth is OFF. Branch, user ID, and password are not checked. Anyone can log in with an empty form.
+          <% } else { %>
+            While building, turn this on so login has no branch / user ID / password restrictions. Empty login is accepted.
+          <% } %>
+        </p>
+      </form>
 
       <form method="post" action="/auth/register-hr" class="form auth-form">
         <label>

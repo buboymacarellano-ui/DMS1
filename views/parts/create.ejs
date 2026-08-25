@@ -36,7 +36,7 @@
     <label>Markup (%) <input name="markup" id="create-markup" type="number" step="0.01" min="0" value="<%= form.markup != null ? form.markup : '' %>" oninput="computeCreateRetail()"></label>
     <label>Retail Price (₱) <input name="retail_price" id="create-retail" type="number" step="0.01" min="0" value="<%= form.retail_price != null ? form.retail_price : '' %>"></label>
     <button type="submit">Save Part</button>
-    <a href="/work-order-transactions">Cancel</a>
+    <a href="/work-orders">Cancel</a>
   </form>
 
   <article class="dashboard-card labor-charge-db" id="created-parts-db">

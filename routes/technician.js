@@ -2,15 +2,13 @@ const express = require('express');
 const store = require('../data/store');
 const { buildPartsRequestInventoryPayload } = require('../lib/parts-request');
 const { allocatePartsTransactionNumber } = require('../lib/parts-transaction-number');
+const { isActiveWorkOrderStatus } = require('../lib/work-order-status');
+const { technicianMatchKeys, keysOverlap } = require('../lib/technician-activity');
 
 const router = express.Router();
 
 function normalizeText(value) {
   return String(value || '').trim();
-}
-
-function normalizeKey(value) {
-  return normalizeText(value).toLowerCase();
 }
 
 function normalizeEmployeeId(value) {
@@ -45,8 +43,7 @@ function getCurrentTimeHHMM() {
 }
 
 function isActiveWorkOrder(status) {
-  const normalized = normalizeText(status).toLowerCase();
-  return normalized === 'open' || normalized === 'in-progress';
+  return isActiveWorkOrderStatus(status);
 }
 
 function buildVehicleLabel(workOrder, vehicle) {
@@ -82,42 +79,13 @@ function toTimeLabel(isoValue) {
   });
 }
 
-function extractTechnicianIdLabel(value) {
-  const raw = normalizeText(value);
-  const match = raw.match(/\(([^)]+)\)\s*$/);
-  return match ? normalizeEmployeeId(match[1]) : '';
-}
-
-function stripTechnicianIdSuffix(value) {
-  return normalizeText(value).replace(/\s*\([^)]+\)\s*$/, '').trim();
-}
-
-function canonicalTechnicianName(value) {
-  return stripTechnicianIdSuffix(value)
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 function matchesTechnician(workOrder, technicianName, technicianEmployeeId) {
   const workOrderTechnician = normalizeText(workOrder && workOrder.technician);
   if (!workOrderTechnician) return false;
-
-  const workOrderKey = normalizeKey(workOrderTechnician);
-  const technicianNameKey = normalizeKey(technicianName);
-  const workOrderCanonicalName = canonicalTechnicianName(workOrderTechnician);
-  const technicianCanonicalName = canonicalTechnicianName(technicianName);
-  const employeeId = normalizeEmployeeId(technicianEmployeeId);
-
-  if (employeeId) {
-    const taggedId = extractTechnicianIdLabel(workOrderTechnician);
-    if (taggedId && taggedId === employeeId) return true;
-    if (normalizeEmployeeId(workOrderTechnician) === employeeId) return true;
-    if (workOrderTechnician.includes(`(${employeeId})`)) return true;
-  }
-
-  if (technicianCanonicalName && workOrderCanonicalName === technicianCanonicalName) return true;
-  return technicianNameKey && workOrderKey === technicianNameKey;
+  return keysOverlap(
+    technicianMatchKeys(workOrderTechnician),
+    technicianMatchKeys(technicianName, technicianEmployeeId)
+  );
 }
 
 async function buildTechnicianDashboardData(sessionUser) {
@@ -242,9 +210,11 @@ router.post('/updates', async (req, res) => {
   if (statusAction === 'break') {
     nextFlags = { on_break: true, waiting_parts: false, done: false };
     if (!message) message = 'Technician is on break.';
+    await store.update('work_orders', workOrder.id, { status: 'break' });
   } else if (statusAction === 'waiting_parts') {
     nextFlags = { on_break: false, waiting_parts: true, done: false };
     if (!message) message = 'Technician is waiting for parts.';
+    await store.update('work_orders', workOrder.id, { status: 'waiting-parts' });
   } else if (statusAction === 'done') {
     nextFlags = { on_break: false, waiting_parts: false, done: true };
     if (!message) message = 'Technician marked this job as done.';

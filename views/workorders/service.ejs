@@ -9,6 +9,9 @@
   const serviceVehicleWithPlate = serviceVehiclePlate ? `${serviceVehicleLabel} (${serviceVehiclePlate})` : serviceVehicleLabel;
 %>
 <h2>Services - <%= serviceCustomerName %> - <%= serviceVehicleWithPlate %></h2>
+<% if (String(wo.technician || '').trim()) { %>
+  <p>Technician: <a href="/work-order-transactions/technicians/<%= encodeURIComponent(wo.technician) %>"><%= wo.technician %></a></p>
+<% } %>
 
 <% if (inventoryError) { %>
   <p style="color:#ff6b6b;font-weight:700;"><%= inventoryError %></p>

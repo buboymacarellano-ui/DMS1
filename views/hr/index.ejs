@@ -67,23 +67,63 @@
       <a class="dashboard-button" href="/employees" style="display:inline-flex;align-items:center;justify-content:center;">Open Employee DB</a>
     </article>
 
-    <article class="dashboard-card admin-panel">
+    <article class="dashboard-card admin-panel admin-panel--wide">
       <div class="dashboard-card__header admin-panel-header">Staff Directory</div>
+      <% if (typeof success !== 'undefined' && success) { %><p class="success"><%= success %></p><% } %>
+      <% if (typeof error !== 'undefined' && error) { %><p class="error"><%= error %></p><% } %>
+      <p class="dashboard-note admin-note">Set a first password, edit an existing password, or turn login on and off for each account.</p>
       <div class="table-scroll">
-        <table class="list">
+        <table class="list hr-staff-grid">
           <thead>
             <tr>
               <th>Username</th>
               <th>Role</th>
               <th>Created</th>
+              <th>Set Password</th>
+              <th>Edit Password</th>
+              <th>Disable/Enable Password</th>
             </tr>
           </thead>
           <tbody>
             <% users.forEach((user) => { %>
+              <% const hasPassword = Boolean(String(user.password_hash || '').trim() && String(user.password_salt || '').trim()); %>
+              <% const passwordOn = user.password_enabled !== false; %>
               <tr>
                 <td><%= user.username %></td>
                 <td><%= user.role %></td>
                 <td><%= user.created_at ? new Date(user.created_at).toLocaleString() : '' %></td>
+                <td class="actions">
+                  <button
+                    type="button"
+                    class="btn hr-pass-btn"
+                    data-hr-password
+                    data-mode="set"
+                    data-user-id="<%= user.id %>"
+                    data-username="<%= user.username %>"
+                    <%= hasPassword ? 'disabled title="Password already exists. Use Edit Password."' : '' %>
+                  >Set</button>
+                </td>
+                <td class="actions">
+                  <button
+                    type="button"
+                    class="btn hr-pass-btn"
+                    data-hr-password
+                    data-mode="edit"
+                    data-user-id="<%= user.id %>"
+                    data-username="<%= user.username %>"
+                    <%= hasPassword ? '' : 'disabled title="No password yet. Use Set Password."' %>
+                  >Edit</button>
+                </td>
+                <td class="actions">
+                  <form method="post" action="/hr/users/<%= user.id %>/password-enabled" class="hr-pass-toggle-form">
+                    <input type="hidden" name="enabled" value="<%= passwordOn ? '0' : '1' %>">
+                    <button
+                      type="submit"
+                      class="btn hr-pass-toggle <%= passwordOn ? 'is-on' : 'is-off' %>"
+                      title="<%= passwordOn ? 'Password login is on. Click to disable.' : 'Password login is off. Click to enable.' %>"
+                    ><%= passwordOn ? 'On' : 'Off' %></button>
+                  </form>
+                </td>
               </tr>
             <% }) %>
           </tbody>
@@ -92,5 +132,52 @@
     </article>
   </div>
 </section>
+
+<dialog id="hr-password-dialog" class="hr-password-dialog">
+  <form method="post" id="hr-password-form" class="form">
+    <h3 id="hr-password-title">Set Password</h3>
+    <p id="hr-password-account" class="dashboard-note"></p>
+    <label>New Password
+      <input id="hr-password-input" type="password" name="password" autocomplete="new-password" minlength="6" required>
+    </label>
+    <label>Confirm Password
+      <input id="hr-password-confirm" type="password" name="confirm_password" autocomplete="new-password" minlength="6" required>
+    </label>
+    <button type="submit">Save Password</button>
+    <button type="button" id="hr-password-cancel">Cancel</button>
+  </form>
+</dialog>
+
+<script>
+  (function hrPasswordActions() {
+    const dialog = document.getElementById('hr-password-dialog');
+    const form = document.getElementById('hr-password-form');
+    const title = document.getElementById('hr-password-title');
+    const account = document.getElementById('hr-password-account');
+    const passwordInput = document.getElementById('hr-password-input');
+    const confirmInput = document.getElementById('hr-password-confirm');
+    const cancel = document.getElementById('hr-password-cancel');
+    if (!dialog || !form || !title || !account || !passwordInput || !confirmInput || !cancel) return;
+
+    document.querySelectorAll('[data-hr-password]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const mode = button.getAttribute('data-mode');
+        const userId = button.getAttribute('data-user-id');
+        const username = button.getAttribute('data-username') || '';
+        form.action = mode === 'edit'
+          ? '/hr/users/' + encodeURIComponent(userId) + '/edit-password'
+          : '/hr/users/' + encodeURIComponent(userId) + '/set-password';
+        title.textContent = mode === 'edit' ? 'Edit Password' : 'Set Password';
+        account.textContent = username;
+        passwordInput.value = '';
+        confirmInput.value = '';
+        if (typeof dialog.showModal === 'function') dialog.showModal();
+        passwordInput.focus();
+      });
+    });
+
+    cancel.addEventListener('click', () => dialog.close());
+  })();
+</script>
 
 <%- include('../partials/footer') %>

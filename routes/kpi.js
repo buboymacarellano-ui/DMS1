@@ -8,7 +8,7 @@ const ASSIGN_DEADLINE_MS = 10 * 60 * 1000; // 10 minutes
 
 function isOpen(wo) {
   const s = String(wo.status || '').trim().toLowerCase();
-  return s === 'open' || s === 'in-progress';
+  return s === 'open' || s === 'in-progress' || s === 'waiting-parts' || s === 'break' || s === 'on-other-priority';
 }
 
 function branchScopedWorkOrders(req, workOrders) {

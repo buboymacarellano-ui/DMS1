@@ -6,12 +6,14 @@
   <title>Auto Shop Manager</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
-<body>
-  <% const activeRole = currentUser ? String(currentUser.role || '').toLowerCase() : ''; %>
+<% const activeRole = currentUser ? String(currentUser.role || '').toLowerCase() : ''; %>
+<body class="<%= ['service_advisor', 'service_receptionist', 'senior_service_receptionist'].includes(activeRole) ? 'role-frontline' : (activeRole === 'service_technical_manager' ? 'role-stm' : '') %>">
   <% const pathNow = typeof currentPath !== 'undefined' && currentPath ? String(currentPath) : ''; %>
   <% const queryScope = typeof currentQuery !== 'undefined' && currentQuery ? String(currentQuery.scope || currentQuery.location || '').toLowerCase() : ''; %>
   <% const viewingWarehouse1 = pathNow.indexOf('/parts') === 0 && queryScope.indexOf('warehouse') !== -1; %>
   <% const roleLabel = activeRole === 'general_manager' ? 'GM' : (activeRole === 'technician' ? 'TECH' : (activeRole === 'service_technical_manager' ? 'STM' : ((activeRole === 'parts_manager' || activeRole === 'pm') ? 'PM' : (activeRole === 'admin' ? 'ADMIN' : (activeRole === 'hr' ? 'HR' : (activeRole === 'service_advisor' ? 'SA' : (activeRole === 'senior_service_receptionist' ? 'SSR' : 'SR'))))))); %>
+  <% const cleanSessionHeader = activeRole === 'general_manager' || activeRole === 'service_technical_manager'; %>
+  <% const cleanHomePath = activeRole === 'general_manager' ? '/gm' : '/stm'; %>
   <%
     const roleHomeByRole = {
       general_manager: '/gm',
@@ -32,19 +34,19 @@
       || normalizedPath === normalizedHome
       || ((activeRole === 'parts_manager' || activeRole === 'pm') && normalizedPath === '/parts-manager');
   %>
-  <header class="site-header<%= activeRole === 'general_manager' ? ' site-header--gm' : '' %>">
-    <% if (activeRole === 'general_manager') { %>
+  <header class="site-header<%= cleanSessionHeader ? ' site-header--gm site-header--gm-clean' : '' %>">
+    <% if (cleanSessionHeader) { %>
       <div class="site-header__left site-header__left--gm-stack">
         <% if (currentUser) { %>
-          <span class="header-user-badge header-user-badge--gm-lead" title="Signed-in General Manager">
+          <span class="header-user-badge header-user-badge--gm-lead" title="Signed-in <%= roleLabel %>">
             <%= roleLabel %>: <%= currentUser.username %>
           </span>
         <% } else { %>
-          <span class="header-user-badge header-user-badge--gm-lead">GM</span>
+          <span class="header-user-badge header-user-badge--gm-lead"><%= roleLabel %></span>
         <% } %>
         <div class="site-header__logo-wrap">
           <h1 class="site-header__brand-left">
-            <a href="/" class="brand-heading" aria-label="Return to main page" title="Return to main page">
+            <a href="<%= cleanHomePath %>" class="brand-heading" aria-label="<%= roleLabel %> Dashboard" title="<%= roleLabel %> Dashboard">
               <img src="/icons/ae-tech-logo.svg" alt="A&E Auto Service Group Inc." class="brand-logo" />
             </a>
           </h1>
@@ -53,43 +55,6 @@
           <% } %>
         </div>
       </div>
-
-      <nav class="site-header__nav">
-        <a href="/gm" class="<%= pathNow === '/gm' ? 'nav-link--active' : '' %>">GM Dashboard</a>
-        <a href="/gm/catalog" class="<%= pathNow === '/gm/catalog' ? 'nav-link--active' : '' %>">DX Catalog</a>
-        <a href="/gm/fte" class="<%= pathNow === '/gm/fte' ? 'nav-link--active' : '' %>">FTE Tracking</a>
-        <div class="gm-workspace-nav" role="group" aria-label="Department workspaces">
-          <a
-            href="/parts-manager/dashboard"
-            class="gm-workspace-nav__btn <%= pathNow.indexOf('/parts-manager') === 0 ? 'gm-workspace-nav__btn--active' : '' %>"
-            title="Parts Manager operational workspace"
-          >PM Workspace</a>
-          <a
-            href="/stm"
-            class="gm-workspace-nav__btn <%= pathNow === '/stm' ? 'gm-workspace-nav__btn--active' : '' %>"
-            title="Service &amp; Technical Manager operational workspace"
-          >STM Workspace</a>
-          <a
-            href="/admin"
-            class="gm-workspace-nav__btn <%= pathNow.indexOf('/admin') === 0 ? 'gm-workspace-nav__btn--active' : '' %>"
-            title="Admin operational workspace"
-          >Admin Workspace</a>
-          <a
-            href="/hr"
-            class="gm-workspace-nav__btn <%= pathNow.indexOf('/hr') === 0 ? 'gm-workspace-nav__btn--active' : '' %>"
-            title="Human Resources operational workspace"
-          >HR Workspace</a>
-        </div>
-        <a href="/gm/performance-incentives" class="<%= pathNow.indexOf('/gm/performance-incentives') === 0 ? 'nav-link--active' : '' %>">Performance &amp; Incentives</a>
-        <a href="/employees">Employee DB</a>
-        <% if (canApproveRequests) { %>
-          <a href="/approvals" class="approval-nav <%= pendingApprovalCount > 0 ? 'approval-nav--pending' : '' %>" title="Approval requests">
-            Approvals<% if (pendingApprovalCount > 0) { %> <span class="approval-nav__count"><%= pendingApprovalCount %></span><% } %>
-          </a>
-        <% } else if (currentUser) { %>
-          <a href="/approvals" class="approval-nav" title="Submit or view approval requests">Requests</a>
-        <% } %>
-      </nav>
 
       <div class="site-header__actions" aria-label="Session actions">
         <div class="site-header__session-btns">
@@ -124,12 +89,7 @@
         <% } else if (activeRole === 'hr') { %>
           <a href="/hr">HR Dashboard</a>
         <% } else if (['service_receptionist', 'senior_service_receptionist', 'service_advisor'].includes(activeRole)) { %>
-          <a href="/service-receptionist"><%= roleLabel %> Dashboard</a>
-          <a href="/parts/create" class="<%= pathNow.indexOf('/parts/create') === 0 ? 'nav-link--active' : '' %>">Create Parts</a>
-          <a href="/parts" class="<%= pathNow.indexOf('/parts') === 0 && pathNow.indexOf('/parts/create') !== 0 && !viewingWarehouse1 ? 'nav-link--active' : '' %>">Parts Database</a>
-          <a href="/parts?scope=warehouse1" class="<%= viewingWarehouse1 ? 'nav-link--active' : '' %>">Warehouse 1</a>
-          <a href="/branch-parts" class="<%= pathNow.indexOf('/branch-parts') === 0 ? 'nav-link--active' : '' %>">Branch Parts DB</a>
-          <a href="/gm/fte" class="<%= pathNow === '/gm/fte' ? 'nav-link--active' : '' %>">FTE Tracking</a>
+          <a href="/service-receptionist" class="<%= pathNow.indexOf('/service-receptionist') === 0 ? 'nav-link--active' : '' %>"><%= roleLabel %> Dashboard</a>
         <% } %>
         <% if (isPartsManager) { %>
           <a href="/parts-manager/dashboard">Parts Dashboard</a>

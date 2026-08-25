@@ -1,7 +1,11 @@
 <%- include('../partials/header') %>
 
 <h2>Work Orders</h2>
-<a class="btn" href="/work-orders/new">+ Create Work Order</a>
+<div class="wo-create-actions">
+  <a class="btn" href="/work-orders/new">+ Create Work Order</a>
+  <a class="btn" href="/parts/create">+ Create Parts</a>
+  <a class="btn" href="/pricing/new">+ Create Labor Charge</a>
+</div>
 
 <%
   const vehicleSearchEntries = [];
@@ -92,8 +96,12 @@
           <% } %>
         </td>
         <td><%= vehicleWithPlate || '—' %></td>
-        <td><%= w.technician || '—' %></td>
-        <td><%= w.status %></td>
+        <td>
+          <% if (hasTechnician) { %>
+            <a href="/work-order-transactions/technicians/<%= encodeURIComponent(w.technician) %>"><%= w.technician %></a>
+          <% } else { %>—<% } %>
+        </td>
+        <td><%= (typeof formatWorkOrderStatusLabel === 'function' ? formatWorkOrderStatusLabel(w.status) : (w.status || 'Open')) %></td>
         <td class="actions">
           <a href="/work-orders/<%= w.id %>/edit">Edit Entry</a>
           <a href="/work-orders/<%= w.id %>/service">Services</a>
@@ -139,7 +147,7 @@
     }
 
     function searchHaystack(entry) {
-      return [entry.vehicle, entry.make, entry.model, entry.plate]
+      return [entry.vehicle, entry.make, entry.model, entry.plate, entry.technician]
         .map((part) => String(part || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim())
         .join(' ');
     }
@@ -193,7 +201,12 @@
     function selectEntry(entry) {
       if (!entry) return;
       input.value = entry.vehicle;
-      techEl.textContent = entry.technician || '—';
+      const techName = String(entry.technician || '').trim();
+      if (techName && techName !== '—') {
+        techEl.innerHTML = '<a href="/work-order-transactions/technicians/' + encodeURIComponent(techName) + '">' + escapeHtml(techName) + '</a>';
+      } else {
+        techEl.textContent = '—';
+      }
       statusEl.textContent = entry.status || '—';
       const id = encodeURIComponent(entry.id);
       actionsEl.innerHTML =

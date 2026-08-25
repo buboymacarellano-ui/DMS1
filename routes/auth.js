@@ -23,7 +23,9 @@ const {
   DEFAULT_OPERATIONAL_BRANCHES,
   canonicalizeBranchName,
   normalizeBranchKey,
+  PRIMARY_BRANCH_NAME,
 } = require('../lib/branches');
+const { isLoginAuthDisabled, setOpenLoginEnabled } = require('../lib/login-auth');
 
 const router = express.Router();
 const ROLE_GENERAL_MANAGER = 'general_manager';
@@ -66,6 +68,39 @@ function redirectForRole(role) {
   if (role === ROLE_TECHNICIAN) return '/technician';
   if (isFrontlineRole(role)) return frontlineHomePath(role);
   return '/work-order-transactions';
+}
+
+function roleShortLabel(role) {
+  if (role === ROLE_GENERAL_MANAGER) return 'GM';
+  if (role === ROLE_ADMIN) return 'ADMIN';
+  if (role === ROLE_HR) return 'HR';
+  if (role === ROLE_STM) return 'STM';
+  if (role === ROLE_PARTS_MANAGER || role === 'pm') return 'PM';
+  if (role === ROLE_TECHNICIAN) return 'TECH';
+  if (role === ROLE_SERVICE_ADVISOR) return 'SA';
+  if (role === ROLE_SENIOR_SERVICE_RECEPTIONIST) return 'SSR';
+  if (isFrontlineRole(role)) return 'SR';
+  return 'USER';
+}
+
+function applyOpenLoginSession(req, accessLevel, loginInputRaw, selectedBranch) {
+  const role = normalizeAccessLevel(accessLevel);
+  const label = roleShortLabel(role);
+  const username = String(loginInputRaw || '').trim() || `OPEN-${label}`;
+  req.session.user = {
+    id: `open-login-${role}`,
+    username,
+    role,
+    technician_name: role === ROLE_TECHNICIAN ? username : '',
+    technician_employee_id: role === ROLE_TECHNICIAN ? username : '',
+    employee_id: '',
+    receptionist_employee_id: '',
+    receptionist_name: isFrontlineRole(role) ? username : '',
+    job_code: '',
+    branch: isFrontlineRole(role) ? canonicalizeBranchName(selectedBranch || PRIMARY_BRANCH_NAME) : '',
+    auth_open: true,
+  };
+  return role;
 }
 
 function canManageAccounts(req) {
@@ -231,7 +266,7 @@ router.get('/login-shortcut.url', (req, res) => {
 });
 
 router.get('/login', async (req, res) => {
-  if (req.session.user) {
+  if (req.session.user && !isLoginAuthDisabled()) {
     return res.redirect(redirectForRole(normalizeRole(req.session.user.role)));
   }
 
@@ -275,6 +310,11 @@ router.post('/login', async (req, res) => {
       branch: selectedBranch,
       branches,
     }));
+  }
+
+  if (isLoginAuthDisabled()) {
+    const role = applyOpenLoginSession(req, accessLevel, loginInputRaw, selectedBranch);
+    return res.redirect(redirectForRole(role));
   }
 
   if (!loginInputRaw) {
@@ -325,6 +365,10 @@ router.post('/login', async (req, res) => {
     return renderLogin(401, accessLevel === ROLE_TECHNICIAN
       ? 'Invalid Technician ID. Please use your registered technician ID.'
       : 'Invalid username.');
+  }
+
+  if (account.password_enabled === false) {
+    return renderLogin(403, 'This account password is disabled. Contact HR.');
   }
 
   if (!password || !account.password_salt || !account.password_hash || !verifyPassword(password, account.password_salt, account.password_hash)) {
@@ -433,7 +477,7 @@ router.post('/login', async (req, res) => {
     receptionist_employee_id: isReceptionistFamily(accountRole) ? liveEmployeeId : (account.receptionist_employee_id || ''),
     receptionist_name: isFrontlineRole(accountRole) ? liveName : (account.receptionist_name || ''),
     job_code: matchedEmployee ? String(matchedEmployee.job_code || '').trim() : (account.receptionist_job_code || ''),
-    branch: isFrontlineRole(accountRole) ? selectedBranch : '',
+    branch: isFrontlineRole(accountRole) ? canonicalizeBranchName(selectedBranch) : '',
   };
 
   return res.redirect(redirectForRole(accountRole));
@@ -683,14 +727,23 @@ router.post('/register-admin', async (req, res) => {
 });
 
 router.get('/register-hr', async (req, res) => {
-  if (req.session.user && !canManageAccounts(req)) {
+  if (req.session.user && !canManageAccounts(req) && !isLoginAuthDisabled()) {
     return res.redirect(redirectForRole(normalizeRole(req.session.user.role)));
   }
 
   return res.render('auth/register-hr', {
     error: '',
     username: '',
+    success: req.query.auth === 'off'
+      ? 'Login auth is disabled. Empty login is accepted for any access level.'
+      : (req.query.auth === 'on' ? 'Login auth is enabled. Branch, user ID, and password are required again.' : ''),
   });
+});
+
+router.post('/login-auth', async (req, res) => {
+  const disable = String(req.body.login_auth_disabled || '').trim() === '1';
+  await setOpenLoginEnabled(disable);
+  return res.redirect(disable ? '/auth/register-hr?auth=off' : '/auth/register-hr?auth=on');
 });
 
 router.post('/register-hr', async (req, res) => {
@@ -702,6 +755,7 @@ router.post('/register-hr', async (req, res) => {
     return res.status(400).render('auth/register-hr', {
       error: 'Username and password are required.',
       username,
+      success: '',
     });
   }
 
@@ -709,6 +763,7 @@ router.post('/register-hr', async (req, res) => {
     return res.status(400).render('auth/register-hr', {
       error: 'Password must be at least 6 characters.',
       username,
+      success: '',
     });
   }
 
@@ -716,6 +771,7 @@ router.post('/register-hr', async (req, res) => {
     return res.status(400).render('auth/register-hr', {
       error: 'Password confirmation does not match.',
       username,
+      success: '',
     });
   }
 
@@ -725,6 +781,7 @@ router.post('/register-hr', async (req, res) => {
     return res.status(409).render('auth/register-hr', {
       error: 'Username already exists. Please choose another.',
       username,
+      success: '',
     });
   }
 

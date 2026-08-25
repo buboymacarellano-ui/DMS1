@@ -20,6 +20,7 @@ function normalizeData(data) {
     pricing_rules: source.pricing_rules || [],
     pricing_settings: source.pricing_settings || { hourly_rate: 350 },
     delete_password_settings: source.delete_password_settings || { password_salt: '', password_hash: '' },
+    auth_settings: source.auth_settings || { login_disabled: false },
     parts: source.parts || [],
     transactions: source.transactions || [],
     parts_inventory: source.parts_inventory || [],
@@ -168,6 +169,22 @@ async function remove(collection, id) {
   return true;
 }
 
+async function isLoginAuthDisabled() {
+  const data = await load();
+  const settings = data.auth_settings || {};
+  return settings.login_disabled === true;
+}
+
+async function setLoginAuthDisabled(disabled) {
+  const data = await load();
+  data.auth_settings = Object.assign({}, data.auth_settings || {}, {
+    login_disabled: Boolean(disabled),
+    updated_at: new Date().toISOString(),
+  });
+  await save();
+  return data.auth_settings.login_disabled === true;
+}
+
 async function getPricingSettings() {
   const data = await load();
   return data.pricing_settings || { hourly_rate: 350 };
@@ -236,6 +253,8 @@ module.exports = {
   create,
   update,
   remove,
+  isLoginAuthDisabled,
+  setLoginAuthDisabled,
   getPricingSettings,
   updatePricingSettings,
   hasDeletePassword,
