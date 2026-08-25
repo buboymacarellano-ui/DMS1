@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: dms1
+    runtime: docker
+    plan: starter
+    healthCheckPath: /healthz
+    disk:
+      name: dms-data
+      mountPath: /data
+      sizeGB: 2
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DMS_SQLITE_PATH
+        value: /data/shop.sqlite
+      - key: SESSION_SECRET
+        generateValue: true

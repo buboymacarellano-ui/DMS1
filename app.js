@@ -146,6 +146,8 @@ app.get('/healthz', (req, res) => {
     timestamp: new Date().toISOString(),
     storage: 'sqlite',
     sqlitePath: store.getSqlitePath(),
+    jsonSnapshot: store.getSnapshotPath(),
+    persistent: true,
   });
 });
 

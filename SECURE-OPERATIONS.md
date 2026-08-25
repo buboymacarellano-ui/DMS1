@@ -16,27 +16,35 @@ npm.cmd install
 npm.cmd run start:prod
 ```
 
-## 2) Live data is SQLite (not the Cloudflare tunnel)
+## 2) Live database that survives refresh and restart
 
-The shop now stores live records in a local SQLite database:
+Shop records are stored in SQLite. A JSON snapshot is written beside it on every save.
 
-- Database file: `%LOCALAPPDATA%\AE-DMS\shop.sqlite`
-- Path pointer: `data\sqlite-path.txt`
-- `data\data.json` is the last JSON snapshot used for the first migration. New work is saved in SQLite.
+- Local database: `%LOCALAPPDATA%\AE-DMS\shop.sqlite`
+- Local JSON snapshot: `%LOCALAPPDATA%\AE-DMS\data-snapshot.json`
+- Cloud database (Render disk): `/data/shop.sqlite`
+- Cloud JSON snapshot: `/data/data-snapshot.json`
+- Git `data/data.json` is a **first-boot seed only**. It is never used to overwrite an existing database.
 
-Keep public access always on by leaving this PC on. The always-run task starts `node app.js` at logon and restarts it if it stops:
+Page refresh, app restart, and redeploy keep the same records as long as the SQLite file stays on that persistent disk.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File "C:\Users\buboy\OneDrive\Desktop\DMS1\scripts\install-always-run.ps1"
-```
+## 3) Cloud deploy (recommended): Render + GitHub + persistent disk
 
-Login URLs:
+This is the standalone always-on setup for city-wide login:
 
-- This computer: `http://127.0.0.1:3000/auth/login`
+1. Push this repo to GitHub (`buboymacarellano-ui/DMS1`).
+2. Open [https://dashboard.render.com](https://dashboard.render.com) and sign in with GitHub.
+3. New → Blueprint, select the `DMS1` repo (`render.yaml`).
+4. Use the **Starter** plan so the service does not sleep.
+5. Render creates HTTPS, a 2 GB disk at `/data`, and `SESSION_SECRET`.
 
-Cloudflare Tunnel is turned off. Other-city internet login needs this PC to be published again (router port forward or a public host). Until then, log in on this computer.
+After the first boot, `/data/shop.sqlite` is the live database. Later deploys do not wipe it.
 
-## 3) Keep app always on (auto-restart)
+Local login on this PC:
+
+- `http://127.0.0.1:3000/auth/login`
+
+## 4) Keep app always on (auto-restart)
 
 Install NSSM, then create a service:
 
@@ -49,7 +57,7 @@ Install NSSM, then create a service:
 
 Set service startup to Automatic and Recovery to Restart on failure.
 
-## 4) Daily backups with retention
+## 5) Daily backups with retention
 
 Manual backup:
 
@@ -64,30 +72,26 @@ Schedule daily backup in Task Scheduler:
 - Start in: project folder
 - Trigger: Daily (off-hours)
 
-Backups older than retention days are removed automatically. A backup includes a JSON snapshot plus a `.sqlite` copy under `data\`.
+Backups older than retention days are removed automatically.
 
-## 5) Health check for monitoring
+## 6) Health check for monitoring
 
 App now exposes:
 
 - /healthz
 
-From any machine that can reach the app URL:
+Should return JSON `status: ok`, `storage: sqlite`, and `persistent: true`.
 
-- http://127.0.0.1:3000/healthz
-
-Should return JSON status ok and `"storage":"sqlite"`.
-
-## 6) Mandatory security checks before all-branch rollout
+## 7) Mandatory security checks before all-branch rollout
 
 - Use unique strong passwords for all users.
 - Restrict admin account sharing.
+- Keep the GitHub repo private (it contains operational JSON).
 - Update Node.js and npm packages monthly.
 - Keep Windows auto-update enabled.
 - Test backup restore at least monthly.
 
-## 7) If a branch PC cannot open the login page
+## 8) If a branch PC cannot open the login page
 
-- Use the URL in `data\public-url.txt` from a PC on the same network.
-- Confirm this host PC is on and `http://127.0.0.1:3000/healthz` returns ok.
-- For long-distance internet access, this PC must be reachable on port 3000 from the internet (router port forward) or a public host. The old Cloudflare tunnel is no longer used.
+- Use the Render HTTPS URL after cloud deploy.
+- On this PC, confirm `http://127.0.0.1:3000/healthz` returns ok.

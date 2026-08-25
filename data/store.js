@@ -45,17 +45,35 @@ async function writeSqlitePointer() {
   }
 }
 
+async function readJsonFile(filePath) {
+  const txt = await fs.readFile(filePath, 'utf8');
+  return normalizeData(JSON.parse(txt));
+}
+
 async function migrateFromJsonIfNeeded() {
   if (sqlite.hasStoreDocs()) return;
-  try {
-    const txt = await fs.readFile(DATA_FILE, 'utf8');
-    const parsed = normalizeData(JSON.parse(txt));
-    sqlite.writeAllDocs(parsed);
-    console.log('Migrated data.json into SQLite at', sqlite.getSqlitePath());
-  } catch (error) {
-    if (error && error.code !== 'ENOENT') {
-      console.error('SQLite migrate from data.json failed:', error.message || error);
+
+  const snapshotPath = sqlite.getSnapshotPath();
+  const candidates = [snapshotPath, DATA_FILE];
+  for (const filePath of candidates) {
+    try {
+      const parsed = await readJsonFile(filePath);
+      sqlite.writeAllDocs(parsed);
+      console.log('Loaded JSON seed into SQLite from', filePath, '->', sqlite.getSqlitePath());
+      return;
+    } catch (error) {
+      if (error && error.code !== 'ENOENT') {
+        console.error('JSON seed failed for', filePath, error.message || error);
+      }
     }
+  }
+}
+
+async function writePersistentJsonSnapshot(data) {
+  try {
+    await fs.writeFile(sqlite.getSnapshotPath(), JSON.stringify(data), 'utf8');
+  } catch (error) {
+    console.error('Persistent JSON snapshot failed:', error.message || error);
   }
 }
 
@@ -70,12 +88,14 @@ async function load() {
   }
   cache = normalizeData({});
   sqlite.writeAllDocs(cache);
+  await writePersistentJsonSnapshot(cache);
   return cache;
 }
 
 async function save() {
   const data = await load();
   sqlite.writeAllDocs(data);
+  await writePersistentJsonSnapshot(data);
 }
 
 async function getRawData() {
@@ -227,4 +247,5 @@ module.exports = {
   replaceData,
   backupData,
   getSqlitePath: sqlite.getSqlitePath,
+  getSnapshotPath: sqlite.getSnapshotPath,
 };
