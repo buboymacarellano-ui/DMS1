@@ -35,6 +35,8 @@ const ROLE_HR = portals.ROLE_HR;
 const ROLE_STM = portals.ROLE_STM;
 const ROLE_PARTS_MANAGER = portals.ROLE_PARTS_MANAGER;
 const ROLE_FINANCE_MANAGER = portals.ROLE_FINANCE_MANAGER;
+const ROLE_ASSETS_FACILITIES = portals.ROLE_ASSETS_FACILITIES;
+const ROLE_ACCOUNTING = portals.ROLE_ACCOUNTING;
 const ROLE_TECHNICIAN = portals.ROLE_TECHNICIAN;
 const ROLE_PARTS_CLERK = portals.ROLE_PARTS_CLERK;
 const ROLE_OPERATIONS_MANAGER = portals.ROLE_OPERATIONS_MANAGER;
@@ -62,6 +64,8 @@ function normalizeAccessLevel(value) {
   if (normalized === ROLE_STM) return ROLE_STM;
   if (normalized === ROLE_PARTS_MANAGER) return ROLE_PARTS_MANAGER;
   if (normalized === ROLE_FINANCE_MANAGER) return ROLE_FINANCE_MANAGER;
+  if (normalized === ROLE_ACCOUNTING) return ROLE_ACCOUNTING;
+  if (normalized === ROLE_ASSETS_FACILITIES) return ROLE_ASSETS_FACILITIES;
   if (normalized === ROLE_TECHNICIAN) return ROLE_TECHNICIAN;
   if (normalized === ROLE_SERVICE_ADVISOR) return ROLE_SERVICE_ADVISOR;
   if (normalized === ROLE_SENIOR_SERVICE_RECEPTIONIST) return ROLE_SENIOR_SERVICE_RECEPTIONIST;
@@ -206,7 +210,7 @@ function findStmAccount(users, loginInput, employee) {
 }
 
 function missingIdError(accessLevel) {
-  if (accessLevel === ROLE_GENERAL_MANAGER) return '';
+  if (accessLevel === ROLE_GENERAL_MANAGER) return 'GM username or employee ID is required.';
   if (accessLevel === ROLE_TECHNICIAN) return 'Technician ID is required.';
   if (isFrontlineRole(accessLevel)) return `${frontlineIdLabel(accessLevel)} is required.`;
   return 'Employee ID is required.';
@@ -338,6 +342,55 @@ router.post('/login', async (req, res) => {
     }));
   }
 
+  if (!String(req.body.department || '').trim()) {
+    return renderLogin(400, 'Department is required.');
+  }
+  if (department !== portals.PORTAL_GM && !String(req.body.access_level || '').trim()) {
+    return renderLogin(400, 'Role is required.');
+  }
+  if (department !== portals.PORTAL_GM && !loginInputRaw) {
+    return renderLogin(400, missingIdError(accessLevel));
+  }
+  const requiresBranch = isFrontlineRole(accessLevel);
+  if (requiresBranch && !selectedBranch) {
+    return renderLogin(400, 'Select your assigned branch to continue.');
+  }
+  if (!password) {
+    return renderLogin(400, 'Password is required.');
+  }
+
+  if (department === portals.PORTAL_GM || accessLevel === ROLE_GENERAL_MANAGER) {
+    if (isLoginAuthDisabled()) {
+      const role = applyOpenLoginSession(req, ROLE_GENERAL_MANAGER, '', '', portals.PORTAL_GM);
+      return res.redirect(redirectForRole(role));
+    }
+    const gmAccounts = getGmAccounts(users).slice(0, MAX_GM_USERS);
+    const matchedGm = gmAccounts.find((account) => (
+      account.password_enabled !== false
+      && account.password_salt
+      && account.password_hash
+      && verifyPassword(password, account.password_salt, account.password_hash)
+    ));
+    if (!matchedGm) {
+      return renderLogin(401, 'Invalid GM password.');
+    }
+    req.session.user = {
+      id: matchedGm.id,
+      username: matchedGm.username,
+      role: ROLE_GENERAL_MANAGER,
+      technician_name: '',
+      technician_employee_id: '',
+      employee_id: '',
+      receptionist_employee_id: '',
+      receptionist_name: '',
+      job_code: '',
+      branch: '',
+      location: '',
+      department: portals.PORTAL_GM,
+    };
+    return res.redirect(redirectForRole(ROLE_GENERAL_MANAGER));
+  }
+
   function locationsMatch(selected, assigned) {
     const left = portals.canonicalizeLocation(department, selected);
     const right = portals.canonicalizeLocation(department, assigned);
@@ -373,45 +426,6 @@ router.post('/login', async (req, res) => {
     return res.redirect(redirectForRole(role));
   }
 
-  if (accessLevel === ROLE_GENERAL_MANAGER) {
-    if (!password) {
-      return renderLogin(400, 'Password is required.');
-    }
-    const gmAccounts = getGmAccounts(users).slice(0, MAX_GM_USERS);
-    const matchedGm = gmAccounts.find((account) => (
-      account.password_enabled !== false
-      && account.password_salt
-      && account.password_hash
-      && verifyPassword(password, account.password_salt, account.password_hash)
-    ));
-    if (!matchedGm) {
-      return renderLogin(401, 'Invalid GM password.');
-    }
-    req.session.user = {
-      id: matchedGm.id,
-      username: matchedGm.username,
-      role: ROLE_GENERAL_MANAGER,
-      technician_name: '',
-      technician_employee_id: '',
-      employee_id: '',
-      receptionist_employee_id: '',
-      receptionist_name: '',
-      job_code: '',
-      branch: '',
-      location: '',
-      department: portals.PORTAL_GM,
-    };
-    return res.redirect(redirectForRole(ROLE_GENERAL_MANAGER));
-  }
-
-  if (!loginInputRaw) {
-    return renderLogin(400, missingIdError(accessLevel));
-  }
-
-  if (!selectedBranch) {
-    return renderLogin(400, 'Select the location assigned to this employee ID.');
-  }
-
   let matchedEmployee = null;
   if (isFrontlineRole(accessLevel)) {
     matchedEmployee = employees.find((item) => normalizeEmployeeId(item.employee_id) === receptionistEmployeeIdInput);
@@ -428,22 +442,10 @@ router.post('/login', async (req, res) => {
     }
   } else if (accessLevel === ROLE_STM) {
     matchedEmployee = findStmEmployee(employees, loginInputRaw);
-    if (matchedEmployee) {
-      const assigned = employeeBranch(matchedEmployee);
-      if (assigned && !locationsMatch(selectedBranch, assigned)) {
-        return renderLogin(403, 'Selected location must match this STM employee ID in Employee DB.');
-      }
-    }
   } else {
     matchedEmployee = employees.find((item) => normalizeEmployeeId(item.employee_id) === receptionistEmployeeIdInput) || null;
     if (matchedEmployee && !portals.employeeMatchesPortalRole(matchedEmployee, accessLevel)) {
       return renderLogin(403, 'This employee ID is not listed for the selected role in Employee DB.');
-    }
-    if (matchedEmployee) {
-      const assigned = employeeBranch(matchedEmployee) || String(matchedEmployee.store || matchedEmployee.location || '').trim();
-      if (assigned && !locationsMatch(selectedBranch, assigned)) {
-        return renderLogin(403, 'Selected location must match this employee ID in Employee DB.');
-      }
     }
   }
 
@@ -463,6 +465,10 @@ router.post('/login', async (req, res) => {
     return renderLogin(403, 'This account password is disabled. Contact HR.');
   }
 
+  if (accessLevel === ROLE_GENERAL_MANAGER && !isAllowedGmLogin(account, users)) {
+    return renderLogin(403, 'This GM account is not in the active GM slots.');
+  }
+
   if (!password || !account.password_salt || !account.password_hash || !verifyPassword(password, account.password_salt, account.password_hash)) {
     return renderLogin(401, 'Invalid password.');
   }
@@ -476,6 +482,9 @@ router.post('/login', async (req, res) => {
   const liveEmployeeId = matchedEmployee
     ? normalizeEmployeeId(matchedEmployee.employee_id)
     : (accountEmployeeId(account) || account.receptionist_employee_id || normalizeEmployeeId(loginInputRaw));
+  const sessionBranch = isFrontlineRole(accountRole)
+    ? selectedBranch
+    : (employeeBranch(matchedEmployee) || String(account.branch || account.location || '').trim());
 
   req.session.user = {
     id: account.id,
@@ -487,8 +496,8 @@ router.post('/login', async (req, res) => {
     receptionist_employee_id: isReceptionistFamily(accountRole) ? liveEmployeeId : (account.receptionist_employee_id || ''),
     receptionist_name: isFrontlineRole(accountRole) ? liveName : (account.receptionist_name || ''),
     job_code: matchedEmployee ? String(matchedEmployee.job_code || '').trim() : (account.receptionist_job_code || ''),
-    branch: selectedBranch,
-    location: selectedBranch,
+    branch: sessionBranch,
+    location: sessionBranch,
     department,
   };
 
@@ -735,7 +744,7 @@ router.post('/register-admin', async (req, res) => {
     password_hash: passwordHash,
   });
 
-  return res.redirect('/auth/login?registered=1&level=admin');
+  return res.redirect('/auth/login?registered=1&level=admin&department=fo');
 });
 
 router.get('/register-hr', async (req, res) => {
@@ -984,7 +993,7 @@ router.post('/register-finance-manager', async (req, res) => {
     password_hash: passwordHash,
   });
 
-  return res.redirect('/auth/login?registered=1&level=finance_manager');
+  return res.redirect('/auth/login?registered=1&level=accounting&department=fo');
 });
 
 router.get('/register-technician', async (req, res) => {

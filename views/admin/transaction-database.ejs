@@ -34,7 +34,7 @@ totalColumns.forEach(c => columns.push(c));
   <div class="dashboard-title admin-title">Transaction Database</div>
 
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
-    <a class="btn" href="/admin">← Back to Admin</a>
+    <a class="btn" href="/admin">← Back to Finance Office</a>
     <span class="dashboard-note admin-note" style="margin:0;">Total Records: <strong><%= records.length %></strong></span>
     <button type="button" class="btn" onclick="document.getElementById('import-csv-panel').style.display=document.getElementById('import-csv-panel').style.display==='none'?'block':'none'" style="background:#1a6bbf;">Import Data CSV</button>
     <a class="btn" href="/admin/transaction-database/export.csv" style="background:#1f8f53;margin-left:auto;">Export CSV</a>

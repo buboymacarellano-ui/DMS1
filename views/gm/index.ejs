@@ -88,8 +88,61 @@
         <% }) %>
       </div>
     </article>
+
+    <%
+      const markupHealth = metrics.markupHealth || {};
+      const markupLines = [markupHealth.labor, markupHealth.parts, markupHealth.total].filter(Boolean);
+      const negativeReports = Array.isArray(metrics.negativeReports) ? metrics.negativeReports : [];
+      function formatMarkupPct(value) {
+        return value == null || !Number.isFinite(Number(value)) ? '—' : Number(value).toFixed(1) + '%';
+      }
+    %>
+    <article class="dashboard-card gm-panel gm-analytics__card gm-analytics__markup gm-markup-card" id="gm-markup-card" data-health="<%= markupHealth.overallCode || 'na' %>">
+      <div class="dashboard-card__header gm-panel-header gm-markup-card__head">
+        <span>Sales Markup Health</span>
+        <span class="gm-markup-badge gm-markup-badge--<%= markupHealth.overallCode || 'na' %>" id="gm-markup-overall"><%= markupHealth.overallLabel || 'No data' %></span>
+      </div>
+      <p class="gm-markup-formula" id="gm-markup-formula">
+        Industry markup: <%= markupHealth.formula || '(Selling − Cost) ÷ Cost × 100' %>
+        · <%= markupHealth.sourceLabel || 'Work-order transactions · parts database' %>
+      </p>
+      <div class="gm-markup-rows" id="gm-markup-rows">
+        <% markupLines.forEach((row) => { %>
+          <div class="gm-markup-row" data-health="<%= row.healthCode || 'na' %>">
+            <div class="gm-markup-row__name"><%= row.label %></div>
+            <div class="gm-markup-row__value"><%= formatMarkupPct(row.markupPct) %></div>
+            <div class="gm-markup-row__meta">
+              <span class="gm-markup-badge gm-markup-badge--<%= row.healthCode || 'na' %>"><%= row.healthLabel || 'No data' %></span>
+              <span>GP <%= formatMarkupPct(row.marginPct) %></span>
+              <span>Target <%= Number(row.targetPct || 0) %>%</span>
+            </div>
+            <div class="gm-markup-row__money">
+              <span>Selling P <%= Number(row.selling || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></span>
+              <span>Cost P <%= Number(row.cost || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></span>
+            </div>
+          </div>
+        <% }) %>
+        <% if (!markupLines.length) { %>
+          <p class="dashboard-note">No billed jobs in this range to compute markup.</p>
+        <% } %>
+      </div>
+    </article>
   </div>
 </section>
+
+<div id="gm-neg-popup" class="gm-neg-popup<%= negativeReports.length ? ' is-visible' : '' %>" role="alert" aria-live="assertive" <%= negativeReports.length ? '' : 'hidden' %>>
+  <div class="gm-neg-popup__card">
+    <strong class="gm-neg-popup__title">Performance warning</strong>
+    <ul id="gm-neg-popup-list">
+      <% negativeReports.forEach((report) => { %>
+        <li class="gm-neg-popup__item gm-neg-popup__item--<%= report.severity || 'watch' %>">
+          <b><%= report.title %></b>
+          <span><%= report.detail %></span>
+        </li>
+      <% }) %>
+    </ul>
+  </div>
+</div>
 
 <script>
 function setupTimelineFilters() {
@@ -126,7 +179,82 @@ function setupTimelineFilters() {
     if (durationInput) durationInput.value = code;
   }
 
-  function updateCards(payload) {
+  function formatMarkupPct(value) {
+    return value == null || !Number.isFinite(Number(value)) ? '—' : Number(value).toFixed(1) + '%';
+  }
+
+  function formatMarkupMoney(value) {
+    return 'P ' + Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function renderMarkupHealth(markup) {
+    const card = document.getElementById('gm-markup-card');
+    const overall = document.getElementById('gm-markup-overall');
+    const formula = document.getElementById('gm-markup-formula');
+    const rowsEl = document.getElementById('gm-markup-rows');
+    if (!markup || !card || !rowsEl) return;
+    const code = markup.overallCode || 'na';
+    card.setAttribute('data-health', code);
+    if (overall) {
+      overall.className = 'gm-markup-badge gm-markup-badge--' + code;
+      overall.textContent = markup.overallLabel || 'No data';
+    }
+    if (formula) {
+      formula.textContent = 'Industry markup: ' + (markup.formula || '(Selling − Cost) ÷ Cost × 100')
+        + ' · ' + (markup.sourceLabel || 'Work-order transactions · parts database');
+    }
+    const lines = [markup.labor, markup.parts, markup.total].filter(Boolean);
+    if (!lines.length) {
+      rowsEl.innerHTML = '<p class="dashboard-note">No billed jobs in this range to compute markup.</p>';
+      return;
+    }
+    rowsEl.innerHTML = lines.map((row) => {
+      const health = row.healthCode || 'na';
+      return (
+        '<div class="gm-markup-row" data-health="' + escapeHtml(health) + '">' +
+          '<div class="gm-markup-row__name">' + escapeHtml(row.label || '') + '</div>' +
+          '<div class="gm-markup-row__value">' + escapeHtml(formatMarkupPct(row.markupPct)) + '</div>' +
+          '<div class="gm-markup-row__meta">' +
+            '<span class="gm-markup-badge gm-markup-badge--' + escapeHtml(health) + '">' + escapeHtml(row.healthLabel || 'No data') + '</span>' +
+            '<span>GP ' + escapeHtml(formatMarkupPct(row.marginPct)) + '</span>' +
+            '<span>Target ' + Number(row.targetPct || 0) + '%</span>' +
+          '</div>' +
+          '<div class="gm-markup-row__money">' +
+            '<span>Selling ' + formatMarkupMoney(row.selling) + '</span>' +
+            '<span>Cost ' + formatMarkupMoney(row.cost) + '</span>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  let negPopupTimer = null;
+  function showNegativeReports(reports) {
+    const popup = document.getElementById('gm-neg-popup');
+    const list = document.getElementById('gm-neg-popup-list');
+    if (!popup || !list) return;
+    const items = Array.isArray(reports) ? reports : [];
+    if (!items.length) {
+      popup.classList.remove('is-visible');
+      popup.hidden = true;
+      return;
+    }
+    list.innerHTML = items.map((report) => (
+      '<li class="gm-neg-popup__item gm-neg-popup__item--' + escapeHtml(report.severity || 'watch') + '">' +
+        '<b>' + escapeHtml(report.title || 'Performance warning') + '</b>' +
+        '<span>' + escapeHtml(report.detail || '') + '</span>' +
+      '</li>'
+    )).join('');
+    popup.hidden = false;
+    popup.classList.add('is-visible');
+    if (negPopupTimer) window.clearTimeout(negPopupTimer);
+    negPopupTimer = window.setTimeout(function () {
+      popup.classList.remove('is-visible');
+      popup.hidden = true;
+    }, 10000);
+  }
+
+  function updateCards(payload, options) {
     const cards = payload && payload.cards ? payload.cards : {};
     const pacing = payload && payload.pacing ? payload.pacing : {};
     const matrix = payload && payload.matrix ? payload.matrix : { rows: [], totals: {} };
@@ -167,26 +295,33 @@ function setupTimelineFilters() {
     }
     if (pacingValueEl) pacingValueEl.textContent = Number(pacing.avgPacing || 0).toFixed(1) + '%';
 
+    renderMarkupHealth(payload && payload.markupHealth);
+
     const rows = Array.isArray(matrix.rows) ? matrix.rows : [];
     const maxRevenue = Math.max.apply(null, rows.map((row) => Number(row.liveAccumulatedRevenue || 0)).concat([1]));
     const chartEl = document.getElementById('gm-perf-chart');
-    if (!chartEl) return;
-    if (!rows.length) {
-      chartEl.innerHTML = '<p class="dashboard-note">No branch revenue yet.</p>';
-      return;
+    if (chartEl) {
+      if (!rows.length) {
+        chartEl.innerHTML = '<p class="dashboard-note">No branch revenue yet.</p>';
+      } else {
+        chartEl.innerHTML = rows.map((row) => {
+          const revenue = Number(row.liveAccumulatedRevenue || 0);
+          const barHeight = revenue > 0 ? Math.max(10, Math.round((revenue / maxRevenue) * 100)) : 4;
+          const label = 'P ' + Math.round(revenue).toLocaleString('en-PH');
+          return (
+            '<div class="gm-perf-col" title="' + escapeHtml(row.branch || '—') + ' ' + money(revenue) + '">' +
+              '<div class="gm-perf-col__value">' + label + '</div>' +
+              '<div class="gm-perf-col__track"><div class="gm-perf-col__bar" style="height:' + barHeight + '%"></div></div>' +
+              '<div class="gm-perf-col__name">' + escapeHtml(row.branch || '—') + '</div>' +
+            '</div>'
+          );
+        }).join('');
+      }
     }
-    chartEl.innerHTML = rows.map((row) => {
-      const revenue = Number(row.liveAccumulatedRevenue || 0);
-      const barHeight = revenue > 0 ? Math.max(10, Math.round((revenue / maxRevenue) * 100)) : 4;
-      const label = 'P ' + Math.round(revenue).toLocaleString('en-PH');
-      return (
-        '<div class="gm-perf-col" title="' + escapeHtml(row.branch || '—') + ' ' + money(revenue) + '">' +
-          '<div class="gm-perf-col__value">' + label + '</div>' +
-          '<div class="gm-perf-col__track"><div class="gm-perf-col__bar" style="height:' + barHeight + '%"></div></div>' +
-          '<div class="gm-perf-col__name">' + escapeHtml(row.branch || '—') + '</div>' +
-        '</div>'
-      );
-    }).join('');
+
+    if (options && options.showWarnings) {
+      showNegativeReports(payload && payload.negativeReports);
+    }
   }
 
   async function fetchMetrics(duration) {
@@ -208,7 +343,7 @@ function setupTimelineFilters() {
       setActiveButton(duration);
       buttons.forEach((item) => { item.disabled = true; });
       try {
-        updateCards(await fetchMetrics(duration));
+        updateCards(await fetchMetrics(duration), { showWarnings: true });
       } catch (error) {
         console.error(error);
       } finally {
@@ -230,6 +365,7 @@ function setupTimelineFilters() {
   }
 
   setInterval(refreshLiveMetrics, 12000);
+  showNegativeReports(<%- JSON.stringify(negativeReports || []) %>);
 }
 
 if (document.readyState === 'loading') {

@@ -72,7 +72,11 @@
               <td><%= row.qty != null ? row.qty : '' %></td>
               <td>₱<%= Number(row.retail_price || 0).toFixed(2) %></td>
               <td class="actions">
-                <a class="btn" href="/parts/create/<%= row.id %>/edit">Edit</a>
+                <% if (typeof isSoldTransaction === 'function' && isSoldTransaction(row)) { %>
+                  <span>Sold — locked</span>
+                <% } else { %>
+                  <a class="btn" href="/parts/create/<%= row.id %>/edit">Edit</a>
+                <% } %>
               </td>
             </tr>
           <% }) %>

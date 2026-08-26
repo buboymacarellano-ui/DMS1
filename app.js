@@ -16,7 +16,7 @@ const partsRouter = require('./routes/parts');
 const partsManagerRouter = require('./routes/parts-manager');
 const { isPartsManagerRole } = require('./routes/parts-manager');
 const financeRouter = require('./routes/finance');
-const { isFinanceManagerRole, ROLE_FINANCE_MANAGER } = require('./lib/finance-ledger');
+const { isFinanceManagerRole, ROLE_FINANCE_MANAGER, computeInvoiceEconomics, buildPartsCostIndex } = require('./lib/finance-ledger');
 // Invoice/transaction finance fields (persisted on work_orders + transaction_records):
 // paymentMethod, partsCostPrice, partsSellingPrice, laborCost, taxAmount, paymentStatus.
 const employeesRouter = require('./routes/employees');
@@ -48,6 +48,11 @@ const { buildOcpdReport } = require('./lib/ocpd-reporting');
 const { buildTechnicianOperations, toDashboardStats } = require('./lib/technician-activity');
 const { getFteSeedTransactions } = require('./lib/fte-seed');
 const {
+  TYPE_SOLD,
+  isPartsActivityLog,
+  normalizePartsTransactionType,
+} = require('./lib/parts-request');
+const {
   envLoginDisabled,
   isLoginAuthDisabled,
   isOpenLoginEnabled,
@@ -78,6 +83,8 @@ const ROLE_HR_MANAGER = portals.ROLE_HR_MANAGER;
 const ROLE_HR_GENERALIST = portals.ROLE_HR_GENERALIST;
 const ROLE_PAYROLL = portals.ROLE_PAYROLL;
 const ROLE_HR_CLERK = portals.ROLE_HR_CLERK;
+const ROLE_ASSETS_FACILITIES = portals.ROLE_ASSETS_FACILITIES;
+const ROLE_ACCOUNTING = portals.ROLE_ACCOUNTING;
 const APPROVER_ROLES = new Set([
   ROLE_GENERAL_MANAGER,
   ROLE_ADMIN,
@@ -102,6 +109,8 @@ const BYPASS_ROLES = new Set([
   ROLE_PARTS_MANAGER,
   ROLE_PARTS_CLERK,
   ROLE_FINANCE_MANAGER,
+  ROLE_ACCOUNTING,
+  ROLE_ASSETS_FACILITIES,
   ROLE_TECHNICIAN,
   ROLE_OPERATIONS_MANAGER,
   ROLE_STORE_MANAGER,
@@ -109,7 +118,7 @@ const BYPASS_ROLES = new Set([
   ROLE_STORES_CLERK,
 ]);
 const HR_SEED_USERNAME = 'HR';
-const HR_SEED_PASSWORD = 'Hr123456';
+const HR_SEED_PASSWORD = '123456';
 
 // Temporary env toggle: set DISABLE_LOGIN=1 to auto-bypass login in local dev.
 // HR Sign Up also has a Disable Login Auth button for empty-form login while building.
@@ -190,7 +199,7 @@ app.use(async (req, res, next) => {
   if (AUTH_DISABLED && !req.session.user) {
     const roleLabel = BYPASS_ROLE === ROLE_GENERAL_MANAGER
       ? 'GM'
-      : (BYPASS_ROLE === ROLE_ADMIN ? 'ADMIN' : (BYPASS_ROLE === ROLE_HR ? 'HR' : (BYPASS_ROLE === ROLE_STM ? 'STM' : (BYPASS_ROLE === ROLE_PARTS_MANAGER ? 'PARTS' : (BYPASS_ROLE === ROLE_FINANCE_MANAGER ? 'FM' : (BYPASS_ROLE === ROLE_TECHNICIAN ? 'TECH' : 'SA'))))));
+      : (BYPASS_ROLE === ROLE_ADMIN ? 'FO' : (BYPASS_ROLE === ROLE_HR ? 'HR' : (BYPASS_ROLE === ROLE_STM ? 'STM' : (BYPASS_ROLE === ROLE_PARTS_MANAGER ? 'PARTS' : (BYPASS_ROLE === ROLE_FINANCE_MANAGER || BYPASS_ROLE === ROLE_ACCOUNTING ? 'ACCT' : (BYPASS_ROLE === ROLE_ASSETS_FACILITIES ? 'A&F' : (BYPASS_ROLE === ROLE_TECHNICIAN ? 'TECH' : 'SA')))))));
     req.session.user = {
       id: `dev-bypass-${BYPASS_ROLE}`,
       username: `DEV-${roleLabel}`,
@@ -413,10 +422,14 @@ function requireGrant(portalKey, grantKey) {
 function requireFinanceManager(req, res, next) {
   if (isLoginAuthDisabled()) return next();
   const activeRole = String(req.session.user && req.session.user.role || '').trim().toLowerCase();
-  if (isFinanceManagerRole(activeRole) || activeRole === ROLE_GENERAL_MANAGER) return next();
+  if (
+    isFinanceManagerRole(activeRole)
+    || activeRole === ROLE_GENERAL_MANAGER
+    || activeRole === ROLE_ADMIN
+  ) return next();
   const url = String(req.originalUrl || req.path || '');
-  if (url.indexOf('/api/') !== -1) return res.status(403).json({ error: 'Finance Manager access only.' });
-  return res.status(403).send('Finance Manager access only.');
+  if (url.indexOf('/api/') !== -1) return res.status(403).json({ error: 'Finance Office Accounting access only.' });
+  return res.status(403).send('Finance Office Accounting access only.');
 }
 
 function requirePartsManager(req, res, next) {
@@ -469,6 +482,16 @@ function getWorkOrderTotal(wo) {
 function getWorkOrderLaborTotal(wo) {
   const items = Array.isArray(wo && wo.service_items) ? wo.service_items : [];
   return items.reduce((sum, item) => sum + (toNumber(item && item.labor_price) * Math.max(1, toNumber(item && item.service_qty) || 1)), 0);
+}
+
+function getWorkOrderLaborHours(wo) {
+  const header = toNumber(wo && wo.labor_hours);
+  if (header > 0) return header;
+  const items = Array.isArray(wo && wo.service_items) ? wo.service_items : [];
+  return items.reduce((sum, item) => {
+    const qty = Math.max(1, toNumber(item && item.service_qty) || 1);
+    return sum + (toNumber(item && item.labor_hours) * qty);
+  }, 0);
 }
 
 function getWorkOrderPartsTotal(wo) {
@@ -857,6 +880,19 @@ function getTransactionRecordTotal(record) {
   return isBackJob ? -Math.abs(baseTotal) : baseTotal;
 }
 
+function getTransactionWorkOrderNumber(record) {
+  return String(record && (
+    record['work order Number']
+    || record.work_order_number
+    || record.workOrderNumber
+    || ''
+  )).trim();
+}
+
+function getTransactionWorkOrderId(record) {
+  return String(record && (record.work_order_id || record.workOrderId || '')).trim();
+}
+
 
 function getLatestTransactionSnapshots(records, endOfDay) {
   const latestByWorkOrder = new Map();
@@ -987,6 +1023,268 @@ function canonicalGmTechnicianName(value) {
     .trim()
     .toLowerCase()
     .replace(/\s+/g, ' ');
+}
+
+const GM_MARKUP_TARGETS = Object.freeze({
+  labor: 150,
+  parts: 50,
+  total: 80,
+});
+const GM_LABOR_COST_RATIO = 0.35;
+
+function roundMoney2(value) {
+  return Number((Number(value) || 0).toFixed(2));
+}
+
+function computeIndustryMarkupPct(selling, cost) {
+  const sales = Number(selling) || 0;
+  const basis = Number(cost) || 0;
+  if (basis > 0) return ((sales - basis) / basis) * 100;
+  if (sales > 0) return null;
+  return 0;
+}
+
+function computeGrossMarginPct(selling, cost) {
+  const sales = Number(selling) || 0;
+  const basis = Number(cost) || 0;
+  if (sales > 0) return ((sales - basis) / sales) * 100;
+  return 0;
+}
+
+function gradeMarkupHealth(markupPct, targetPct) {
+  if (markupPct == null || !Number.isFinite(Number(markupPct))) {
+    return { code: 'na', label: 'No data' };
+  }
+  const actual = Number(markupPct);
+  if (actual < 0) return { code: 'negative', label: 'Negative' };
+  if (actual < targetPct * 0.5) return { code: 'weak', label: 'Weak' };
+  if (actual < targetPct) return { code: 'watch', label: 'Watch' };
+  return { code: 'strong', label: 'Healthy' };
+}
+
+function estimateTechnicianHourlyCost(employee, doorRate) {
+  const pay = toNumber(employee && employee.base_salary_pay_rate);
+  if (pay >= 5000) return pay / 176;
+  if (pay > 0) return pay;
+  return Math.max(1, Number(doorRate) || 350) * GM_LABOR_COST_RATIO;
+}
+
+function buildTechnicianCostRoster(employees, doorRate) {
+  const roster = new Map();
+  (employees || []).forEach((employee) => {
+    const name = [employee.first_name, employee.middle_name, employee.last_name]
+      .map((value) => String(value || '').trim())
+      .filter(Boolean)
+      .join(' ');
+    const key = canonicalGmTechnicianName(name);
+    if (!key) return;
+    roster.set(key, estimateTechnicianHourlyCost(employee, doorRate));
+  });
+  return roster;
+}
+
+function workOrderSalesDate(wo) {
+  const raw = wo && (wo.invoice_date || wo.paidAt || wo.updated_at || wo.created_at);
+  const date = new Date(raw || 0);
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
+function buildMarkupHealthLine(key, label, selling, cost, targetPct) {
+  const markupPct = computeIndustryMarkupPct(selling, cost);
+  const health = gradeMarkupHealth(markupPct, targetPct);
+  return {
+    key,
+    label,
+    selling: roundMoney2(selling),
+    cost: roundMoney2(cost),
+    markupPct: markupPct == null ? null : roundOneDecimal(markupPct),
+    marginPct: roundOneDecimal(computeGrossMarginPct(selling, cost)),
+    targetPct,
+    healthCode: health.code,
+    healthLabel: health.label,
+  };
+}
+
+function overallMarkupHealthCode(lines) {
+  if (lines.some((row) => row.healthCode === 'negative')) return 'negative';
+  if (lines.some((row) => row.healthCode === 'weak')) return 'weak';
+  if (lines.some((row) => row.healthCode === 'watch')) return 'watch';
+  if (lines.every((row) => row.healthCode === 'na')) return 'na';
+  return 'strong';
+}
+
+function overallMarkupHealthLabel(code) {
+  if (code === 'strong') return 'Healthy';
+  if (code === 'watch') return 'Watch';
+  if (code === 'weak') return 'Weak';
+  if (code === 'negative') return 'Negative';
+  return 'No data';
+}
+
+function buildGmMarkupHealth(workOrders, transactionSnapshots, partsInventory, employees, pricingSettings, rangeWindow) {
+  const doorRate = Math.max(1, toNumber(pricingSettings && pricingSettings.hourly_rate) || 350);
+  const roster = buildTechnicianCostRoster(employees, doorRate);
+  const defaultHourlyCost = doorRate * GM_LABOR_COST_RATIO;
+  const partsCostIndex = buildPartsCostIndex(partsInventory);
+  const workOrdersByNumber = new Map();
+  const workOrdersById = new Map();
+  (workOrders || []).forEach((wo) => {
+    if (!wo) return;
+    const number = String(wo.work_order_number || '').trim();
+    const id = String(wo.id || '').trim();
+    if (number) workOrdersByNumber.set(number, wo);
+    if (id) workOrdersById.set(id, wo);
+  });
+
+  const soldByWorkOrder = new Map();
+  (partsInventory || []).forEach((row) => {
+    if (!row || isPartsActivityLog(row)) return;
+    if (normalizePartsTransactionType(row.transaction_type || row.type) !== TYPE_SOLD) return;
+    const woNumber = String(row.work_order_number || row.sold_to || '').trim();
+    if (!woNumber) return;
+    const qty = Math.max(0, toNumber(row.qty));
+    const entry = soldByWorkOrder.get(woNumber) || { cost: 0, retail: 0 };
+    entry.cost += qty * toNumber(row.cost_price);
+    entry.retail += qty * toNumber(row.retail_price);
+    soldByWorkOrder.set(woNumber, entry);
+  });
+
+  let laborSales = 0;
+  let partsSales = 0;
+  let partsCost = 0;
+  let laborCost = 0;
+  let billedCount = 0;
+
+  (transactionSnapshots || []).forEach(({ record, date }) => {
+    if (!isDateInGmWindow(date, rangeWindow)) return;
+    const woNumber = getTransactionWorkOrderNumber(record);
+    const woId = getTransactionWorkOrderId(record);
+    const wo = (woId && workOrdersById.get(woId))
+      || (woNumber && workOrdersByNumber.get(woNumber))
+      || null;
+    const economics = wo ? computeInvoiceEconomics(wo, partsCostIndex) : null;
+    const labor = toNumber(record && record['Total Labor'])
+      || (economics && economics.laborCost)
+      || (wo ? getWorkOrderLaborTotal(wo) : 0);
+    const parts = toNumber(record && record['Total Parts'])
+      || (economics && economics.partsSellingPrice)
+      || (wo ? getWorkOrderPartsTotal(wo) : 0);
+    const sold = woNumber ? soldByWorkOrder.get(woNumber) : null;
+    const hours = wo ? getWorkOrderLaborHours(wo) : 0;
+    const techName = (wo && wo.technician) || (record && (record.Tecnician || record.Technician)) || '';
+    const hourlyCost = roster.get(canonicalGmTechnicianName(techName)) || defaultHourlyCost;
+
+    laborSales += labor;
+    partsSales += parts;
+    partsCost += sold && sold.cost > 0
+      ? sold.cost
+      : (economics && economics.partsCostPrice) || 0;
+    laborCost += hours > 0 ? hours * hourlyCost : labor * GM_LABOR_COST_RATIO;
+    billedCount += 1;
+  });
+
+  const labor = buildMarkupHealthLine('labor', 'Labor Markup', laborSales, laborCost, GM_MARKUP_TARGETS.labor);
+  const parts = buildMarkupHealthLine('parts', 'Parts Markup', partsSales, partsCost, GM_MARKUP_TARGETS.parts);
+  const total = buildMarkupHealthLine(
+    'total',
+    'Total Sales Markup',
+    laborSales + partsSales,
+    laborCost + partsCost,
+    GM_MARKUP_TARGETS.total
+  );
+  const overallCode = overallMarkupHealthCode([labor, parts, total]);
+  return {
+    formula: '(Selling − Cost) ÷ Cost × 100',
+    closedCount: billedCount,
+    sourceLabel: billedCount
+      ? billedCount + ' work-order transaction' + (billedCount === 1 ? '' : 's') + ' · parts database cost'
+      : 'No work-order transactions in this range',
+    labor,
+    parts,
+    total,
+    overallCode,
+    overallLabel: overallMarkupHealthLabel(overallCode),
+  };
+}
+
+function buildGmNegativeReports(metrics) {
+  const reports = [];
+  const markup = metrics && metrics.markupHealth ? metrics.markupHealth : {};
+  ['labor', 'parts', 'total'].forEach((key) => {
+    const row = markup[key];
+    if (!row) return;
+    const pct = row.markupPct == null ? 'n/a' : Number(row.markupPct).toFixed(1) + '%';
+    if (row.healthCode === 'negative') {
+      reports.push({
+        severity: 'alert',
+        source: 'markup',
+        title: row.label + ' is negative',
+        detail: 'Selling below cost at ' + pct + ' markup.',
+      });
+    } else if (row.healthCode === 'weak') {
+      reports.push({
+        severity: 'alert',
+        source: 'markup',
+        title: row.label + ' is below industry health',
+        detail: pct + ' vs ' + row.targetPct + '% industry target.',
+      });
+    } else if (row.healthCode === 'watch') {
+      reports.push({
+        severity: 'watch',
+        source: 'markup',
+        title: row.label + ' is off target',
+        detail: pct + ' vs ' + row.targetPct + '% industry target.',
+      });
+    }
+  });
+
+  const alertBranches = [];
+  const watchBranches = [];
+  (metrics && metrics.branchMilestones ? metrics.branchMilestones : []).forEach((row) => {
+    if (!row || row.isPipeline) return;
+    if (row.statusWarningCode === 'alert') alertBranches.push(row.branch || 'Branch');
+    else if (row.statusWarningCode === 'watch') watchBranches.push(row.branch || 'Branch');
+  });
+  if (alertBranches.length) {
+    reports.push({
+      severity: 'alert',
+      source: 'branch',
+      title: alertBranches.length + ' branch' + (alertBranches.length === 1 ? '' : 'es') + ' on Alert',
+      detail: alertBranches.join(', '),
+    });
+  }
+  if (watchBranches.length) {
+    reports.push({
+      severity: 'watch',
+      source: 'branch',
+      title: watchBranches.length + ' branch' + (watchBranches.length === 1 ? '' : 'es') + ' on Watch',
+      detail: watchBranches.join(', '),
+    });
+  }
+
+  const risks = Array.isArray(metrics && metrics.riskAlerts) ? metrics.riskAlerts : [];
+  if (risks.length) {
+    const oldest = risks[0] || {};
+    reports.push({
+      severity: 'alert',
+      source: 'aging',
+      title: risks.length + ' open job' + (risks.length === 1 ? '' : 's') + ' past 24 hours',
+      detail: 'Oldest WO ' + (oldest.work_order_number || '—') + ' · ' + Number(oldest.ageHours || 0) + 'h.',
+    });
+  }
+
+  const pending = Number(metrics && metrics.kpis && metrics.kpis.pendingBillingCount || 0);
+  if (pending >= 5) {
+    reports.push({
+      severity: pending >= 10 ? 'alert' : 'watch',
+      source: 'billing',
+      title: pending + ' jobs pending billing',
+      detail: 'Completed work is waiting to be invoiced.',
+    });
+  }
+
+  reports.sort((a, b) => (a.severity === 'alert' ? 0 : 1) - (b.severity === 'alert' ? 0 : 1));
+  return reports.slice(0, 6);
 }
 
 function buildGmTechnicianPerformance(workOrders, employees, pricingSettings, period) {
@@ -1331,7 +1629,7 @@ function buildPendingSpark(workOrders, rangeStart, rangeEnd) {
   return buckets.map((count) => Math.max(18, Math.round((count / peak) * 100)));
 }
 
-function buildGmMetrics(workOrders, transactionRecords, employees, pricingSettings, reportDate, branchCatalog, duration) {
+function buildGmMetrics(workOrders, transactionRecords, employees, pricingSettings, reportDate, branchCatalog, duration, partsInventory) {
   const now = new Date();
   const period = resolveGmReportPeriod(reportDate);
   const window = resolveGmDurationWindow(period, duration);
@@ -1398,7 +1696,7 @@ function buildGmMetrics(workOrders, transactionRecords, employees, pricingSettin
   );
   const transactionToday = buildGmLiveTransactionBranches(workOrders, transactionRecords, catalog);
 
-  return {
+  const metrics = {
     duration: window.duration,
     branchSalesTargets: salesTargets,
     kpis: {
@@ -1433,6 +1731,16 @@ function buildGmMetrics(workOrders, transactionRecords, employees, pricingSettin
     topTechnicians: buildTransactionTopTechnicians(transactionSnapshots, period.endOfDay),
     riskAlerts: risks.sort((a, b) => b.ageHours - a.ageHours).slice(0, 8),
   };
+  metrics.markupHealth = buildGmMarkupHealth(
+    workOrders,
+    transactionSnapshots,
+    partsInventory,
+    employees,
+    pricingSettings,
+    window
+  );
+  metrics.negativeReports = buildGmNegativeReports(metrics);
+  return metrics;
 }
 
 function gmDashboardTemplateVars(metrics) {
@@ -1483,7 +1791,7 @@ function gmDashboardTemplateVars(metrics) {
 }
 
 async function loadGmDashboardPage(req) {
-  const [customers, vehicles, workOrders, transactionRecords, employees, pricingSettings, branches] = await Promise.all([
+  const [customers, vehicles, workOrders, transactionRecords, employees, pricingSettings, branches, partsInventory] = await Promise.all([
     store.getAll('customers'),
     store.getAll('vehicles'),
     store.getAll('work_orders'),
@@ -1491,6 +1799,7 @@ async function loadGmDashboardPage(req) {
     store.getAll('employees'),
     store.getPricingSettings(),
     store.getAll('branches'),
+    store.getAll('parts_inventory'),
   ]);
   const metrics = buildGmMetrics(
     workOrders,
@@ -1499,7 +1808,8 @@ async function loadGmDashboardPage(req) {
     pricingSettings,
     req.query.date,
     branches,
-    req.query.duration
+    req.query.duration,
+    partsInventory
   );
   return Object.assign({
     customersCount: customers.length,
@@ -1550,6 +1860,8 @@ function serializeGmDashboardPayload(metrics) {
       pendingSpark: Array.isArray(kpis.pendingSpark) ? kpis.pendingSpark : [36, 52, 44, 70, 58, 82, 64],
       avgTicket: Number(kpis.avgTicket || 0),
     },
+    markupHealth: metrics.markupHealth || null,
+    negativeReports: Array.isArray(metrics.negativeReports) ? metrics.negativeReports : [],
     pacing: {
       avgPacing,
       segA: clampPct(avgLabor * 0.45),
@@ -1919,12 +2231,13 @@ app.get('/api/service-receptionist/revenue-bars', requireAnyRole(ROLE_SERVICE_AD
 
 app.get('/api/dashboard/metrics', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
   try {
-    const [workOrders, transactionRecords, employees, pricingSettings, branches] = await Promise.all([
+    const [workOrders, transactionRecords, employees, pricingSettings, branches, partsInventory] = await Promise.all([
       store.getAll('work_orders'),
       store.getAll('transaction_records'),
       store.getAll('employees'),
       store.getPricingSettings(),
       store.getAll('branches'),
+      store.getAll('parts_inventory'),
     ]);
     const metrics = buildGmMetrics(
       workOrders,
@@ -1933,7 +2246,8 @@ app.get('/api/dashboard/metrics', requireRole(ROLE_GENERAL_MANAGER), async (req,
       pricingSettings,
       req.query.date,
       branches,
-      req.query.duration
+      req.query.duration,
+      partsInventory
     );
     return res.json(serializeGmDashboardPayload(metrics));
   } catch (error) {
@@ -1993,7 +2307,7 @@ app.get('/gm/enterprise', requireRole(ROLE_GENERAL_MANAGER), async (req, res) =>
 
 app.get(
   '/gm/fte',
-  requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_STM, ROLE_SERVICE_ADVISOR, ROLE_SERVICE_RECEPTIONIST, ROLE_SENIOR_SERVICE_RECEPTIONIST),
+  requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_STM, ROLE_SERVICE_ADVISOR, ROLE_SERVICE_RECEPTIONIST, ROLE_SENIOR_SERVICE_RECEPTIONIST, ROLE_ASSETS_FACILITIES, ROLE_ADMIN),
   async (req, res) => {
   const branchRows = await store.getAll('branches').catch(() => []);
   const branchNames = Array.isArray(branchRows) && branchRows.length
@@ -2020,6 +2334,9 @@ app.get(
   if (isStmFte) {
     fteHomeHref = '/stm';
     fteHomeLabel = '← STM Dashboard';
+  } else if (viewerRole === ROLE_ASSETS_FACILITIES || viewerRole === ROLE_ADMIN) {
+    fteHomeHref = '/admin';
+    fteHomeLabel = '← Finance Office';
   } else if (isFrontlineRole(viewerRole)) {
     fteHomeHref = frontlineHomePath(viewerRole);
     const tag = frontlineRoleLabel(viewerRole) || 'SA';

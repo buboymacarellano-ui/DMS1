@@ -183,6 +183,7 @@ async function loadWorkspaceLocals(req) {
     transactionTypes: VALID_PARTS_TRANSACTION_TYPES,
     displayPartsTransactionType,
     normalizePartsTransactionType,
+    isSoldTransaction: inventory.isSoldTransaction,
     locationOptions,
     warehouse1: WAREHOUSE_1,
     vitals,
@@ -381,6 +382,12 @@ router.post('/parts/:id/edit', async (req, res) => {
     return res.redirect('/parts-manager?panel=edit&error=' + encodeURIComponent('Record not found.'));
   }
 
+  const existing = data.parts_inventory[idx];
+  const soldLock = inventory.assertSoldRecordMutable(existing);
+  if (!soldLock.ok) {
+    return res.redirect('/parts-manager?panel=edit&error=' + encodeURIComponent(soldLock.error));
+  }
+
   const transaction_type = normalizePartsTransactionType(body.transaction_type);
   const part_number = String(body.part_number || '').trim();
   const part_name = String(body.part_name || '').trim();
@@ -430,6 +437,10 @@ router.post('/parts/:id/delete', async (req, res) => {
   const idx = (data.parts_inventory || []).findIndex((p) => String(p.id) === String(req.params.id));
   if (idx !== -1) {
     const removed = data.parts_inventory[idx];
+    const soldLock = inventory.assertSoldRecordMutable(removed);
+    if (!soldLock.ok) {
+      return res.redirect('/parts-manager?error=' + encodeURIComponent(soldLock.error));
+    }
     inventory.rememberTransaction(data, removed);
     data.parts_inventory.splice(idx, 1);
     inventory.rebuildPartCatalogEntry(data, removed.part_number);
@@ -725,7 +736,11 @@ router.get('/api/workspace', async (req, res) => {
 router.get('/api/parts/:id', async (req, res) => {
   const part = await store.getById('parts_inventory', req.params.id);
   if (!part) return res.status(404).json({ error: 'Record not found.' });
-  return res.json(part);
+  const soldLock = inventory.assertSoldRecordMutable(part);
+  return res.json(Object.assign({}, part, {
+    locked: !soldLock.ok,
+    lockReason: soldLock.error || '',
+  }));
 });
 
 router.get('/api/branch-reports', async (req, res) => {

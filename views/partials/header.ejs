@@ -17,6 +17,8 @@
     parts_clerk: 'PCLK',
     finance_manager: 'FM',
     fm: 'FM',
+    accounting: 'ACCT',
+    assets_facilities: 'A&F',
     admin: 'ADMIN',
     hr: 'HM',
     hr_manager: 'HM',
@@ -32,15 +34,18 @@
     stores_clerk: 'SCLK',
   };
 %>
-<body class="<%= ['service_advisor', 'service_receptionist', 'senior_service_receptionist'].includes(activeRole) ? 'role-frontline' : (activeRole === 'service_technical_manager' ? 'role-stm' : ((activeRole === 'parts_manager' || activeRole === 'pm') ? 'role-pm' : ((activeRole === 'finance_manager' || activeRole === 'fm') ? 'role-fm' : ''))) %>">
+<body class="<%= ['service_advisor', 'service_receptionist', 'senior_service_receptionist'].includes(activeRole) ? 'role-frontline' : (activeRole === 'service_technical_manager' ? 'role-stm' : ((activeRole === 'parts_manager' || activeRole === 'pm') ? 'role-pm' : ((activeRole === 'finance_manager' || activeRole === 'fm' || activeRole === 'accounting') ? 'role-fm' : (activeRole === 'assets_facilities' ? 'role-fm' : '')))) %>">
   <% const pathNow = typeof currentPath !== 'undefined' && currentPath ? String(currentPath) : ''; %>
   <% const queryScope = typeof currentQuery !== 'undefined' && currentQuery ? String(currentQuery.scope || currentQuery.location || '').toLowerCase() : ''; %>
   <% const viewingWarehouse1 = pathNow.indexOf('/parts') === 0 && queryScope.indexOf('warehouse') !== -1; %>
   <% const isPmRole = activeRole === 'parts_manager' || activeRole === 'pm'; %>
-  <% const isFmRole = activeRole === 'finance_manager' || activeRole === 'fm'; %>
+  <% const isFmRole = activeRole === 'finance_manager' || activeRole === 'fm' || activeRole === 'accounting'; %>
+  <% const isAfRole = activeRole === 'assets_facilities'; %>
+  <% const isServicePortalRole = ['service_advisor', 'service_receptionist', 'senior_service_receptionist', 'technician', 'service_technical_manager'].includes(activeRole); %>
+  <% const isFinancePortalRole = activeRole === 'admin' || isFmRole; %>
   <% const roleLabel = roleLabelMap[activeRole] || 'USER'; %>
-  <% const cleanSessionHeader = activeRole === 'general_manager' || activeRole === 'service_technical_manager' || isPmRole || isFmRole; %>
-  <% const cleanHomePath = activeRole === 'general_manager' ? '/gm' : (activeRole === 'service_technical_manager' ? '/stm' : (isFmRole ? '/finance' : '/parts-manager')); %>
+  <% const cleanSessionHeader = activeRole === 'general_manager' || isServicePortalRole || isFinancePortalRole || isPmRole || isAfRole; %>
+  <% const cleanHomePath = activeRole === 'general_manager' ? '/gm' : (activeRole === 'service_technical_manager' ? '/stm' : (activeRole === 'technician' ? '/technician' : (isServicePortalRole ? '/service-receptionist' : (isFinancePortalRole ? (isFmRole ? '/finance' : '/admin') : (isAfRole ? '/gm/fte' : '/parts-manager'))))); %>
   <%
     const roleHomeByRole = {
       general_manager: '/gm',
@@ -57,6 +62,8 @@
       parts_clerk: '/parts-portal',
       finance_manager: '/finance',
       fm: '/finance',
+      accounting: '/finance',
+      assets_facilities: '/gm/fte',
       service_receptionist: '/service-receptionist',
       senior_service_receptionist: '/service-receptionist',
       service_advisor: '/service-receptionist',
@@ -75,7 +82,8 @@
       || normalizedPath === '/stores'
       || normalizedPath === '/hr/portal'
       || ((activeRole === 'parts_manager' || activeRole === 'pm') && normalizedPath === '/parts-manager')
-      || ((activeRole === 'finance_manager' || activeRole === 'fm') && normalizedPath === '/finance');
+      || ((activeRole === 'finance_manager' || activeRole === 'fm' || activeRole === 'accounting') && normalizedPath === '/finance')
+      || (activeRole === 'assets_facilities' && (normalizedPath === '/gm/fte' || normalizedPath.indexOf('/gm/fte') === 0));
   %>
   <header class="site-header<%= cleanSessionHeader ? ' site-header--gm site-header--gm-clean' : '' %>">
     <% if (typeof portalLabel !== 'undefined' && portalLabel) { %>
@@ -93,10 +101,13 @@
         <div class="site-header__logo-wrap">
           <h1 class="site-header__brand-left">
             <a href="<%= cleanHomePath %>" class="brand-heading" aria-label="<%= roleLabel %> Dashboard" title="<%= roleLabel %> Dashboard">
-              <img src="/icons/ae-tech-logo.svg" alt="A&E Auto Service Group Inc." class="brand-logo" />
+              <span class="brand-text">
+                <span class="brand-text__name">A&amp;E Auto Service</span>
+                <span class="brand-text__entity">GROUP INC.</span>
+              </span>
             </a>
           </h1>
-          <% if (!isHomePage) { %>
+          <% if (!isHomePage && !isServicePortalRole && !isFinancePortalRole) { %>
             <%- include('back-button', { backChipMode: 'under-logo' }) %>
           <% } %>
         </div>
@@ -116,7 +127,10 @@
       <div class="site-header__logo-wrap">
         <h1>
           <a href="/" class="brand-heading" aria-label="Return to main page" title="Return to main page">
-            <img src="/icons/ae-tech-logo.svg" alt="A&E Auto Service Group Inc." class="brand-logo" />
+            <span class="brand-text">
+              <span class="brand-text__name">A&amp;E Auto Service</span>
+              <span class="brand-text__entity">GROUP INC.</span>
+            </span>
           </a>
         </h1>
         <% if (!isHomePage) { %>
@@ -131,7 +145,9 @@
           <a href="/service">Service Portal</a>
           <a href="/gm/fte" class="<%= pathNow === '/gm/fte' ? 'nav-link--active' : '' %>">FTE Tracking</a>
         <% } else if (activeRole === 'admin') { %>
-          <a href="/admin">Admin Dashboard</a>
+          <a href="/admin">Finance Office</a>
+          <a href="/gm/fte" class="<%= pathNow === '/gm/fte' ? 'nav-link--active' : '' %>">Assets &amp; Facilities</a>
+          <a href="/finance">Accounting</a>
           <a href="/admin/gates/removed-records">Removed Records</a>
         <% } else if (['hr', 'hr_manager', 'hr_generalist', 'payroll', 'hr_clerk'].includes(activeRole)) { %>
           <a href="/hr/portal">HR Portal</a>

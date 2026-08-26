@@ -1,53 +1,10 @@
 <%- include('../partials/header') %>
 
 <style>
-  #sa-reminder {
-    position: fixed;
-    top: 28px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #1f6ae0;
-    color: #fff;
-    padding: 16px 32px;
-    border-radius: 10px;
-    font-size: 18px;
-    font-weight: 600;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.28);
-    z-index: 9999;
-    opacity: 1;
-    transition: opacity 1s ease;
-    pointer-events: none;
-    white-space: nowrap;
-  }
-  #sa-reminder.fade-out {
-    opacity: 0;
-  }
   .customer-row-priority {
     background: #eef6ff;
   }
 </style>
-
-<div id="sa-reminder" style="display:none"></div>
-
-<script>
-  (function showSAReminder() {
-    const reminders = [
-      'Do You have a pending call?',
-      'Did You check your pending confirmations?',
-      'Check Your pending approvals'
-    ];
-    const key = 'sa_reminder_index';
-    const idx = Number(localStorage.getItem(key) || 0) % reminders.length;
-    localStorage.setItem(key, (idx + 1) % reminders.length);
-
-    const el = document.getElementById('sa-reminder');
-    el.textContent = reminders[idx];
-    el.style.display = 'block';
-
-    setTimeout(() => el.classList.add('fade-out'), 4000);
-    setTimeout(() => el.style.display = 'none', 5000);
-  })();
-</script>
 
 <h2>Work Order Transactions</h2>
 <p>Access branch work order operations and related customer and pricing data here.</p>

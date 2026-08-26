@@ -1,33 +1,5 @@
-<svg width="520" height="88" viewBox="0 0 520 88" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="logoTitle logoDesc">
-  <title id="logoTitle">A&amp;E Auto Service Group Inc. logo</title>
-  <desc id="logoDesc">Industrial style logo in charcoal, silver, white, and warm orange.</desc>
-
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#4A5864"/>
-      <stop offset="1" stop-color="#141B21"/>
-    </linearGradient>
-    <linearGradient id="steel" x1="14" y1="14" x2="74" y2="74" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#B8C0CA"/>
-      <stop offset="1" stop-color="#5E6875"/>
-    </linearGradient>
-  </defs>
-
-  <rect x="2" y="2" width="84" height="84" rx="18" fill="url(#bg)" stroke="#8794A0" stroke-opacity="0.7" stroke-width="2"/>
-  <rect x="10" y="10" width="68" height="68" rx="12" fill="rgba(255,255,255,0.04)" stroke="#AAB4BE" stroke-opacity="0.55" stroke-width="2"/>
-
-  <path d="M20 60L33 26H42L55 60H47L44.5 52H30.5L28 60H20ZM33.7 45.5H41.3L37.5 34.5L33.7 45.5Z" fill="#F1F5FA"/>
-  <path d="M58 30H74V36H64V42H72V47.5H64V54H74V60H58V30Z" fill="url(#steel)"/>
-
-  <circle cx="22" cy="21" r="2.8" fill="#E5A044"/>
-  <circle cx="44" cy="21" r="2.8" fill="#E5A044"/>
-  <circle cx="66" cy="21" r="2.8" fill="#E5A044"/>
-  <path d="M26 21H62" stroke="#E5A044" stroke-width="1.8" stroke-linecap="round"/>
-
-  <g transform="translate(100 0)">
-    <text x="0" y="39" fill="#F5F7F9" font-family="Bahnschrift, Segoe UI, sans-serif" font-size="34" font-weight="900" letter-spacing="0">A&amp;E</text>
-    <text x="86" y="39" fill="#F5F7F9" font-family="Bahnschrift, Segoe UI, sans-serif" font-size="34" font-weight="900" letter-spacing="0">Auto Service</text>
-    <text x="0" y="69" fill="#BDC8D2" font-family="Bahnschrift, Segoe UI, sans-serif" font-size="20" font-weight="700" letter-spacing="0">GROUP INC.</text>
-    <rect x="0" y="76" width="300" height="3" rx="1.5" fill="#E5A044"/>
-  </g>
+<svg width="420" height="64" viewBox="0 0 420 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="logoTitle">
+  <title id="logoTitle">A&amp;E Auto Service Group Inc.</title>
+  <text x="0" y="28" fill="#1f2933" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="26" font-weight="800">A&amp;E Auto Service</text>
+  <text x="0" y="52" fill="#5b6b7c" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="14" font-weight="700" letter-spacing="2.4">GROUP INC.</text>
 </svg>

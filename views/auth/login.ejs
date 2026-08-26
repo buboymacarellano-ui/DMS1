@@ -11,10 +11,13 @@
   <main class="auth-shell">
     <section class="auth-card">
       <div class="auth-brand">
-        <img src="/icons/ae-tech-logo.svg" alt="A&E Auto Service Group Inc." class="auth-brand-logo" />
+        <p class="brand-text brand-text--auth">
+          <span class="brand-text__name">A&amp;E Auto Service</span>
+          <span class="brand-text__entity">GROUP INC.</span>
+        </p>
         <h1>A&amp;E LogIn</h1>
       </div>
-      <p class="auth-subtitle">Choose department and role, then fill employee ID, location, and password. GM asks for the password only.</p>
+      <p class="auth-subtitle">Department, role, employee ID, and password are required. SA, SR, and SSR must also select their branch. GM signs in with password only.</p>
 
       <% const openAuth = typeof loginAuthDisabled !== 'undefined' && loginAuthDisabled; %>
       <% const deptNow = typeof department !== 'undefined' && department ? department : 'service'; %>
@@ -25,11 +28,14 @@
         { key: 'stores', label: 'Stores' },
         { key: 'hr', label: 'HR' },
         { key: 'gm', label: 'GM' },
+        { key: 'fo', label: 'Finance Office' },
       ]; %>
       <% const rolesByDept = (typeof rolesByDepartment !== 'undefined' && rolesByDepartment) ? rolesByDepartment : {}; %>
       <% const locationsByDept = (typeof locationsByDepartment !== 'undefined' && locationsByDepartment) ? locationsByDepartment : {}; %>
+      <% const locationRoles = ['service_advisor', 'service_receptionist', 'senior_service_receptionist']; %>
+      <% const needsLocation = locationRoles.indexOf(String(roleNow || '').toLowerCase()) !== -1; %>
       <% if (openAuth) { %>
-        <p class="success">Login auth is disabled. Choose a department and click Log In — employee ID, location, and password can stay empty.</p>
+        <p class="success">Login auth is disabled, but department, role, employee ID, and password still must be filled. SA / SR / SSR also select a branch.</p>
       <% } %>
 
       <% if (error) { %>
@@ -51,7 +57,7 @@
         </label>
         <label id="login-role-field">
           Role
-          <select name="access_level" id="login-role">
+          <select name="access_level" id="login-role" required>
             <option value="">-- Select role --</option>
             <% const initialRoles = rolesByDept[deptNow] || []; %>
             <% initialRoles.forEach((roleOpt) => { %>
@@ -61,11 +67,11 @@
         </label>
         <label id="login-id-field">
           <span id="login-id-label">Employee ID</span>
-          <input id="login-id-input" type="text" name="username" value="<%= username %>" autocomplete="username" <%= openAuth ? '' : 'required' %> />
+          <input id="login-id-input" type="text" name="username" value="<%= username %>" autocomplete="username" required />
         </label>
-        <label id="login-location-field">
-          Location
-          <select name="branch" id="login-location-input">
+        <label id="login-location-field" <%= needsLocation ? '' : 'hidden' %>>
+          Location / Branch
+          <select name="branch" id="login-location-input" <%= needsLocation ? 'required' : '' %>>
             <option value="">-- Select your assigned location --</option>
             <% const initialLocations = locationsByDept[deptNow] || []; %>
             <% initialLocations.forEach((locationOption) => { %>
@@ -75,7 +81,7 @@
         </label>
         <label>
           Password
-          <input type="password" name="password" autocomplete="current-password" <%= openAuth ? '' : 'required' %> />
+          <input type="password" name="password" autocomplete="current-password" required minlength="6" />
         </label>
         <button type="submit">Log In</button>
       </form>
@@ -127,13 +133,17 @@
         gm: [
           { key: 'general_manager', label: 'GM' },
         ],
+        fo: [
+          { key: 'assets_facilities', label: 'Assets & Facilities' },
+          { key: 'accounting', label: 'Accounting' },
+          { key: 'admin', label: 'Admin' },
+        ],
       };
       const serverRoles = <%- JSON.stringify(rolesByDept || {}) %>;
       const rolesByDepartment = Object.assign({}, serverRoles, fallbackRoles);
       const locationsByDepartment = Object.assign({}, <%- JSON.stringify(locationsByDept || {}) %>);
       const selectedRole = <%- JSON.stringify(roleNow) %>;
       const selectedLocation = <%- JSON.stringify(typeof branch !== 'undefined' ? branch : '') %>;
-      const openAuth = <%= openAuth ? 'true' : 'false' %>;
 
       function rolesFor(department) {
         return (rolesByDepartment[department] || []).slice();
@@ -164,12 +174,12 @@
       }
 
       function fillLocations(department, keepValue) {
-        const items = locationsByDepartment[department] || [];
+        const items = locationsByDepartment.service || locationsByDepartment[department] || [];
         const wanted = String(keepValue || '');
         locationInput.innerHTML = '';
         const blank = document.createElement('option');
         blank.value = '';
-        blank.textContent = '-- Select your assigned location --';
+        blank.textContent = '-- Select your assigned branch --';
         locationInput.appendChild(blank);
         items.forEach((name) => {
           const option = document.createElement('option');
@@ -180,26 +190,41 @@
         locationInput.value = items.indexOf(wanted) !== -1 ? wanted : '';
       }
 
+      function needsBranch(role) {
+        return ['service_advisor', 'service_receptionist', 'senior_service_receptionist'].indexOf(String(role || '').toLowerCase()) !== -1;
+      }
+
+      function syncLocation(keepValue) {
+        const show = needsBranch(roleSelect.value);
+        locationField.hidden = !show;
+        locationInput.required = show;
+        if (!show) {
+          locationInput.value = '';
+          return;
+        }
+        fillLocations('service', keepValue);
+      }
+
       function sync(fromDepartmentChange) {
         const department = String(departmentSelect.value || 'service').toLowerCase();
         const isGm = department === 'gm';
         form.setAttribute('data-department', department);
         roleField.hidden = isGm;
         idField.hidden = isGm;
-        locationField.hidden = isGm;
         roleSelect.required = !isGm;
-        idInput.required = !isGm && !openAuth;
-        locationInput.required = !isGm && !openAuth;
+        idInput.required = !isGm;
         if (isGm) {
           fillRoles('gm', 'general_manager');
           idInput.value = '';
+          locationField.hidden = true;
+          locationInput.required = false;
           locationInput.value = '';
           return;
         }
         const keepRole = fromDepartmentChange ? '' : (roleSelect.value || selectedRole);
         const keepLocation = fromDepartmentChange ? '' : (locationInput.value || selectedLocation);
         fillRoles(department, keepRole);
-        fillLocations(department, keepLocation);
+        syncLocation(keepLocation);
         idLabel.textContent = 'Employee ID';
         idInput.placeholder = 'Enter employee ID from Employee DB';
       }
@@ -209,6 +234,9 @@
       });
       departmentSelect.addEventListener('input', function onDepartmentInput() {
         sync(true);
+      });
+      roleSelect.addEventListener('change', function onRoleChange() {
+        syncLocation(locationInput.value || selectedLocation);
       });
       sync(false);
     })();

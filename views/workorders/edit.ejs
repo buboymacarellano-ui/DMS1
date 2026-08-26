@@ -1,7 +1,5 @@
 <%- include('../partials/header') %>
 
-<h2>Edit Work Order - <%= wo.work_order_number || wo.id %></h2>
-
 <%
   const currentCustomer = customers.find(c => c.id === wo.customer_id) || {};
   const currentVehicle = vehicles.find(v => v.id === wo.vehicle_id) || {};
@@ -18,7 +16,36 @@
   const catalogEntry = catalogModels.find((entry) => catalogKey(entry.model) === lookupModel) || null;
   const selectedVehicleType = (catalogEntry && (catalogEntry.vehicleTypeUi || catalogEntry.vehicleType)) || currentVehicle.vehicle_type || 'small';
   const selectedBranch = String(wo.branch || '').trim();
+  const acquiredItems = Array.isArray(wo.service_items) ? wo.service_items.filter((item) => item && (
+    String(item.description || '').trim()
+    || String(item.reason || '').trim()
+    || Number(item.labor_price) > 0
+    || Number(item.labor_hours) > 0
+    || String(item.parts || '').trim()
+    || String(item.part_number || '').trim()
+  )) : [];
+  function woMoney(value) {
+    return 'P ' + Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function woHours(value) {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n.toFixed(2) : '—';
+  }
+  const acquiredLabor = acquiredItems.reduce((sum, item) => (
+    sum + (Number(item.labor_price) || 0) * Math.max(1, Number(item.service_qty) || 1)
+  ), 0);
+  const acquiredParts = acquiredItems.reduce((sum, item) => {
+    const qty = Number(item.parts_qty);
+    const price = Number(item.parts_price) || 0;
+    return sum + ((Number.isFinite(qty) && qty > 0) ? qty * price : price);
+  }, 0);
+  const acquiredHours = acquiredItems.reduce((sum, item) => (
+    sum + (Number(item.labor_hours) || 0) * Math.max(1, Number(item.service_qty) || 1)
+  ), 0);
 %>
+
+<div class="wo-edit-page">
+<h2>Edit Work Order - <%= wo.work_order_number || wo.id %></h2>
 
 <% if (typeof printError !== 'undefined' && printError) { %>
   <p class="error"><%= printError %></p>
@@ -38,7 +65,8 @@
   <p class="error">This Work Order is closed. It is final and can no longer be edited.</p>
 <% } %>
 
-<form method="post" action="/work-orders/<%= wo.id %>/edit" class="form">
+<div class="wo-edit-spread">
+<form method="post" action="/work-orders/<%= wo.id %>/edit" class="form wo-edit-form">
   <label>Branch
     <select name="branch" id="branch-select">
       <option value="">--select branch--</option>
@@ -132,6 +160,73 @@
   <a href="/work-orders">Cancel</a>
 </form>
 
+<aside class="wo-edit-services" aria-label="Services and labor acquired">
+  <div class="wo-edit-services__head">
+    <h3>Services &amp; Labor Acquired</h3>
+    <a class="wo-edit-services__link" href="/work-orders/<%= wo.id %>/service">Open service lines</a>
+  </div>
+  <p class="wo-edit-services__meta">Work order <%= wo.work_order_number || wo.id %> · <%= acquiredItems.length %> line<%= acquiredItems.length === 1 ? '' : 's' %></p>
+  <% if (!acquiredItems.length) { %>
+    <p class="dashboard-note">No services or labor recorded on this transaction yet.</p>
+  <% } else { %>
+    <div class="wo-edit-services__scroll">
+      <table class="wo-edit-services__table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Service</th>
+            <th>Hours</th>
+            <th>Labor</th>
+            <th>Parts</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% acquiredItems.forEach((item, idx) => { %>
+            <%
+              const laborQty = Math.max(1, Number(item.service_qty) || 1);
+              const laborAmt = (Number(item.labor_price) || 0) * laborQty;
+              const partsQty = Number(item.parts_qty);
+              const partsAmt = (Number.isFinite(partsQty) && partsQty > 0)
+                ? partsQty * (Number(item.parts_price) || 0)
+                : (Number(item.parts_price) || 0);
+              const lineTotal = Number(item.total_price) || (laborAmt + partsAmt);
+              const serviceName = String(item.description || item.reason || 'Service').trim();
+              const partLabel = String(item.parts || item.part_number || '').trim();
+            %>
+            <tr>
+              <td><%= idx + 1 %></td>
+              <td>
+                <strong><%= serviceName %></strong>
+                <% if (item.reason && String(item.reason).trim() !== serviceName) { %>
+                  <small><%= item.reason %></small>
+                <% } %>
+                <% if (partLabel) { %>
+                  <small><%= partLabel %><%= Number.isFinite(partsQty) && partsQty > 0 ? ' × ' + partsQty : '' %></small>
+                <% } %>
+              </td>
+              <td><%= woHours(item.labor_hours) %></td>
+              <td><%= woMoney(laborAmt) %></td>
+              <td><%= woMoney(partsAmt) %></td>
+              <td><%= woMoney(lineTotal) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+        <tfoot>
+          <tr>
+            <th colspan="2">Totals</th>
+            <th><%= acquiredHours > 0 ? acquiredHours.toFixed(2) : '—' %></th>
+            <th><%= woMoney(acquiredLabor) %></th>
+            <th><%= woMoney(acquiredParts) %></th>
+            <th><%= woMoney(acquiredLabor + acquiredParts) %></th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  <% } %>
+</aside>
+</div>
+
 <section class="dashboard-card gm-panel" style="margin-top:16px;">
   <div class="dashboard-card__header gm-panel-header">Technician Communication</div>
   <form method="post" action="/work-orders/<%= wo.id %>/technician-update" class="form" style="margin-bottom:10px;">
@@ -169,6 +264,7 @@
     <% } %>
   </div>
 </section>
+</div>
 
 <script src="/js/vehicle-type-catalog.js"></script>
 <script src="/js/work-order-status.js"></script>

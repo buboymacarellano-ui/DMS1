@@ -1,7 +1,7 @@
 <%- include('../partials/header') %>
 
 <section class="dashboard-shell admin-shell">
-  <div class="dashboard-title admin-title role-dashboard-title"><span>Admin</span> <span class="role-dashboard-title__suffix">Dashboard</span></div>
+  <div class="dashboard-title admin-title role-dashboard-title"><span>Finance Office</span> <span class="role-dashboard-title__suffix">Dashboard</span></div>
 
   <% if (error) { %>
     <p class="error"><%= error %></p>
@@ -14,6 +14,14 @@
   <% } %>
 
   <div class="admin-summary-grid">
+    <article class="gm-kpi-card admin-summary-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <p class="gm-kpi-label" style="margin:0;">Assets &amp; Facilities</p>
+      <a class="btn" href="/gm/fte" style="white-space:nowrap;">Open</a>
+    </article>
+    <article class="gm-kpi-card admin-summary-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <p class="gm-kpi-label" style="margin:0;">Accounting</p>
+      <a class="btn" href="/finance" style="white-space:nowrap;">Open</a>
+    </article>
     <% (adminGates || []).forEach((gate) => { %>
       <article class="gm-kpi-card admin-summary-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
         <p class="gm-kpi-label" style="margin:0;"><%= gate.label %></p>

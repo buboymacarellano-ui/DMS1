@@ -406,7 +406,7 @@
             <tr><td colspan="17" style="text-align:center;padding:20px;">No records found.</td></tr>
           <% } %>
           <% parts.forEach((p, i) => { %>
-            <tr class="pm-db-row" data-id="<%= p.id %>" data-part="<%= p.part_number || '' %>">
+            <tr class="pm-db-row" data-id="<%= p.id %>" data-part="<%= p.part_number || '' %>" data-sold="<%= typeof isSoldTransaction === 'function' && isSoldTransaction(p) ? '1' : '0' %>">
               <td><%= i + 1 %></td>
               <td style="white-space:nowrap;"><%= p.transaction_date || '' %></td>
               <td style="white-space:nowrap;">
@@ -431,10 +431,14 @@
               <td style="white-space:nowrap;"><%= p.sold_to || '' %></td>
               <td style="white-space:nowrap;">
                 <a class="btn" href="/parts/history/<%= encodeURIComponent(p.part_number || '') %>" style="font-size:11px;padding:4px 8px;">History</a>
-                <button type="button" class="btn" data-pm-edit="<%= p.id %>" style="font-size:11px;padding:4px 8px;">EditParts</button>
-                <form method="post" action="/parts-manager/parts/<%= p.id %>/delete" style="display:inline;" onsubmit="return confirm('Delete this entry?')">
-                  <button type="submit" class="btn" style="font-size:11px;padding:4px 8px;background:#c0392b;">Del</button>
-                </form>
+                <% if (typeof isSoldTransaction === 'function' && isSoldTransaction(p)) { %>
+                  <span class="dashboard-note" style="display:inline;margin:0;font-size:11px;">Sold — locked</span>
+                <% } else { %>
+                  <button type="button" class="btn" data-pm-edit="<%= p.id %>" style="font-size:11px;padding:4px 8px;">EditParts</button>
+                  <form method="post" action="/parts-manager/parts/<%= p.id %>/delete" style="display:inline;" onsubmit="return confirm('Delete this entry?')">
+                    <button type="submit" class="btn" style="font-size:11px;padding:4px 8px;background:#c0392b;">Del</button>
+                  </form>
+                <% } %>
               </td>
             </tr>
           <% }) %>

@@ -194,15 +194,19 @@
             <td style="text-align:right;"><%= p.markup != null ? p.markup : '' %></td>
             <td style="text-align:right;"><%= p.retail_price != null ? Number(p.retail_price).toFixed(2) : '' %></td>
             <td style="white-space:nowrap;"><%= p.sold_to || '' %></td>
-            <td style="white-space:nowrap;">
-              <a class="btn" href="/parts/history/<%= encodeURIComponent(p.part_number || '') %><%= view.scope === 'warehouse1' ? '?scope=warehouse1' : '' %>" style="font-size:11px;padding:4px 8px;">History</a>
-              <% if (!view.readOnly) { %>
-              <a class="btn" href="/parts/<%= p.id %>/edit" style="font-size:11px;padding:4px 8px;">EditParts</a>
-              <form method="post" action="/parts/<%= p.id %>/delete" style="display:inline;" onsubmit="return confirm('Delete this entry?')">
-                <button type="submit" class="btn" style="font-size:11px;padding:4px 8px;background:#c0392b;">Del</button>
-              </form>
-              <% } %>
-            </td>
+              <td style="white-space:nowrap;">
+                <a class="btn" href="/parts/history/<%= encodeURIComponent(p.part_number || '') %><%= view.scope === 'warehouse1' ? '?scope=warehouse1' : '' %>" style="font-size:11px;padding:4px 8px;">History</a>
+                <% if (!view.readOnly) { %>
+                  <% if (typeof isSoldTransaction === 'function' && isSoldTransaction(p)) { %>
+                    <span class="dashboard-note" style="display:inline;margin:0;font-size:11px;">Sold — locked</span>
+                  <% } else { %>
+                    <a class="btn" href="/parts/<%= p.id %>/edit" style="font-size:11px;padding:4px 8px;">EditParts</a>
+                    <form method="post" action="/parts/<%= p.id %>/delete" style="display:inline;" onsubmit="return confirm('Delete this entry?')">
+                      <button type="submit" class="btn" style="font-size:11px;padding:4px 8px;background:#c0392b;">Del</button>
+                    </form>
+                  <% } %>
+                <% } %>
+              </td>
           </tr>
         <% }) %>
       </tbody>

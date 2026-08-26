@@ -1,0 +1,22 @@
+<div id="sa-reminder" style="display:none" role="status" aria-live="polite"></div>
+<script>
+  (function showSAReminder() {
+    var reminders = [
+      'Do You have a pending call?',
+      'Did You check your pending confirmations?',
+      'Check Your pending approvals',
+      'Check your technicians activity'
+    ];
+    var key = 'sa_reminder_index';
+    var idx = Number(localStorage.getItem(key) || 0) % reminders.length;
+    localStorage.setItem(key, String((idx + 1) % reminders.length));
+
+    var el = document.getElementById('sa-reminder');
+    if (!el) return;
+    el.textContent = reminders[idx];
+    el.style.display = 'block';
+
+    setTimeout(function () { el.classList.add('fade-out'); }, 4000);
+    setTimeout(function () { el.style.display = 'none'; }, 5000);
+  })();
+</script>

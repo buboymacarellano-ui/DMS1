@@ -104,6 +104,10 @@
     });
     if (!res.ok) return;
     const part = await res.json();
+    if (part && part.locked) {
+      window.alert(part.lockReason || 'A part that has been sold cannot be edited or erased.');
+      return;
+    }
     fillEdit(part);
     root.querySelectorAll('.pm-db-row').forEach((row) => {
       row.classList.toggle('pm-db-row--active', row.getAttribute('data-id') === String(id));
@@ -119,6 +123,10 @@
     }
     const row = event.target.closest('.pm-db-row');
     if (row && !event.target.closest('a, button, form')) {
+      if (row.getAttribute('data-sold') === '1') {
+        window.alert('A part that has been sold cannot be edited or erased.');
+        return;
+      }
       loadPart(row.getAttribute('data-id'));
     }
   });

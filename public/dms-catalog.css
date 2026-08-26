@@ -1,28 +1,28 @@
 /* DEMO DMS DX Catalog — classic multi-column parts lookup shell */
 
 .dms-catalog {
-  --dms-panel: #1a4a78;
-  --dms-panel-deep: #14365c;
-  --dms-stripe: #122844;
-  --dms-header: #0c1c34;
-  --dms-active: #2a6aa8;
-  --dms-go: #b8e64c;
-  --dms-go-hover: #9ad12f;
-  --dms-ink: #f3f7fc;
-  --dms-muted: #c9d9ec;
-  --dms-border: #2b5580;
-  --dms-box: #163252;
-  --dms-box-border: #3d6fa3;
+  --dms-panel: #ffffff;
+  --dms-panel-deep: #f4f6f8;
+  --dms-stripe: #eef2f6;
+  --dms-header: #ffffff;
+  --dms-active: #5b9bd5;
+  --dms-go: #70ad47;
+  --dms-go-hover: #548235;
+  --dms-ink: #1f2933;
+  --dms-muted: #5b6b7c;
+  --dms-border: #c5d0dc;
+  --dms-box: #ffffff;
+  --dms-box-border: #c5d0dc;
 
   display: flex;
   flex-direction: column;
   min-height: 100%;
   color: var(--dms-ink);
   font-family: Tahoma, "Segoe UI", sans-serif;
-  background: #122844;
-  border-radius: 8px;
+  background: #f4f6f8;
+  border-radius: 0;
   overflow: hidden;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+  box-shadow: none;
 }
 
 .dms-catalog__topbar {
@@ -422,4 +422,45 @@
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+.dms-catalog,
+.dms-catalog * {
+  border-radius: 0 !important;
+}
+.dms-catalog__topbar {
+  background: #ffffff !important;
+  color: #1f2933 !important;
+  border-bottom: 1px solid #c5d0dc !important;
+}
+.dms-catalog__title,
+.dms-catalog__title-accent {
+  color: #1f2933 !important;
+}
+.dms-catalog__mark {
+  background: #eef2f6 !important;
+  color: #2f6db3 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.dms-catalog__back {
+  background: #f3f3f3 !important;
+  color: #1f2933 !important;
+  border: 1px solid #adadad !important;
+}
+.dms-catalog__vehicle-stripe {
+  color: #1f2933 !important;
+  border-bottom: 1px solid #c5d0dc !important;
+}
+.dms-catalog__brand-btn {
+  background: #ffffff !important;
+  color: #1f2933 !important;
+  border: 1px solid #c5d0dc !important;
+  box-shadow: none !important;
+}
+.dms-catalog__brand-btn:hover,
+.dms-catalog__brand-btn.is-active {
+  background: #d6e6f5 !important;
+  color: #1f2933 !important;
+  border-color: #5b9bd5 !important;
 }

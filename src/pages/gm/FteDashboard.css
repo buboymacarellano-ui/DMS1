@@ -760,7 +760,55 @@
 .fte-modal__grid select,
 .fte-modal__grid textarea,
 .fte-branch-select select {
-  background: #122844 !important;
-  color: #f3f7fc !important;
-  border-color: #3d6fa3 !important;
+  background: #ffffff !important;
+  color: #1f2933 !important;
+  border-color: #c5d0dc !important;
+  border-radius: 0 !important;
+}
+
+.fte-shell {
+  background: #f4f6f8 !important;
+  border: 1px solid #c5d0dc !important;
+  box-shadow: none !important;
+  color: #1f2933 !important;
+  border-radius: 0 !important;
+}
+.fte-shell .dashboard-title { color: #1f2933 !important; }
+.fte-shell .role-dashboard-title__suffix { color: #5b6b7c !important; }
+.fte-log-btn,
+.fte-export-btn {
+  background: #f3f3f3 !important;
+  border: 1px solid #adadad !important;
+  color: #1f2933 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.fte-panel,
+.fte-modal,
+.fte-feed-item,
+.fte-branch-tab,
+.fte-branch-locked-badge,
+.fte-status-banner {
+  background: #ffffff !important;
+  border-color: #c5d0dc !important;
+  color: #1f2933 !important;
+  border-radius: 0 !important;
+}
+.fte-shell,
+.fte-shell button,
+.fte-shell .btn,
+.fte-shell input,
+.fte-shell select,
+.fte-shell textarea {
+  border-radius: 0 !important;
+}
+.fte-ledger-table th,
+.fte-table th {
+  background: #5b9bd5 !important;
+  color: #ffffff !important;
+}
+.fte-ledger-table td,
+.fte-table td {
+  background: #ffffff !important;
+  color: #1f2933 !important;
 }

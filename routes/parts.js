@@ -521,6 +521,7 @@ router.get('/', async (req, res) => {
     transactionTypes: TRANSACTION_TYPES,
     displayPartsTransactionType,
     normalizePartsTransactionType,
+    isSoldTransaction: inventory.isSoldTransaction,
     reportLookups: collectReportLookups(scopedData),
     error: req.query.error || '',
     success: req.query.success || '',
@@ -918,6 +919,7 @@ router.get('/create', async (req, res) => {
     branchOptions: createdPartsBranchOptions(data, actorBranch),
     actorBranch,
     warehouseLocation: WAREHOUSE_1,
+    isSoldTransaction: inventory.isSoldTransaction,
     prefill: {
       transaction_date: new Date().toISOString().slice(0, 10),
       created_branch: actorBranch,
@@ -951,6 +953,7 @@ router.post('/create', async (req, res) => {
       branchOptions: createdPartsBranchOptions(data, createdBranch || actorBranch),
       actorBranch,
       warehouseLocation: WAREHOUSE_1,
+      isSoldTransaction: inventory.isSoldTransaction,
       prefill: Object.assign({}, body, { created_branch: createdBranch || actorBranch }),
       error: 'Part Name is required.',
       success: '',
@@ -992,6 +995,8 @@ router.get('/create/:id/edit', async (req, res) => {
   const data = await store.getRawData();
   const part = listCreatedParts(data).find((row) => String(row.id) === String(req.params.id));
   if (!part) return res.redirect('/parts/create?error=Created+part+not+found.');
+  const soldLock = inventory.assertSoldRecordMutable(part);
+  if (!soldLock.ok) return res.redirect('/parts/create?error=' + encodeURIComponent(soldLock.error));
   const user = (req.session && req.session.user) || {};
   const actorBranch = resolveActorBranch(user, data.employees);
   return res.render('parts/create-edit', {
@@ -1012,6 +1017,11 @@ router.post('/create/:id/edit', async (req, res) => {
   }
 
   const existing = data.parts_inventory[idx];
+  const soldLock = inventory.assertSoldRecordMutable(existing);
+  if (!soldLock.ok) {
+    return res.redirect('/parts/create?error=' + encodeURIComponent(soldLock.error));
+  }
+
   const partName = String(body.part_name || '').trim();
   const user = (req.session && req.session.user) || {};
   const actorBranch = resolveActorBranch(user, data.employees);
@@ -1069,6 +1079,8 @@ router.get('/:id/edit', async (req, res) => {
   persistCatalogIfNeeded(data);
   const part = (data.parts_inventory || []).find(p => p.id === req.params.id);
   if (!part) return res.redirect('/parts?error=Record+not+found.');
+  const soldLock = inventory.assertSoldRecordMutable(part);
+  if (!soldLock.ok) return res.redirect('/parts?error=' + encodeURIComponent(soldLock.error));
   const mutate = assertFrontlineCanMutate(req, data, part);
   if (!mutate.ok) return res.redirect('/parts?error=' + encodeURIComponent(mutate.error));
 
@@ -1102,6 +1114,8 @@ router.post('/:id/edit', async (req, res) => {
   const data = await store.getRawData();
   const idx = data.parts_inventory.findIndex(p => p.id === req.params.id);
   if (idx === -1) return res.redirect('/parts?error=Record+not+found.');
+  const soldLock = inventory.assertSoldRecordMutable(data.parts_inventory[idx]);
+  if (!soldLock.ok) return res.redirect('/parts?error=' + encodeURIComponent(soldLock.error));
   const mutate = assertFrontlineCanMutate(req, data, data.parts_inventory[idx]);
   if (!mutate.ok) return res.redirect('/parts?error=' + encodeURIComponent(mutate.error));
 
@@ -1229,6 +1243,8 @@ router.post('/:id/delete', async (req, res) => {
   const idx = data.parts_inventory.findIndex(p => p.id === req.params.id);
   if (idx !== -1) {
     const removed = data.parts_inventory[idx];
+    const soldLock = inventory.assertSoldRecordMutable(removed);
+    if (!soldLock.ok) return res.redirect('/parts?error=' + encodeURIComponent(soldLock.error));
     const mutate = assertFrontlineCanMutate(req, data, removed);
     if (!mutate.ok) return res.redirect('/parts?error=' + encodeURIComponent(mutate.error));
     inventory.rememberTransaction(data, removed);

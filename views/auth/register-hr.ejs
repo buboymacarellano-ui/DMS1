@@ -28,9 +28,9 @@
         </button>
         <p class="auth-hint">
           <% if (openAuth) { %>
-            Login auth is OFF. Branch, user ID, and password are not checked. Anyone can log in with an empty form.
+            Login auth is OFF. Every login field must still be filled; password is not checked.
           <% } else { %>
-            While building, turn this on so login has no branch / user ID / password restrictions. Empty login is accepted.
+            Login auth is ON. Department, role, employee ID, location, and password are all required.
           <% } %>
         </p>
       </form>
