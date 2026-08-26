@@ -52,6 +52,7 @@
         <label id="login-role-field">
           Role
           <select name="access_level" id="login-role">
+            <option value="">-- Select role --</option>
             <% const initialRoles = rolesByDept[deptNow] || []; %>
             <% initialRoles.forEach((roleOpt) => { %>
               <option value="<%= roleOpt.key %>" <%= roleNow === roleOpt.key ? 'selected' : '' %>><%= roleOpt.label %></option>
@@ -89,6 +90,7 @@
   </main>
   <script>
     (function bindPortalLoginPanel() {
+      const form = document.getElementById('portal-login-form');
       const departmentSelect = document.getElementById('login-department');
       const roleField = document.getElementById('login-role-field');
       const roleSelect = document.getElementById('login-role');
@@ -97,28 +99,73 @@
       const idInput = document.getElementById('login-id-input');
       const locationField = document.getElementById('login-location-field');
       const locationInput = document.getElementById('login-location-input');
-      if (!departmentSelect || !roleSelect || !idField || !idInput || !locationField || !locationInput) return;
+      if (!form || !departmentSelect || !roleSelect || !idField || !idInput || !locationField || !locationInput) return;
 
-      const rolesByDepartment = <%- JSON.stringify(rolesByDept) %>;
-      const locationsByDepartment = <%- JSON.stringify(locationsByDept) %>;
-      const selectedRole = <%= JSON.stringify(roleNow) %>;
-      const selectedLocation = <%= JSON.stringify(typeof branch !== 'undefined' ? branch : '') %>;
+      const fallbackRoles = {
+        service: [
+          { key: 'service_technical_manager', label: 'STM' },
+          { key: 'service_advisor', label: 'SA' },
+          { key: 'service_receptionist', label: 'SR' },
+          { key: 'senior_service_receptionist', label: 'SSR' },
+        ],
+        parts: [
+          { key: 'parts_manager', label: 'PM' },
+          { key: 'parts_clerk', label: 'Clerk' },
+        ],
+        stores: [
+          { key: 'operations_manager', label: 'OM - Operation Manager' },
+          { key: 'store_manager', label: 'SM - Store Manager' },
+          { key: 'cashier', label: 'Cashier' },
+          { key: 'stores_clerk', label: 'Clerk' },
+        ],
+        hr: [
+          { key: 'hr_manager', label: 'HM - HR Manager' },
+          { key: 'hr_generalist', label: 'Generalist' },
+          { key: 'payroll', label: 'Payroll' },
+          { key: 'hr_clerk', label: 'Clerk' },
+        ],
+        gm: [
+          { key: 'general_manager', label: 'GM' },
+        ],
+      };
+      const serverRoles = <%- JSON.stringify(rolesByDept || {}) %>;
+      const rolesByDepartment = Object.assign({}, serverRoles, fallbackRoles);
+      const locationsByDepartment = Object.assign({}, <%- JSON.stringify(locationsByDept || {}) %>);
+      const selectedRole = <%- JSON.stringify(roleNow) %>;
+      const selectedLocation = <%- JSON.stringify(typeof branch !== 'undefined' ? branch : '') %>;
       const openAuth = <%= openAuth ? 'true' : 'false' %>;
 
-      function fillSelect(select, items, current) {
-        const wanted = String(current || '');
-        select.innerHTML = '';
-        (items || []).forEach((item) => {
-          const option = document.createElement('option');
-          option.value = item.key || item;
-          option.textContent = item.label || item;
-          if (option.value === wanted) option.selected = true;
-          select.appendChild(option);
-        });
+      function rolesFor(department) {
+        return (rolesByDepartment[department] || []).slice();
       }
 
-      function fillLocations(department, current) {
+      function fillRoles(department, keepValue) {
+        const roles = rolesFor(department);
+        const wanted = String(keepValue || '');
+        roleSelect.innerHTML = '';
+        const blank = document.createElement('option');
+        blank.value = '';
+        blank.textContent = '-- Select role --';
+        roleSelect.appendChild(blank);
+        roles.forEach((item) => {
+          const option = document.createElement('option');
+          option.value = item.key;
+          option.textContent = item.label;
+          roleSelect.appendChild(option);
+        });
+        const keys = roles.map((item) => item.key);
+        if (wanted && keys.indexOf(wanted) !== -1) {
+          roleSelect.value = wanted;
+        } else if (roles[0]) {
+          roleSelect.value = roles[0].key;
+        } else {
+          roleSelect.value = '';
+        }
+      }
+
+      function fillLocations(department, keepValue) {
         const items = locationsByDepartment[department] || [];
+        const wanted = String(keepValue || '');
         locationInput.innerHTML = '';
         const blank = document.createElement('option');
         blank.value = '';
@@ -128,14 +175,15 @@
           const option = document.createElement('option');
           option.value = name;
           option.textContent = name;
-          if (name === current) option.selected = true;
           locationInput.appendChild(option);
         });
+        locationInput.value = items.indexOf(wanted) !== -1 ? wanted : '';
       }
 
-      function sync() {
+      function sync(fromDepartmentChange) {
         const department = String(departmentSelect.value || 'service').toLowerCase();
         const isGm = department === 'gm';
+        form.setAttribute('data-department', department);
         roleField.hidden = isGm;
         idField.hidden = isGm;
         locationField.hidden = isGm;
@@ -143,30 +191,26 @@
         idInput.required = !isGm && !openAuth;
         locationInput.required = !isGm && !openAuth;
         if (isGm) {
-          roleSelect.innerHTML = '';
-          const option = document.createElement('option');
-          option.value = 'general_manager';
-          option.textContent = 'GM - General Manager';
-          option.selected = true;
-          roleSelect.appendChild(option);
+          fillRoles('gm', 'general_manager');
           idInput.value = '';
           locationInput.value = '';
           return;
         }
-        fillSelect(roleSelect, rolesByDepartment[department] || [], roleSelect.value || selectedRole);
-        fillLocations(department, locationInput.value || selectedLocation);
+        const keepRole = fromDepartmentChange ? '' : (roleSelect.value || selectedRole);
+        const keepLocation = fromDepartmentChange ? '' : (locationInput.value || selectedLocation);
+        fillRoles(department, keepRole);
+        fillLocations(department, keepLocation);
         idLabel.textContent = 'Employee ID';
         idInput.placeholder = 'Enter employee ID from Employee DB';
       }
 
       departmentSelect.addEventListener('change', function onDepartmentChange() {
-        roleSelect.value = '';
-        locationInput.value = '';
-        sync();
+        sync(true);
       });
-      departmentSelect.addEventListener('input', sync);
-      roleSelect.addEventListener('change', sync);
-      sync();
+      departmentSelect.addEventListener('input', function onDepartmentInput() {
+        sync(true);
+      });
+      sync(false);
     })();
   </script>
 </body>
