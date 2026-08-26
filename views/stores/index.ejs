@@ -1,0 +1,99 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell sa-shell">
+  <div class="dashboard-title admin-title sa-title role-dashboard-title"><span>Stores</span> <span class="role-dashboard-title__suffix">Portal</span></div>
+  <p class="dashboard-note">Fourteen grocery stores, POS sales, retail shelving, and cashier control. Counts are live from the stores databases.</p>
+
+  <div class="admin-summary-grid">
+    <article class="gm-kpi-card admin-summary-card">
+      <p class="gm-kpi-label">Grocery Stores</p>
+      <h2 class="gm-kpi-value"><%= stores.length %></h2>
+    </article>
+    <article class="gm-kpi-card admin-summary-card">
+      <p class="gm-kpi-label">POS Tickets</p>
+      <h2 class="gm-kpi-value"><%= stores.reduce((sum, row) => sum + Number(row.posCount || 0), 0) %></h2>
+    </article>
+    <article class="gm-kpi-card admin-summary-card">
+      <p class="gm-kpi-label">POS Sales</p>
+      <h2 class="gm-kpi-value">₱ <%= Number(stores.reduce((sum, row) => sum + Number(row.posTotal || 0), 0)).toFixed(2) %></h2>
+    </article>
+    <article class="gm-kpi-card admin-summary-card">
+      <p class="gm-kpi-label">Shelf On Hand</p>
+      <h2 class="gm-kpi-value"><%= stores.reduce((sum, row) => sum + Number(row.onHand || 0), 0) %></h2>
+    </article>
+  </div>
+
+  <section class="sa-home-group">
+    <h3 class="sa-home-group__title">Operations</h3>
+    <div class="sa-grid sa-grid--4">
+      <% if (canPos) { %>
+        <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/stores/pos">
+          <div class="workorder-nav-card__icon">&#128179;</div>
+          <div class="workorder-nav-card__body">
+            <h3>POS Sales Data</h3>
+            <p>Tickets by store</p>
+            <span>Sales</span>
+          </div>
+        </a>
+      <% } %>
+      <a class="workorder-nav-card workorder-nav-card--orange sa-home-card" href="/stores/shelving">
+        <div class="workorder-nav-card__icon">&#128230;</div>
+        <div class="workorder-nav-card__body">
+          <h3>Retail Shelving</h3>
+          <p>Facings · on hand</p>
+          <span>Planogram</span>
+        </div>
+      </a>
+      <% if (canCashier || canFill) { %>
+        <a class="workorder-nav-card workorder-nav-card--yellow sa-home-card" href="/stores/cashier">
+          <div class="workorder-nav-card__icon">&#128176;</div>
+          <div class="workorder-nav-card__body">
+            <h3>Cashier Control</h3>
+            <p>Drawer · variance</p>
+            <span>Tills</span>
+          </div>
+        </a>
+      <% } %>
+      <% if (canRequest) { %>
+        <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/parts-portal">
+          <div class="workorder-nav-card__icon">&#128203;</div>
+          <div class="workorder-nav-card__body">
+            <h3>Branch Procurement</h3>
+            <p>Request from warehouse</p>
+            <span>Parts portal</span>
+          </div>
+        </a>
+      <% } %>
+    </div>
+  </section>
+
+  <section class="sa-home-group">
+    <h3 class="sa-home-group__title">14 Grocery Stores</h3>
+    <div class="table-scroll">
+      <table class="list">
+        <thead>
+          <tr>
+            <th>Store</th>
+            <th>POS Tickets</th>
+            <th>POS Sales</th>
+            <th>On Hand</th>
+            <th>Till Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% stores.forEach((row) => { %>
+            <tr>
+              <td><%= row.name %></td>
+              <td><%= row.posCount %></td>
+              <td>₱ <%= Number(row.posTotal || 0).toFixed(2) %></td>
+              <td><%= row.onHand %></td>
+              <td><%= (row.till && row.till.status) || 'closed' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
+
+<%- include('../partials/footer') %>

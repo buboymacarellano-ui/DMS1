@@ -25,6 +25,7 @@ const branchPartsRouter = require('./routes/branch-parts');
 const technicianRouter = require('./routes/technician');
 const adminRouter = require('./routes/admin');
 const hrRouter = require('./routes/hr');
+const storesRouter = require('./routes/stores');
 const authRouter = require('./routes/auth');
 const kpiRouter = require('./routes/kpi');
 const approvalsRouter = require('./routes/approvals');
@@ -64,10 +65,28 @@ const {
   frontlineHomePath,
   frontlineRoleLabel,
 } = require('./lib/frontline-roles');
-const ROLE_STM = 'service_technical_manager';
-const ROLE_PARTS_MANAGER = 'parts_manager';
-const ROLE_TECHNICIAN = 'technician';
-const APPROVER_ROLES = new Set([ROLE_GENERAL_MANAGER, ROLE_ADMIN, ROLE_HR, ROLE_STM]);
+const portals = require('./lib/portals');
+const ROLE_STM = portals.ROLE_STM;
+const ROLE_PARTS_MANAGER = portals.ROLE_PARTS_MANAGER;
+const ROLE_TECHNICIAN = portals.ROLE_TECHNICIAN;
+const ROLE_PARTS_CLERK = portals.ROLE_PARTS_CLERK;
+const ROLE_OPERATIONS_MANAGER = portals.ROLE_OPERATIONS_MANAGER;
+const ROLE_STORE_MANAGER = portals.ROLE_STORE_MANAGER;
+const ROLE_CASHIER = portals.ROLE_CASHIER;
+const ROLE_STORES_CLERK = portals.ROLE_STORES_CLERK;
+const ROLE_HR_MANAGER = portals.ROLE_HR_MANAGER;
+const ROLE_HR_GENERALIST = portals.ROLE_HR_GENERALIST;
+const ROLE_PAYROLL = portals.ROLE_PAYROLL;
+const ROLE_HR_CLERK = portals.ROLE_HR_CLERK;
+const APPROVER_ROLES = new Set([
+  ROLE_GENERAL_MANAGER,
+  ROLE_ADMIN,
+  ROLE_HR,
+  ROLE_HR_MANAGER,
+  ROLE_STM,
+  ROLE_OPERATIONS_MANAGER,
+  ROLE_STORE_MANAGER,
+]);
 const BYPASS_ROLES = new Set([
   ROLE_SERVICE_ADVISOR,
   ROLE_SERVICE_RECEPTIONIST,
@@ -75,10 +94,19 @@ const BYPASS_ROLES = new Set([
   ROLE_GENERAL_MANAGER,
   ROLE_ADMIN,
   ROLE_HR,
+  ROLE_HR_MANAGER,
+  ROLE_HR_GENERALIST,
+  ROLE_PAYROLL,
+  ROLE_HR_CLERK,
   ROLE_STM,
   ROLE_PARTS_MANAGER,
+  ROLE_PARTS_CLERK,
   ROLE_FINANCE_MANAGER,
   ROLE_TECHNICIAN,
+  ROLE_OPERATIONS_MANAGER,
+  ROLE_STORE_MANAGER,
+  ROLE_CASHIER,
+  ROLE_STORES_CLERK,
 ]);
 const HR_SEED_USERNAME = 'HR';
 const HR_SEED_PASSWORD = 'Hr123456';
@@ -177,10 +205,15 @@ app.use(async (req, res, next) => {
   res.locals.currentPath = req.path || '';
   res.locals.currentQuery = req.query || {};
   const activeRole = String(req.session.user && req.session.user.role || '').trim().toLowerCase();
-  res.locals.canApproveRequests = APPROVER_ROLES.has(activeRole);
+  const activePortal = portals.portalForPath(req.path) || portals.departmentForRole(activeRole);
+  res.locals.canApproveRequests = APPROVER_ROLES.has(activeRole) || portals.hasGrant(activeRole, activePortal, portals.GRANT.approval);
   res.locals.isPartsManager = isPartsManagerRole(activeRole);
   res.locals.isFinanceManager = isFinanceManagerRole(activeRole);
   res.locals.isGmSupervisor = activeRole === ROLE_GENERAL_MANAGER;
+  res.locals.currentPortal = activePortal;
+  res.locals.portalLabel = portals.portalLabel(activePortal);
+  res.locals.accessiblePortals = activeRole ? portals.accessiblePortals(activeRole) : [];
+  res.locals.canGrant = (portalKey, grantKey) => portals.hasGrant(activeRole, portalKey, grantKey);
   res.locals.pendingApprovalCount = res.locals.canApproveRequests
     ? (await store.getAll('approval_requests')).filter(request => request.status === 'pending').length
     : 0;
@@ -209,6 +242,45 @@ app.use((req, res, next) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
   return res.redirect('/auth/login');
+});
+
+app.use((req, res, next) => {
+  if (isLoginAuthDisabled()) return next();
+  if (req.path.startsWith('/auth/')) return next();
+  if (req.path === '/healthz') return next();
+  const user = req.session && req.session.user;
+  if (!user) return next();
+  if (req.path === '/helper' || req.path.indexOf('/helper') === 0) return next();
+  if (req.path === '/approvals' || req.path.indexOf('/approvals') === 0) {
+    if (
+      portals.hasGrant(user, portals.PORTAL_SERVICE, portals.GRANT.approval)
+      || portals.hasGrant(user, portals.PORTAL_PARTS, portals.GRANT.approval)
+      || portals.hasGrant(user, portals.PORTAL_STORES, portals.GRANT.approval)
+      || portals.hasGrant(user, portals.PORTAL_HR, portals.GRANT.approval)
+      || portals.hasGrant(user, portals.PORTAL_SERVICE, portals.GRANT.request)
+      || portals.hasGrant(user, portals.PORTAL_PARTS, portals.GRANT.request)
+      || portals.hasGrant(user, portals.PORTAL_STORES, portals.GRANT.request)
+      || portals.hasGrant(user, portals.PORTAL_HR, portals.GRANT.request)
+    ) {
+      return next();
+    }
+    return res.redirect(portals.homePathForRole(user.role));
+  }
+  if (req.path === '/transactions' || req.path.indexOf('/transactions') === 0) {
+    if (
+      portals.canEnterPortal(user, portals.PORTAL_SERVICE, req.method)
+      || portals.canEnterPortal(user, portals.PORTAL_STORES, req.method)
+      || portals.canEnterPortal(user, portals.PORTAL_GM, req.method)
+    ) {
+      return next();
+    }
+    return res.redirect(portals.homePathForRole(user.role));
+  }
+  const portalKey = portals.portalForPath(req.path);
+  if (!portalKey) return next();
+  if (portals.canEnterPortal(user, portalKey, req.method)) return next();
+  if (req.path.startsWith('/api/')) return res.status(403).json({ error: 'Forbidden' });
+  return res.redirect(portals.homePathForRole(user.role));
 });
 
 function normalizeBranchAccess(value) {
@@ -304,6 +376,37 @@ function requireAnyRole(...roles) {
       return res.status(403).json({ error: 'Forbidden' });
     }
     return res.redirect('/');
+  };
+}
+
+function requirePortalAccess(portalKey, grantKey) {
+  return (req, res, next) => {
+    if (isLoginAuthDisabled()) return next();
+    const user = req.session && req.session.user;
+    if (!user) return res.redirect('/auth/login');
+    if (grantKey) {
+      if (portals.hasGrant(user, portalKey, grantKey) || portals.hasGrant(user, portalKey, portals.GRANT.access)) {
+        if (grantKey === portals.GRANT.limited_view || portals.canEnterPortal(user, portalKey, req.method)) {
+          return next();
+        }
+      }
+      if (portals.hasGrant(user, portalKey, grantKey)) return next();
+      if (req.path.startsWith('/api/')) return res.status(403).json({ error: 'Forbidden' });
+      return res.redirect(portals.homePathForRole(user.role));
+    }
+    if (portals.canEnterPortal(user, portalKey, req.method)) return next();
+    if (req.path.startsWith('/api/')) return res.status(403).json({ error: 'Forbidden' });
+    return res.redirect(portals.homePathForRole(user.role));
+  };
+}
+
+function requireGrant(portalKey, grantKey) {
+  return (req, res, next) => {
+    if (isLoginAuthDisabled()) return next();
+    const user = req.session && req.session.user;
+    if (portals.hasGrant(user, portalKey, grantKey)) return next();
+    if (req.path.startsWith('/api/')) return res.status(403).json({ error: 'Forbidden' });
+    return res.redirect(portals.homePathForRole(user && user.role));
   };
 }
 
@@ -1733,35 +1836,33 @@ function buildStmMetrics(workOrders, transactionRecords, partsInventory, pricing
 // Role landing page
 app.get('/', async (req, res) => {
   const activeRole = String(req.session.user && req.session.user.role || '').trim().toLowerCase();
-  if (activeRole === ROLE_GENERAL_MANAGER) {
-    return res.redirect('/gm');
-  }
-  if (activeRole === ROLE_ADMIN) {
-    return res.redirect('/admin');
-  }
-  if (activeRole === ROLE_HR) {
-    return res.redirect('/hr');
-  }
-  if (activeRole === ROLE_STM) {
-    return res.redirect('/stm');
-  }
-  if (activeRole === ROLE_TECHNICIAN) {
-    return res.redirect('/technician');
-  }
-  if (activeRole === ROLE_PARTS_MANAGER || activeRole === 'pm') {
-    return res.redirect('/parts-manager');
-  }
-  if (isFinanceManagerRole(activeRole)) {
-    return res.redirect('/finance');
-  }
-  if (isFrontlineRole(activeRole)) {
-    return res.redirect(frontlineHomePath(activeRole));
-  }
-
-  return res.redirect('/work-order-transactions');
+  return res.redirect(portals.homePathForRole(activeRole));
 });
 
-app.get('/service-receptionist', requireAnyRole(ROLE_SERVICE_ADVISOR, ROLE_SERVICE_RECEPTIONIST, ROLE_SENIOR_SERVICE_RECEPTIONIST), async (req, res) => {
+app.get('/service', requirePortalAccess(portals.PORTAL_SERVICE), async (req, res) => {
+  const [workOrders, customers, employees] = await Promise.all([
+    store.getAll('work_orders'),
+    store.getAll('customers'),
+    store.getAll('employees'),
+  ]);
+  return res.render('service/index', {
+    openWorkOrdersCount: (workOrders || []).filter((wo) => !isWorkOrderClosed(wo)).length,
+    customerCount: (customers || []).length,
+    technicianCount: (employees || []).length,
+  });
+});
+
+app.get('/parts-portal', requirePortalAccess(portals.PORTAL_PARTS), (req, res) => {
+  return res.render('parts-portal/index');
+});
+
+app.get('/service-receptionist', requireAnyRole(
+  ROLE_SERVICE_ADVISOR,
+  ROLE_SERVICE_RECEPTIONIST,
+  ROLE_SENIOR_SERVICE_RECEPTIONIST,
+  ROLE_GENERAL_MANAGER,
+  ROLE_STM
+), async (req, res) => {
   const user = req.session && req.session.user ? req.session.user : {};
   const branchName = resolveFrontlineDashboardBranch(user);
   const branchKey = normalizeBranchKey(branchName);
@@ -2475,8 +2576,26 @@ app.get('/api/stm/live', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_STM), async (
 app.use('/technician', requireRole(ROLE_TECHNICIAN), technicianRouter);
 
 app.use('/admin', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_ADMIN), adminRouter);
-app.use('/hr', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_HR), hrRouter);
-app.use('/employees', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_ADMIN, ROLE_HR), employeesRouter);
+app.use('/hr/payroll', requireGrant(portals.PORTAL_HR, portals.GRANT.view_payroll), (req, res, next) => next());
+app.use('/hr', requireAnyRole(
+  ROLE_GENERAL_MANAGER,
+  ROLE_ADMIN,
+  ROLE_HR,
+  ROLE_HR_MANAGER,
+  ROLE_HR_GENERALIST,
+  ROLE_PAYROLL,
+  ROLE_HR_CLERK
+), hrRouter);
+app.use('/employees', requireAnyRole(
+  ROLE_GENERAL_MANAGER,
+  ROLE_ADMIN,
+  ROLE_HR,
+  ROLE_HR_MANAGER,
+  ROLE_HR_GENERALIST,
+  ROLE_HR_CLERK,
+  ROLE_PAYROLL
+), employeesRouter);
+app.use('/stores', requirePortalAccess(portals.PORTAL_STORES), storesRouter);
 
 app.use('/customers', customersRouter);
 app.use('/vehicles', vehiclesRouter);
@@ -2490,28 +2609,42 @@ app.use('/api/finance', requireFinanceManager, financeRouter.apiRouter);
 app.use('/api/reports', requireAnyRole(
   ROLE_PARTS_MANAGER,
   'pm',
+  ROLE_PARTS_CLERK,
   ROLE_GENERAL_MANAGER,
   ROLE_ADMIN,
   ROLE_STM,
   ROLE_SERVICE_RECEPTIONIST,
   ROLE_SENIOR_SERVICE_RECEPTIONIST,
-  ROLE_SERVICE_ADVISOR
+  ROLE_SERVICE_ADVISOR,
+  ROLE_OPERATIONS_MANAGER,
+  ROLE_STORE_MANAGER
 ), reportsRouter);
 app.use('/parts', requireAnyRole(
   ROLE_PARTS_MANAGER,
   'pm',
+  ROLE_PARTS_CLERK,
   ROLE_GENERAL_MANAGER,
   ROLE_ADMIN,
   ROLE_STM,
   ROLE_SERVICE_RECEPTIONIST,
   ROLE_SENIOR_SERVICE_RECEPTIONIST,
-  ROLE_SERVICE_ADVISOR
+  ROLE_SERVICE_ADVISOR,
+  ROLE_OPERATIONS_MANAGER,
+  ROLE_STORE_MANAGER,
+  ROLE_STORES_CLERK
 ), partsRouter);
 app.use('/helper', helperRouter);
 app.use('/branch-parts', requireAnyRole(
   ROLE_SERVICE_ADVISOR,
   ROLE_SERVICE_RECEPTIONIST,
-  ROLE_SENIOR_SERVICE_RECEPTIONIST
+  ROLE_SENIOR_SERVICE_RECEPTIONIST,
+  ROLE_STM,
+  ROLE_PARTS_MANAGER,
+  ROLE_PARTS_CLERK,
+  ROLE_OPERATIONS_MANAGER,
+  ROLE_STORE_MANAGER,
+  ROLE_STORES_CLERK,
+  ROLE_GENERAL_MANAGER
 ), branchPartsRouter);
 app.use('/approvals', approvalsRouter);
 app.use('/api/kpi', kpiRouter);

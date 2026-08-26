@@ -1,0 +1,38 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell">
+  <div class="dashboard-title admin-title role-dashboard-title"><span>Shift</span> <span class="role-dashboard-title__suffix">Rosters</span></div>
+  <p class="dashboard-note">Roster rows start at zero. Employee names come from Employee DB.</p>
+  <p><a class="dashboard-button" href="/hr/portal">← HR Portal</a></p>
+  <div class="table-scroll">
+    <table class="list">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Location</th>
+          <th>Shift Date</th>
+          <th>Start</th>
+          <th>End</th>
+          <th>Hours</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!(rosters || []).length) { %>
+          <tr><td colspan="6">No roster rows. Values are zero until shifts are posted.</td></tr>
+        <% } %>
+        <% (rosters || []).forEach((row) => { %>
+          <tr>
+            <td><%= row.employee_name || row.employee_id || '-' %></td>
+            <td><%= row.location || row.branch || '-' %></td>
+            <td><%= row.shift_date || '-' %></td>
+            <td><%= row.start_time || '-' %></td>
+            <td><%= row.end_time || '-' %></td>
+            <td><%= Number(row.hours || 0).toFixed(2) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

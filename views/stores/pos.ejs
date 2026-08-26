@@ -1,0 +1,29 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell sa-shell">
+  <div class="dashboard-title admin-title sa-title role-dashboard-title"><span>POS</span> <span class="role-dashboard-title__suffix">Sales Data</span></div>
+  <p class="dashboard-note">Grocery POS tickets by store. Values are zero until sales are posted.</p>
+  <p><a class="dashboard-button" href="/stores">← Stores Portal</a></p>
+  <div class="table-scroll">
+    <table class="list">
+      <thead>
+        <tr>
+          <th>Store</th>
+          <th>Tickets</th>
+          <th>Collected</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% stores.forEach((row) => { %>
+          <tr>
+            <td><%= row.name %></td>
+            <td><%= row.posCount %></td>
+            <td>₱ <%= Number(row.posTotal || 0).toFixed(2) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

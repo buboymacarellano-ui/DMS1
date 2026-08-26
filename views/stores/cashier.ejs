@@ -1,0 +1,40 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell sa-shell">
+  <div class="dashboard-title admin-title sa-title role-dashboard-title"><span>Cashier</span> <span class="role-dashboard-title__suffix">Control</span></div>
+  <p class="dashboard-note">Drawer float, cash movement, and variance by grocery store. All tills start at zero.</p>
+  <p><a class="dashboard-button" href="/stores">← Stores Portal</a></p>
+  <div class="table-scroll">
+    <table class="list">
+      <thead>
+        <tr>
+          <th>Store</th>
+          <th>Opening Float</th>
+          <th>Cash In</th>
+          <th>Cash Out</th>
+          <th>Expected</th>
+          <th>Actual</th>
+          <th>Variance</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% stores.forEach((row) => { %>
+          <% const till = row.till || {}; %>
+          <tr>
+            <td><%= row.name %></td>
+            <td>₱ <%= Number(till.opening_float || 0).toFixed(2) %></td>
+            <td>₱ <%= Number(till.cash_in || 0).toFixed(2) %></td>
+            <td>₱ <%= Number(till.cash_out || 0).toFixed(2) %></td>
+            <td>₱ <%= Number(till.expected_drawer || 0).toFixed(2) %></td>
+            <td>₱ <%= Number(till.actual_drawer || 0).toFixed(2) %></td>
+            <td>₱ <%= Number(till.variance || 0).toFixed(2) %></td>
+            <td><%= till.status || 'closed' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

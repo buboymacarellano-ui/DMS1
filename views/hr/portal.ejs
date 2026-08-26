@@ -1,0 +1,48 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell sa-shell">
+  <div class="dashboard-title admin-title sa-title role-dashboard-title"><span>HR</span> <span class="role-dashboard-title__suffix">Portal</span></div>
+  <p class="dashboard-note">Employee directory, shift rosters, and payroll data. Existing HR account tools stay on the HR Dashboard.</p>
+
+  <section class="sa-home-group">
+    <h3 class="sa-home-group__title">People</h3>
+    <div class="sa-grid sa-grid--4">
+      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/employees">
+        <div class="workorder-nav-card__icon">&#128101;</div>
+        <div class="workorder-nav-card__body">
+          <h3>Employee Directory</h3>
+          <p><%= employeeCount || 0 %></p>
+          <span>Employee DB</span>
+        </div>
+      </a>
+      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/hr">
+        <div class="workorder-nav-card__icon">&#128100;</div>
+        <div class="workorder-nav-card__body">
+          <h3>Account Directory</h3>
+          <p><%= accountCount || 0 %></p>
+          <span>Passwords · access</span>
+        </div>
+      </a>
+      <a class="workorder-nav-card workorder-nav-card--orange sa-home-card" href="/hr/rosters">
+        <div class="workorder-nav-card__icon">&#128197;</div>
+        <div class="workorder-nav-card__body">
+          <h3>Shift Rosters</h3>
+          <p><%= rosterCount || 0 %></p>
+          <span>Schedules</span>
+        </div>
+      </a>
+      <% if (canGrant('hr', 'view_payroll')) { %>
+        <a class="workorder-nav-card workorder-nav-card--yellow sa-home-card" href="/hr/payroll">
+          <div class="workorder-nav-card__icon">&#128176;</div>
+          <div class="workorder-nav-card__body">
+            <h3>Payroll Data</h3>
+            <p><%= payrollCount || 0 %></p>
+            <span>Payslips</span>
+          </div>
+        </a>
+      <% } %>
+    </div>
+  </section>
+</section>
+
+<%- include('../partials/footer') %>

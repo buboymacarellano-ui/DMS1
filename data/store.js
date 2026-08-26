@@ -35,8 +35,72 @@ function normalizeData(data) {
     employees: source.employees || [],
     technician_updates: source.technician_updates || [],
     approval_requests: source.approval_requests || [],
+    store_pos_sales: source.store_pos_sales || [],
+    store_tills: source.store_tills || [],
+    store_shelves: source.store_shelves || [],
+    hr_rosters: source.hr_rosters || [],
+    hr_payroll: source.hr_payroll || [],
   };
   return ensureCollections(next);
+}
+
+const OPERATIONAL_COLLECTIONS = [
+  'customers',
+  'vehicles',
+  'work_orders',
+  'transaction_records',
+  'transactions',
+  'parts_inventory',
+  'parts_transfers',
+  'parts_purchase_orders',
+  'parts_requests',
+  'parts_documents',
+  'parts_request_transactions',
+  'branch_parts_order_drafts',
+  'technician_updates',
+  'approval_requests',
+  'store_pos_sales',
+  'store_tills',
+  'store_shelves',
+  'hr_rosters',
+  'hr_payroll',
+];
+
+const QTY_KEYS = [
+  'qty', 'quantity', 'stock', 'sold', 'on_hand', 'onhand', 'balance',
+  'amount', 'total', 'count', 'hours', 'revenue', 'cost',
+];
+
+function zeroNumericFields(row) {
+  if (!row || typeof row !== 'object' || Array.isArray(row)) return row;
+  const next = Object.assign({}, row);
+  QTY_KEYS.forEach((key) => {
+    if (Object.prototype.hasOwnProperty.call(next, key) && typeof next[key] === 'number') {
+      next[key] = 0;
+    }
+  });
+  if (typeof next.qty === 'string' && next.qty.trim() !== '') next.qty = 0;
+  if (typeof next.stock === 'string' && next.stock.trim() !== '') next.stock = 0;
+  return next;
+}
+
+async function zeroOperationalDatabases() {
+  const data = await load();
+  OPERATIONAL_COLLECTIONS.forEach((name) => {
+    data[name] = [];
+  });
+  data.parts = (data.parts || []).map((part) => {
+    const next = zeroNumericFields(part);
+    next.qty = 0;
+    next.stock = 0;
+    next.sold = 0;
+    return next;
+  });
+  await save();
+  return {
+    emptied: OPERATIONAL_COLLECTIONS.slice(),
+    partsZeroed: (data.parts || []).length,
+  };
 }
 
 async function writeSqlitePointer() {
@@ -266,6 +330,7 @@ module.exports = {
   getRawData,
   replaceData,
   backupData,
+  zeroOperationalDatabases,
   getSqlitePath: sqlite.getSqlitePath,
   getSnapshotPath: sqlite.getSnapshotPath,
   getEngineName: sqlite.getEngineName,

@@ -7,39 +7,80 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <% const activeRole = currentUser ? String(currentUser.role || '').toLowerCase() : ''; %>
+<%
+  const roleLabelMap = {
+    general_manager: 'GM',
+    technician: 'TECH',
+    service_technical_manager: 'STM',
+    parts_manager: 'PM',
+    pm: 'PM',
+    parts_clerk: 'PCLK',
+    finance_manager: 'FM',
+    fm: 'FM',
+    admin: 'ADMIN',
+    hr: 'HM',
+    hr_manager: 'HM',
+    hr_generalist: 'GEN',
+    payroll: 'PAY',
+    hr_clerk: 'HRC',
+    service_advisor: 'SA',
+    senior_service_receptionist: 'SSR',
+    service_receptionist: 'SR',
+    operations_manager: 'OM',
+    store_manager: 'SM',
+    cashier: 'CASH',
+    stores_clerk: 'SCLK',
+  };
+%>
 <body class="<%= ['service_advisor', 'service_receptionist', 'senior_service_receptionist'].includes(activeRole) ? 'role-frontline' : (activeRole === 'service_technical_manager' ? 'role-stm' : ((activeRole === 'parts_manager' || activeRole === 'pm') ? 'role-pm' : ((activeRole === 'finance_manager' || activeRole === 'fm') ? 'role-fm' : ''))) %>">
   <% const pathNow = typeof currentPath !== 'undefined' && currentPath ? String(currentPath) : ''; %>
   <% const queryScope = typeof currentQuery !== 'undefined' && currentQuery ? String(currentQuery.scope || currentQuery.location || '').toLowerCase() : ''; %>
   <% const viewingWarehouse1 = pathNow.indexOf('/parts') === 0 && queryScope.indexOf('warehouse') !== -1; %>
   <% const isPmRole = activeRole === 'parts_manager' || activeRole === 'pm'; %>
   <% const isFmRole = activeRole === 'finance_manager' || activeRole === 'fm'; %>
-  <% const roleLabel = activeRole === 'general_manager' ? 'GM' : (activeRole === 'technician' ? 'TECH' : (activeRole === 'service_technical_manager' ? 'STM' : (isPmRole ? 'PM' : (isFmRole ? 'FM' : (activeRole === 'admin' ? 'ADMIN' : (activeRole === 'hr' ? 'HR' : (activeRole === 'service_advisor' ? 'SA' : (activeRole === 'senior_service_receptionist' ? 'SSR' : 'SR')))))))); %>
+  <% const roleLabel = roleLabelMap[activeRole] || 'USER'; %>
   <% const cleanSessionHeader = activeRole === 'general_manager' || activeRole === 'service_technical_manager' || isPmRole || isFmRole; %>
   <% const cleanHomePath = activeRole === 'general_manager' ? '/gm' : (activeRole === 'service_technical_manager' ? '/stm' : (isFmRole ? '/finance' : '/parts-manager')); %>
   <%
     const roleHomeByRole = {
       general_manager: '/gm',
       admin: '/admin',
-      hr: '/hr',
+      hr: '/hr/portal',
+      hr_manager: '/hr/portal',
+      hr_generalist: '/hr/portal',
+      payroll: '/hr/payroll',
+      hr_clerk: '/hr/portal',
       service_technical_manager: '/stm',
       technician: '/technician',
       parts_manager: '/parts-manager',
       pm: '/parts-manager',
+      parts_clerk: '/parts-portal',
       finance_manager: '/finance',
       fm: '/finance',
       service_receptionist: '/service-receptionist',
       senior_service_receptionist: '/service-receptionist',
       service_advisor: '/service-receptionist',
+      operations_manager: '/stores',
+      store_manager: '/stores',
+      cashier: '/stores/pos',
+      stores_clerk: '/stores',
     };
     const roleHomePath = roleHomeByRole[activeRole] || '/';
     const normalizedPath = String(pathNow || '').replace(/\/+$/, '') || '/';
     const normalizedHome = String(roleHomePath || '/').replace(/\/+$/, '') || '/';
     const isHomePage = normalizedPath === '/'
       || normalizedPath === normalizedHome
+      || normalizedPath === '/service'
+      || normalizedPath === '/parts-portal'
+      || normalizedPath === '/stores'
+      || normalizedPath === '/hr/portal'
       || ((activeRole === 'parts_manager' || activeRole === 'pm') && normalizedPath === '/parts-manager')
       || ((activeRole === 'finance_manager' || activeRole === 'fm') && normalizedPath === '/finance');
   %>
   <header class="site-header<%= cleanSessionHeader ? ' site-header--gm site-header--gm-clean' : '' %>">
+    <% if (typeof portalLabel !== 'undefined' && portalLabel) { %>
+      <span class="portal-watermark" aria-hidden="true"><%= portalLabel %></span>
+    <% } %>
     <% if (cleanSessionHeader) { %>
       <div class="site-header__left site-header__left--gm-stack">
         <% if (currentUser) { %>
@@ -87,16 +128,27 @@
           <a href="/technician">Technician</a>
         <% } else if (activeRole === 'service_technical_manager') { %>
           <a href="/stm">STM Dashboard</a>
+          <a href="/service">Service Portal</a>
           <a href="/gm/fte" class="<%= pathNow === '/gm/fte' ? 'nav-link--active' : '' %>">FTE Tracking</a>
         <% } else if (activeRole === 'admin') { %>
           <a href="/admin">Admin Dashboard</a>
           <a href="/admin/gates/removed-records">Removed Records</a>
-        <% } else if (activeRole === 'hr') { %>
+        <% } else if (['hr', 'hr_manager', 'hr_generalist', 'payroll', 'hr_clerk'].includes(activeRole)) { %>
+          <a href="/hr/portal">HR Portal</a>
           <a href="/hr">HR Dashboard</a>
+          <a href="/hr/rosters">Shift Rosters</a>
+          <% if (typeof canGrant === 'function' && canGrant('hr', 'view_payroll')) { %>
+            <a href="/hr/payroll">Payroll</a>
+          <% } %>
         <% } else if (['service_receptionist', 'senior_service_receptionist', 'service_advisor'].includes(activeRole)) { %>
           <a href="/service-receptionist" class="<%= pathNow.indexOf('/service-receptionist') === 0 ? 'nav-link--active' : '' %>"><%= roleLabel %> Dashboard</a>
+          <a href="/service">Service Portal</a>
+        <% } else if (activeRole === 'parts_clerk') { %>
+          <a href="/parts-portal">Parts Portal</a>
+        <% } else if (['operations_manager', 'store_manager', 'cashier', 'stores_clerk'].includes(activeRole)) { %>
+          <a href="/stores">Stores Portal</a>
         <% } %>
-        <% if (activeRole === 'admin' || activeRole === 'hr') { %>
+        <% if (activeRole === 'admin' || activeRole === 'hr' || activeRole === 'hr_manager' || activeRole === 'hr_generalist' || activeRole === 'hr_clerk') { %>
           <a href="/employees">Employee DB</a>
         <% } %>
         <% if (canApproveRequests) { %>

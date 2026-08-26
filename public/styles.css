@@ -263,6 +263,13 @@ body:has(.app-back-arrow--under-logo) .container{
 .auth-card h1{margin:0 0 10px;font-size:30px;line-height:1.05;color:#f3f7fc;text-shadow:none}
 .auth-subtitle{margin:0 0 14px;color:var(--ink-on-dark-muted)}
 .auth-form{max-width:none;background:transparent;border:none;padding:0;box-shadow:none}
+.auth-form label[hidden],
+.auth-form [hidden]{display:none!important}
+.auth-form:has(#login-department option[value="gm"]:checked) #login-role-field,
+.auth-form:has(#login-department option[value="gm"]:checked) #login-id-field,
+.auth-form:has(#login-department option[value="gm"]:checked) #login-location-field{
+  display:none!important
+}
 .auth-hint{margin:12px 0 0;color:var(--ink-on-dark-muted)}
 .auth-open-form{margin:0 0 16px;padding:12px;border:1px solid rgba(78,205,232,0.28);border-radius:12px;background:rgba(8,24,44,0.35)}
 .auth-open-toggle{width:100%;min-height:44px;border:0;border-radius:10px;background:#c0392b;color:#fff;font-weight:800;cursor:pointer}
@@ -2279,6 +2286,31 @@ body {
   pointer-events: none;
   background: linear-gradient(90deg, var(--lime) 0%, var(--cyan) 42%, var(--orange) 78%, transparent 100%);
   box-shadow: 0 1px 8px rgba(184, 230, 76, 0.28);
+}
+
+.portal-watermark {
+  position: absolute;
+  right: 210px;
+  left: auto;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  pointer-events: none;
+  font-size: clamp(18px, 2.5vw, 28px);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: rgba(243, 247, 252, 0.3);
+  text-shadow:
+    3px 0 0 rgba(255, 214, 92, 0.4),
+    6px 0 0 rgba(255, 186, 40, 0.2),
+    10px 0 10px rgba(255, 168, 20, 0.28);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.site-header > *:not(.portal-watermark) {
+  position: relative;
+  z-index: 1;
 }
 
 /* GM header: accent line under the logo group (left) */

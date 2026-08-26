@@ -1,0 +1,104 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell sa-shell">
+  <div class="dashboard-title admin-title sa-title role-dashboard-title"><span>Service</span> <span class="role-dashboard-title__suffix">Portal</span></div>
+  <p class="dashboard-note">Work orders, seven service bays, and technician scheduling. Existing boards and metrics are unchanged.</p>
+
+  <section class="sa-home-group">
+    <h3 class="sa-home-group__title">1. Work Orders</h3>
+    <div class="sa-grid sa-grid--4">
+      <% if (canGrant('service', 'view') || canGrant('service', 'access')) { %>
+        <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/work-orders">
+          <div class="workorder-nav-card__icon">&#9881;</div>
+          <div class="workorder-nav-card__body">
+            <h3>Work Orders</h3>
+            <p><%= openWorkOrdersCount || 0 %></p>
+            <span>Open list</span>
+          </div>
+        </a>
+      <% } %>
+      <% if (canGrant('service', 'filloutform') || canGrant('service', 'edit')) { %>
+        <a class="workorder-nav-card workorder-nav-card--orange sa-home-card" href="/work-orders/new">
+          <div class="workorder-nav-card__icon">&#10010;</div>
+          <div class="workorder-nav-card__body">
+            <h3>New Work Order</h3>
+            <p>Create a job</p>
+            <span>Fill-out form</span>
+          </div>
+        </a>
+      <% } %>
+      <a class="workorder-nav-card workorder-nav-card--yellow sa-home-card" href="/customers">
+        <div class="workorder-nav-card__icon">&#128101;</div>
+        <div class="workorder-nav-card__body">
+          <h3>Customers</h3>
+          <p><%= customerCount || 0 %></p>
+          <span>Directory</span>
+        </div>
+      </a>
+      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/transactions">
+        <div class="workorder-nav-card__icon">&#128269;</div>
+        <div class="workorder-nav-card__body">
+          <h3>Closed WO Search</h3>
+          <p>Billing lookup</p>
+          <span>Reprint</span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <section class="sa-home-group">
+    <h3 class="sa-home-group__title">2. Seven Service Bays</h3>
+    <div class="sa-grid sa-grid--4">
+      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="<%= (typeof canGrant === 'function' && (canGrant('service', 'schedule') || canGrant('service', 'approval'))) ? '/stm' : '/service-receptionist' %>">
+        <div class="workorder-nav-card__icon">&#128736;</div>
+        <div class="workorder-nav-card__body">
+          <h3>Bay Monitor</h3>
+          <p>Live floor</p>
+          <span>7 branches</span>
+        </div>
+      </a>
+      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/service-receptionist">
+        <div class="workorder-nav-card__icon">&#127970;</div>
+        <div class="workorder-nav-card__body">
+          <h3>Branch Dashboard</h3>
+          <p>SA / SR / SSR</p>
+          <span>Assigned bay</span>
+        </div>
+      </a>
+      <a class="workorder-nav-card workorder-nav-card--orange sa-home-card" href="/gm/fte">
+        <div class="workorder-nav-card__icon">&#128736;</div>
+        <div class="workorder-nav-card__body">
+          <h3>FTE Workspace</h3>
+          <p>Facility issues</p>
+          <span>Records</span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <section class="sa-home-group">
+    <h3 class="sa-home-group__title">3. Tech Scheduling</h3>
+    <div class="sa-grid sa-grid--4">
+      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/work-order-transactions/technicians">
+        <div class="workorder-nav-card__icon">&#128295;</div>
+        <div class="workorder-nav-card__body">
+          <h3>Technicians</h3>
+          <p><%= technicianCount || 0 %></p>
+          <span>Status · assignments</span>
+        </div>
+      </a>
+      <% if (canGrant('service', 'schedule') || canGrant('service', 'assign_tech')) { %>
+        <a class="workorder-nav-card workorder-nav-card--yellow sa-home-card" href="/stm">
+          <div class="workorder-nav-card__icon">&#128197;</div>
+          <div class="workorder-nav-card__body">
+            <h3>Scheduling Board</h3>
+            <p>Live assignments</p>
+            <span>STM monitor</span>
+          </div>
+        </a>
+      <% } %>
+    </div>
+  </section>
+</section>
+
+<%- include('../partials/footer') %>

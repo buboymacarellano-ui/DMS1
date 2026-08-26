@@ -1,0 +1,120 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell sa-shell">
+  <div class="dashboard-title admin-title sa-title role-dashboard-title"><span>Parts</span> <span class="role-dashboard-title__suffix">Portal</span></div>
+  <p class="dashboard-note">Main warehouse, bulk inventory, supplier inbound, and branch procurement. Existing PM boards stay as they are.</p>
+
+  <section class="sa-home-group">
+    <h3 class="sa-home-group__title">1. Main Warehouse</h3>
+    <div class="sa-grid sa-grid--4">
+      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/parts?scope=warehouse1">
+        <div class="workorder-nav-card__icon">&#127970;</div>
+        <div class="workorder-nav-card__body">
+          <h3>Warehouse 1</h3>
+          <p>Central stock</p>
+          <span>Lookup</span>
+        </div>
+      </a>
+      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/parts">
+        <div class="workorder-nav-card__icon">&#128230;</div>
+        <div class="workorder-nav-card__body">
+          <h3>Parts Database</h3>
+          <p>Catalog</p>
+          <span>History</span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <section class="sa-home-group">
+    <h3 class="sa-home-group__title">2. Bulk Inventory WMS</h3>
+    <div class="sa-grid sa-grid--4">
+      <% if (canGrant('parts', 'adjust_inventory') || canGrant('parts', 'edit_price')) { %>
+        <a class="workorder-nav-card workorder-nav-card--orange sa-home-card" href="/parts-manager/inventory">
+          <div class="workorder-nav-card__icon">&#128202;</div>
+          <div class="workorder-nav-card__body">
+            <h3>Inventory Management</h3>
+            <p>PM workspace</p>
+            <span>Adjust stock</span>
+          </div>
+        </a>
+        <a class="workorder-nav-card workorder-nav-card--yellow sa-home-card" href="/parts-manager/dashboard">
+          <div class="workorder-nav-card__icon">&#128230;</div>
+          <div class="workorder-nav-card__body">
+            <h3>Receive / Alerts</h3>
+            <p>Low stock · inbound</p>
+            <span>Dashboard</span>
+          </div>
+        </a>
+        <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/parts-manager/branch-reports">
+          <div class="workorder-nav-card__icon">&#128196;</div>
+          <div class="workorder-nav-card__body">
+            <h3>Branch Sorter Reports</h3>
+            <p>Printable</p>
+            <span>Multi-branch</span>
+          </div>
+        </a>
+      <% } else if (canGrant('parts', 'receive_stock') || canGrant('parts', 'filloutform')) { %>
+        <a class="workorder-nav-card workorder-nav-card--yellow sa-home-card" href="/parts">
+          <div class="workorder-nav-card__icon">&#128230;</div>
+          <div class="workorder-nav-card__body">
+            <h3>Receive / Lookup</h3>
+            <p>Catalog on-hand</p>
+            <span>Fill-out</span>
+          </div>
+        </a>
+      <% } %>
+    </div>
+  </section>
+
+  <section class="sa-home-group">
+    <h3 class="sa-home-group__title">3. Supplier Inbound</h3>
+    <div class="sa-grid sa-grid--4">
+      <% if (canGrant('parts', 'adjust_inventory') || canGrant('parts', 'edit_price')) { %>
+        <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/parts-manager/suppliers">
+          <div class="workorder-nav-card__icon">&#128101;</div>
+          <div class="workorder-nav-card__body">
+            <h3>Supplier Directory</h3>
+            <p>Billing</p>
+            <span>Inbound</span>
+          </div>
+        </a>
+      <% } else { %>
+        <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/parts">
+          <div class="workorder-nav-card__icon">&#128101;</div>
+          <div class="workorder-nav-card__body">
+            <h3>Supplier Lookup</h3>
+            <p>From catalog</p>
+            <span>View</span>
+          </div>
+        </a>
+      <% } %>
+    </div>
+  </section>
+
+  <section class="sa-home-group">
+    <h3 class="sa-home-group__title">4. Branch Procurement</h3>
+    <div class="sa-grid sa-grid--4">
+      <% if (canGrant('parts', 'request')) { %>
+        <a class="workorder-nav-card workorder-nav-card--orange sa-home-card" href="/branch-parts">
+          <div class="workorder-nav-card__icon">&#128203;</div>
+          <div class="workorder-nav-card__body">
+            <h3>Branch Parts Orders</h3>
+            <p>Request to warehouse</p>
+            <span>Procurement</span>
+          </div>
+        </a>
+      <% } %>
+      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="<%= (typeof canGrant === 'function' && canGrant('parts', 'adjust_inventory')) ? '/parts-manager/dashboard' : '/parts' %>">
+        <div class="workorder-nav-card__icon">&#128233;</div>
+        <div class="workorder-nav-card__body">
+          <h3>Branch Requests</h3>
+          <p>Pending fulfillment</p>
+          <span>PM queue</span>
+        </div>
+      </a>
+    </div>
+  </section>
+</section>
+
+<%- include('../partials/footer') %>

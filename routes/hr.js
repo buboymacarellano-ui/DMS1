@@ -129,4 +129,41 @@ router.post('/users/:id/password-enabled', async (req, res) => {
   );
 });
 
+router.get('/portal', async (req, res) => {
+  const [employees, users, rosters, payroll] = await Promise.all([
+    store.getAll('employees'),
+    store.getAll('users'),
+    store.getAll('hr_rosters'),
+    store.getAll('hr_payroll'),
+  ]);
+  return res.render('hr/portal', {
+    employeeCount: (employees || []).length,
+    accountCount: (users || []).length,
+    rosterCount: (rosters || []).length,
+    payrollCount: (payroll || []).length,
+  });
+});
+
+router.get('/rosters', async (req, res) => {
+  const [employees, rosters] = await Promise.all([
+    store.getAll('employees'),
+    store.getAll('hr_rosters'),
+  ]);
+  return res.render('hr/rosters', {
+    employees: employees || [],
+    rosters: rosters || [],
+  });
+});
+
+router.get('/payroll', async (req, res) => {
+  const [employees, payroll] = await Promise.all([
+    store.getAll('employees'),
+    store.getAll('hr_payroll'),
+  ]);
+  return res.render('hr/payroll', {
+    employees: employees || [],
+    payroll: payroll || [],
+  });
+});
+
 module.exports = router;

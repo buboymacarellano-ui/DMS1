@@ -1,0 +1,33 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell sa-shell">
+  <div class="dashboard-title admin-title sa-title role-dashboard-title"><span>Retail</span> <span class="role-dashboard-title__suffix">Shelving</span></div>
+  <p class="dashboard-note">Shelf facings and on-hand by aisle. Counts are zero until stock is received.</p>
+  <p><a class="dashboard-button" href="/stores">← Stores Portal</a></p>
+  <div class="table-scroll">
+    <table class="list">
+      <thead>
+        <tr>
+          <th>Aisle</th>
+          <th>Facings</th>
+          <th>On Hand</th>
+          <th>Capacity</th>
+          <th>Fill</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% (aisles || []).forEach((row) => { %>
+          <tr>
+            <td><%= row.aisle %></td>
+            <td><%= row.facings || 0 %></td>
+            <td><%= row.on_hand || 0 %></td>
+            <td><%= row.capacity || 0 %></td>
+            <td><%= Number(row.fill_pct || 0).toFixed(0) %>%</td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

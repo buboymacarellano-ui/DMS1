@@ -1,0 +1,38 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell">
+  <div class="dashboard-title admin-title role-dashboard-title"><span>Payroll</span> <span class="role-dashboard-title__suffix">Data</span></div>
+  <p class="dashboard-note">Payroll amounts start at zero. This board is limited to payroll and HR manager grants.</p>
+  <p><a class="dashboard-button" href="/hr/portal">← HR Portal</a></p>
+  <div class="table-scroll">
+    <table class="list">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Period</th>
+          <th>Gross</th>
+          <th>Deductions</th>
+          <th>Net</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!(payroll || []).length) { %>
+          <tr><td colspan="6">No payroll rows. Amounts are zero until payroll is posted.</td></tr>
+        <% } %>
+        <% (payroll || []).forEach((row) => { %>
+          <tr>
+            <td><%= row.employee_name || row.employee_id || '-' %></td>
+            <td><%= row.period || '-' %></td>
+            <td>₱ <%= Number(row.gross || 0).toFixed(2) %></td>
+            <td>₱ <%= Number(row.deductions || 0).toFixed(2) %></td>
+            <td>₱ <%= Number(row.net || 0).toFixed(2) %></td>
+            <td><%= row.status || 'open' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>
