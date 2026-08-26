@@ -8,7 +8,7 @@
     <h3 class="sa-home-group__title">1. Work Orders</h3>
     <div class="sa-grid sa-grid--4">
       <% if (canGrant('service', 'view') || canGrant('service', 'access')) { %>
-        <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/work-orders">
+        <a class="workorder-nav-card workorder-nav-card--blue sa-home-card sa-home-card--kpi" href="/work-orders">
           <div class="workorder-nav-card__icon">&#9881;</div>
           <div class="workorder-nav-card__body">
             <h3>Work Orders</h3>
@@ -27,7 +27,7 @@
           </div>
         </a>
       <% } %>
-      <a class="workorder-nav-card workorder-nav-card--yellow sa-home-card" href="/customers">
+      <a class="workorder-nav-card workorder-nav-card--yellow sa-home-card sa-home-card--kpi" href="/customers">
         <div class="workorder-nav-card__icon">&#128101;</div>
         <div class="workorder-nav-card__body">
           <h3>Customers</h3>
@@ -79,7 +79,7 @@
   <section class="sa-home-group">
     <h3 class="sa-home-group__title">3. Tech Scheduling</h3>
     <div class="sa-grid sa-grid--4">
-      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/work-order-transactions/technicians">
+      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card sa-home-card--kpi" href="/work-order-transactions/technicians">
         <div class="workorder-nav-card__icon">&#128295;</div>
         <div class="workorder-nav-card__body">
           <h3>Technicians</h3>
