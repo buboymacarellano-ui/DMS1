@@ -1,0 +1,79 @@
+<% const readyList = Array.isArray(typeof readyMessages !== 'undefined' ? readyMessages : null) ? readyMessages : []; %>
+<article class="dashboard-card admin-panel pm-panel pm-panel--wide sa-parts-message-panel" id="sa-parts-message-panel">
+  <div class="dashboard-card__header admin-panel-header pm-panel-header">Message Panel</div>
+  <p class="dashboard-note admin-note">Warehouse 1 restock notices for this branch. Pending out-of-stock lookups stay with Parts Manager until on-hand is greater than 0.</p>
+  <div class="table-scroll">
+    <table class="list">
+      <thead>
+        <tr>
+          <th>Message</th>
+          <th>Part Number</th>
+          <th>Date and Time</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!readyList.length) { %>
+          <tr><td colspan="4">No Warehouse 1 ready messages yet.</td></tr>
+        <% } %>
+        <% readyList.forEach((row) => { %>
+          <tr>
+            <td><%= row.sa_message || ('The Part Number ' + (row.part_number || '') + ' Is Ready and Available') %></td>
+            <td style="white-space:nowrap;"><%= row.part_number || '' %></td>
+            <td style="white-space:nowrap;"><%= row.ready_stamp_label || row.stamp_label || '' %></td>
+            <td><strong class="pm-stock-status pm-stock-status--restocked">Restocked</strong></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</article>
+<div class="office-stock-dialog" id="office-stock-dialog" hidden>
+  <div class="office-stock-dialog__card" role="alertdialog" aria-modal="true" aria-labelledby="office-stock-dialog-title" aria-describedby="office-stock-dialog-text">
+    <div class="office-stock-dialog__title" id="office-stock-dialog-title">Warehouse 1</div>
+    <p class="office-stock-dialog__body" id="office-stock-dialog-text"></p>
+    <button type="button" class="btn" id="office-stock-dialog-ok">OK</button>
+  </div>
+</div>
+<script>
+  (function officeStockDialog() {
+    var overlay = document.getElementById('office-stock-dialog');
+    var titleEl = document.getElementById('office-stock-dialog-title');
+    var textEl = document.getElementById('office-stock-dialog-text');
+    var okBtn = document.getElementById('office-stock-dialog-ok');
+    if (!overlay || !textEl || !okBtn) return;
+
+    function hide() {
+      overlay.hidden = true;
+    }
+
+    window.showOfficeStockDialog = function (title, text) {
+      if (titleEl) titleEl.textContent = title || 'Warehouse 1';
+      textEl.textContent = text || '';
+      overlay.hidden = false;
+      okBtn.focus();
+    };
+
+    okBtn.addEventListener('click', hide);
+    overlay.addEventListener('click', function (event) {
+      if (event.target === overlay) hide();
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && !overlay.hidden) hide();
+    });
+  })();
+</script>
+<% if (readyList.length) { %>
+<script>
+  (function announceReadyParts() {
+    var latest = <%- JSON.stringify(readyList[0] && (readyList[0].sa_message || '')) %>;
+    if (!latest) return;
+    var key = 'sa_ready_parts_notice';
+    if (sessionStorage.getItem(key) === latest) return;
+    sessionStorage.setItem(key, latest);
+    if (typeof window.showOfficeStockDialog === 'function') {
+      window.showOfficeStockDialog('Message Panel', latest);
+    }
+  })();
+</script>
+<% } %>

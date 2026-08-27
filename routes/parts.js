@@ -35,7 +35,8 @@ const {
   belongsToLocation,
   filterRowsByLocation,
   stockByLocation,
-  attachLocationOnHand,
+  withLocationOnHand,
+  attachEachRowLocationOnHand,
   resolveFrontlinePartsView,
   filterDataToLocation,
 } = require('../lib/parts-location-scope');
@@ -497,10 +498,11 @@ router.get('/', async (req, res) => {
   const q = String(req.query.q || '').trim().toLowerCase();
   const filterType = req.query.type || '';
   const { filtered } = filterPartsInventory(dashboardLogs, req.query);
-  const stockMap = view.location ? stockByLocation(inventory.allAuditRows(data), view.location) : null;
-  const viewRows = stockMap
-    ? attachLocationOnHand(inventory.attachOnHand(scopedData, filtered), stockMap)
-    : inventory.attachOnHand(data, filtered);
+  const viewRows = withLocationOnHand(
+    inventory.attachOnHand(view.location ? scopedData : data, filtered),
+    inventory.allAuditRows(data),
+    view.location || ''
+  );
 
   const partsRequests = inventory.allAuditRows(scopedData).filter(p => isPartsRequestType(p.transaction_type));
   const sortedRequestTransactions = [...requestTransactions].sort((a, b) =>
@@ -915,7 +917,7 @@ router.get('/create', async (req, res) => {
   const user = (req.session && req.session.user) || {};
   const actorBranch = resolveActorBranch(user, data.employees);
   return res.render('parts/create', {
-    createdParts: listCreatedParts(data),
+    createdParts: attachEachRowLocationOnHand(listCreatedParts(data), inventory.allAuditRows(data)),
     branchOptions: createdPartsBranchOptions(data, actorBranch),
     actorBranch,
     warehouseLocation: WAREHOUSE_1,
@@ -949,7 +951,7 @@ router.post('/create', async (req, res) => {
 
   if (!partName) {
     return res.render('parts/create', {
-      createdParts: listCreatedParts(data),
+      createdParts: attachEachRowLocationOnHand(listCreatedParts(data), inventory.allAuditRows(data)),
       branchOptions: createdPartsBranchOptions(data, createdBranch || actorBranch),
       actorBranch,
       warehouseLocation: WAREHOUSE_1,

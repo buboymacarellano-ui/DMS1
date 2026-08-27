@@ -34,7 +34,7 @@
     stores_clerk: 'SCLK',
   };
 %>
-<body class="<%= ['service_advisor', 'service_receptionist', 'senior_service_receptionist'].includes(activeRole) ? 'role-frontline' : (activeRole === 'service_technical_manager' ? 'role-stm' : ((activeRole === 'parts_manager' || activeRole === 'pm') ? 'role-pm' : ((activeRole === 'finance_manager' || activeRole === 'fm' || activeRole === 'accounting') ? 'role-fm' : (activeRole === 'assets_facilities' ? 'role-fm' : '')))) %>">
+<body class="<%= ['service_advisor', 'service_receptionist', 'senior_service_receptionist'].includes(activeRole) ? 'role-frontline' : (activeRole === 'service_technical_manager' ? 'role-stm' : ((activeRole === 'parts_manager' || activeRole === 'pm') ? 'role-pm' : ((activeRole === 'finance_manager' || activeRole === 'fm' || activeRole === 'accounting') ? 'role-fm' : (activeRole === 'assets_facilities' ? 'role-fm' : (activeRole === 'general_manager' ? 'role-gm' : ''))))) %>">
   <% const pathNow = typeof currentPath !== 'undefined' && currentPath ? String(currentPath) : ''; %>
   <% const queryScope = typeof currentQuery !== 'undefined' && currentQuery ? String(currentQuery.scope || currentQuery.location || '').toLowerCase() : ''; %>
   <% const viewingWarehouse1 = pathNow.indexOf('/parts') === 0 && queryScope.indexOf('warehouse') !== -1; %>
@@ -75,15 +75,9 @@
     const roleHomePath = roleHomeByRole[activeRole] || '/';
     const normalizedPath = String(pathNow || '').replace(/\/+$/, '') || '/';
     const normalizedHome = String(roleHomePath || '/').replace(/\/+$/, '') || '/';
-    const isHomePage = normalizedPath === '/'
-      || normalizedPath === normalizedHome
-      || normalizedPath === '/service'
-      || normalizedPath === '/parts-portal'
-      || normalizedPath === '/stores'
-      || normalizedPath === '/hr/portal'
-      || ((activeRole === 'parts_manager' || activeRole === 'pm') && normalizedPath === '/parts-manager')
-      || ((activeRole === 'finance_manager' || activeRole === 'fm' || activeRole === 'accounting') && normalizedPath === '/finance')
-      || (activeRole === 'assets_facilities' && (normalizedPath === '/gm/fte' || normalizedPath.indexOf('/gm/fte') === 0));
+    const isHomePage = !activeRole
+      ? (normalizedPath === '/' || normalizedPath === '/auth/login')
+      : (normalizedPath === normalizedHome);
   %>
   <header class="site-header<%= cleanSessionHeader ? ' site-header--gm site-header--gm-clean' : '' %>">
     <% if (typeof portalLabel !== 'undefined' && portalLabel) { %>
@@ -107,7 +101,7 @@
               </span>
             </a>
           </h1>
-          <% if (!isHomePage && !isServicePortalRole && !isFinancePortalRole) { %>
+          <% if (!isHomePage) { %>
             <%- include('back-button', { backChipMode: 'under-logo' }) %>
           <% } %>
         </div>

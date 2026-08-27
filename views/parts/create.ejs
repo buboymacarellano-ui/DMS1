@@ -55,6 +55,7 @@
             <th>Sub-ID</th>
             <th>Supplier</th>
             <th>Qty</th>
+            <th>On-Hand</th>
             <th>Retail</th>
             <th></th>
           </tr>
@@ -70,6 +71,7 @@
               <td><%= row.sub_id || '' %></td>
               <td><%= row.supplier || '' %></td>
               <td><%= row.qty != null ? row.qty : '' %></td>
+              <td style="text-align:right;"><%= row.on_hand != null ? row.on_hand : '' %></td>
               <td>₱<%= Number(row.retail_price || 0).toFixed(2) %></td>
               <td class="actions">
                 <% if (typeof isSoldTransaction === 'function' && isSoldTransaction(row)) { %>

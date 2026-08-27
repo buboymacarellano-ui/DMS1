@@ -10,6 +10,8 @@
   <% if (error) { %><p class="error" style="font-weight:700;margin-bottom:10px;"><%= error %></p><% } %>
   <% if (success) { %><p class="success" style="font-weight:700;margin-bottom:10px;"><%= success %></p><% } %>
 
+  <%- include('../partials/parts-ready-messages') %>
+
   <div class="branch-parts-actions">
     <a class="btn" href="<%= homeHref %>">← Dashboard</a>
     <form method="get" action="/branch-parts" class="form" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:0;">
@@ -22,14 +24,7 @@
   </div>
 
   <div class="pm-grid" style="margin-top:12px;">
-    <article class="dashboard-card admin-panel pm-panel">
-      <div class="dashboard-card__header admin-panel-header pm-panel-header">
-        <span>Warehouse 1 Parts Database</span>
-      </div>
-      <p class="dashboard-note admin-note">Open a separate read-only view of Warehouse 1 parts and transactions. Your default table below stays on <%= branch %> only.</p>
-      <a class="btn" href="/parts?scope=warehouse1" style="background:#0f6d8c;">View Warehouse 1</a>
-    </article>
-    <article class="dashboard-card admin-panel pm-panel">
+    <article class="dashboard-card admin-panel pm-panel pm-panel--wide branch-parts-low-stock">
       <div class="dashboard-card__header admin-panel-header pm-panel-header">
         <span>Low Stock Monitor</span>
         <span class="pm-badge pm-badge--alert"><%= lowStock.length %></span>
@@ -44,12 +39,13 @@
               <th>Sub-ID</th>
               <th>Supplier</th>
               <th>Qty</th>
+              <th>On-Hand</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             <% if (!lowStock.length) { %>
-              <tr><td colspan="6">No low-stock alerts for <%= branch %>.</td></tr>
+              <tr><td colspan="7">No low-stock alerts for <%= branch %>.</td></tr>
             <% } %>
             <% lowStock.forEach((row) => { %>
               <tr>
@@ -58,6 +54,7 @@
                 <td><%= row.sub_id || '—' %></td>
                 <td><%= row.supplier || '—' %></td>
                 <td><%= row.qty %></td>
+                <td style="text-align:right;"><%= row.on_hand != null ? row.on_hand : row.qty %></td>
                 <td>
                   <button
                     type="button"
@@ -79,7 +76,7 @@
       </div>
     </article>
 
-    <article class="dashboard-card admin-panel pm-panel">
+    <article class="dashboard-card admin-panel pm-panel pm-panel--wide">
       <div class="dashboard-card__header admin-panel-header pm-panel-header">
         <span>Sent to Warehouse 1</span>
         <span class="pm-badge"><%= sentOrders.length %></span>
@@ -197,21 +194,23 @@
             <th>Generic</th>
             <th>Supplier</th>
             <th>Qty</th>
+            <th>On-Hand</th>
             <th>Cost Price</th>
             <th>Markup (%)</th>
             <th>Retail Price</th>
             <th>Sold To (WO#)</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           <% if (!parts.length) { %>
-            <tr><td colspan="15" style="text-align:center;padding:20px;">No parts records for <%= branch %>.</td></tr>
+            <tr><td colspan="17" style="text-align:center;padding:20px;">No parts records for <%= branch %>.</td></tr>
           <% } %>
           <% parts.forEach((p, i) => { %>
             <tr>
               <td><%= i + 1 %></td>
               <td><%= p.transaction_date || '' %></td>
-              <td><%= ({ NewEntry: 'New Stock', Restock: 'Stock' })[p.transaction_type] || p.transaction_type || '' %></td>
+              <td><strong><%= typeof displayPartsTransactionType === 'function' ? displayPartsTransactionType(p.transaction_type) : (({ NewEntry: 'New Stock', Restock: 'Stock' })[p.transaction_type] || p.transaction_type || '') %></strong></td>
               <td><%= p.present_location || p.branch || p.requesting_branch || '—' %></td>
               <td><%= p.editor || '' %></td>
               <td><%= p.part_number || '' %></td>
@@ -220,10 +219,14 @@
               <td><%= p.generic || '' %></td>
               <td><%= p.supplier || '' %></td>
               <td style="text-align:right;"><%= p.qty != null ? p.qty : '' %></td>
+              <td style="text-align:right;"><%= p.on_hand != null ? p.on_hand : '' %></td>
               <td style="text-align:right;"><%= p.cost_price != null ? Number(p.cost_price).toFixed(2) : '' %></td>
               <td style="text-align:right;"><%= p.markup != null ? p.markup : '' %></td>
               <td style="text-align:right;"><%= p.retail_price != null ? Number(p.retail_price).toFixed(2) : '' %></td>
               <td><%= p.sold_to || '' %></td>
+              <td style="white-space:nowrap;">
+                <a class="btn" href="/parts/history/<%= encodeURIComponent(p.part_number || '') %>" style="font-size:11px;padding:4px 8px;">History</a>
+              </td>
             </tr>
           <% }) %>
         </tbody>
@@ -335,22 +338,127 @@
       row.remove();
     });
 
+    var form = document.getElementById('branch-parts-order-form');
+    var debounceTimer = null;
+
+    function rowPartName(row) {
+      return String((row.querySelector('input[name="line_part_name"]') || {}).value || '').trim();
+    }
+
+    function rowQty(row) {
+      return parseFloat((row.querySelector('input[name="line_qty"]') || {}).value) || 0;
+    }
+
+    function warnNoStock(text) {
+      if (typeof window.showOfficeStockDialog === 'function') {
+        window.showOfficeStockDialog('Warehouse 1', text || 'No Stock for this Part Number');
+        return;
+      }
+      window.alert(text || 'No Stock for this Part Number');
+    }
+
+    function reportOutOfStock(partNumber, qty, partName) {
+      return fetch('/branch-parts/api/out-of-stock', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          part_number: partNumber,
+          part_name: partName || '',
+          qty: qty > 0 ? qty : undefined
+        })
+      }).catch(function () { return null; });
+    }
+
+    function checkWarehouse1Stock(row, force) {
+      if (!row) return Promise.resolve(true);
+      var input = row.querySelector('input[name="line_part_number"]');
+      if (!input) return Promise.resolve(true);
+      var partNumber = String(input.value || '').trim();
+      if (!partNumber) {
+        input.dataset.stockKey = '';
+        input.dataset.inStock = '';
+        return Promise.resolve(true);
+      }
+      var qty = rowQty(row);
+      var key = partNumber.toUpperCase() + '|' + String(qty || 0);
+      if (!force && input.dataset.stockKey === key) {
+        return Promise.resolve(input.dataset.inStock !== '0');
+      }
+      input.dataset.stockKey = key;
+
+      var url = '/branch-parts/api/warehouse1-stock?part_number=' + encodeURIComponent(partNumber);
+      if (qty > 0) url += '&qty=' + encodeURIComponent(String(qty));
+
+      return fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          var inStock = !!(data && data.in_stock);
+          input.dataset.inStock = inStock ? '1' : '0';
+          if (inStock) return true;
+          warnNoStock('No Stock for this Part Number');
+          reportOutOfStock(partNumber, qty, rowPartName(row));
+          return false;
+        })
+        .catch(function () { return true; });
+    }
+
     body.addEventListener('input', function (event) {
       var row = event.target.closest('tr');
       if (!row) return;
-      if (event.target.name === 'line_part_number') fillFromCatalog(row, event.target.value);
+      if (event.target.name === 'line_part_number') {
+        fillFromCatalog(row, event.target.value);
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function () { checkWarehouse1Stock(row, true); }, 400);
+      }
       if (event.target.classList.contains('js-cost') || event.target.classList.contains('js-markup')) computeRetail(row);
     });
 
     body.addEventListener('change', function (event) {
       var row = event.target.closest('tr');
       if (!row) return;
-      if (event.target.name === 'line_part_number') fillFromCatalog(row, event.target.value);
+      if (event.target.name === 'line_part_number') {
+        fillFromCatalog(row, event.target.value);
+        checkWarehouse1Stock(row, true);
+      }
+      if (event.target.name === 'line_qty') checkWarehouse1Stock(row, true);
     });
+
+    body.addEventListener('focusout', function (event) {
+      var row = event.target.closest('tr');
+      if (!row) return;
+      if (event.target.name === 'line_part_number') checkWarehouse1Stock(row, false);
+    });
+
+    if (form) {
+      form.addEventListener('submit', function (event) {
+        var submitter = event.submitter || document.activeElement;
+        var intent = submitter && submitter.getAttribute('name') === 'intent' ? submitter.value : '';
+        if (intent !== 'send') return;
+        event.preventDefault();
+        var rows = Array.prototype.slice.call(body.querySelectorAll('tr'));
+        Promise.all(rows.map(function (row) { return checkWarehouse1Stock(row, true); }))
+          .then(function (results) {
+            if (results.some(function (ok) { return ok === false; })) {
+              warnNoStock('No Stock for this Part Number. Order was not sent. Parts Manager was notified.');
+              return;
+            }
+            var hidden = form.querySelector('input[name="intent"][type="hidden"]');
+            if (!hidden) {
+              hidden = document.createElement('input');
+              hidden.type = 'hidden';
+              hidden.name = 'intent';
+              form.appendChild(hidden);
+            }
+            hidden.value = 'send';
+            form.submit();
+          });
+      });
+    }
 
     document.querySelectorAll('.branch-parts-add-from-stock').forEach(function (button) {
       button.addEventListener('click', function () {
-        addRow({
+        var row = addRow({
           part_number: button.getAttribute('data-part-number'),
           part_name: button.getAttribute('data-part-name'),
           sub_id: button.getAttribute('data-sub-id'),
@@ -361,6 +469,7 @@
           markup: button.getAttribute('data-markup'),
           retail: button.getAttribute('data-retail')
         });
+        checkWarehouse1Stock(row, true);
         document.getElementById('branch-parts-order-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });

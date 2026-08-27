@@ -70,6 +70,7 @@ const {
   frontlineHomePath,
   frontlineRoleLabel,
 } = require('./lib/frontline-roles');
+const stockAlerts = require('./lib/parts-stock-alerts');
 const portals = require('./lib/portals');
 const ROLE_STM = portals.ROLE_STM;
 const ROLE_PARTS_MANAGER = portals.ROLE_PARTS_MANAGER;
@@ -2178,7 +2179,7 @@ app.get('/service-receptionist', requireAnyRole(
   const user = req.session && req.session.user ? req.session.user : {};
   const branchName = resolveFrontlineDashboardBranch(user);
   const branchKey = normalizeBranchKey(branchName);
-  const [allWorkOrders, allCustomers, allVehicles, employees, technicianUpdates, transactionRecords, pricingSettings] = await Promise.all([
+  const [allWorkOrders, allCustomers, allVehicles, employees, technicianUpdates, transactionRecords, pricingSettings, rawData] = await Promise.all([
     store.getAll('work_orders'),
     store.getAll('customers'),
     store.getAll('vehicles'),
@@ -2186,6 +2187,7 @@ app.get('/service-receptionist', requireAnyRole(
     store.getAll('technician_updates'),
     store.getAll('transaction_records'),
     store.getPricingSettings(),
+    store.getRawData(),
   ]);
   const workOrders = allWorkOrders.filter((wo) => normalizeBranchKey(wo.branch) === branchKey);
   const customerIds = new Set(workOrders.map((wo) => wo.customer_id).filter(Boolean));
@@ -2200,6 +2202,7 @@ app.get('/service-receptionist', requireAnyRole(
     normalizeBranchKey(employee.work_location_branch_id) === branchKey
   ));
   const openWorkOrdersCount = workOrders.filter((wo) => !isWorkOrderClosed(wo)).length;
+  stockAlerts.reconcileWarehouse1Stock(rawData);
   return res.render('index', {
     work_orders: workOrders,
     customers,
@@ -2211,6 +2214,7 @@ app.get('/service-receptionist', requireAnyRole(
     branch: branchName,
     openWorkOrdersCount,
     branchRevenueBars: buildFrontlineBranchRevenueBars(branchName, transactionRecords, pricingSettings),
+    readyMessages: stockAlerts.listReadyMessages(rawData, branchName),
   });
 });
 

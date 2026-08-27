@@ -229,14 +229,23 @@ function setupTimelineFilters() {
   }
 
   let negPopupTimer = null;
+  function hideNegativeReports() {
+    const popup = document.getElementById('gm-neg-popup');
+    if (!popup) return;
+    popup.classList.remove('is-visible');
+    popup.hidden = true;
+    if (negPopupTimer) {
+      window.clearTimeout(negPopupTimer);
+      negPopupTimer = null;
+    }
+  }
   function showNegativeReports(reports) {
     const popup = document.getElementById('gm-neg-popup');
     const list = document.getElementById('gm-neg-popup-list');
     if (!popup || !list) return;
     const items = Array.isArray(reports) ? reports : [];
     if (!items.length) {
-      popup.classList.remove('is-visible');
-      popup.hidden = true;
+      hideNegativeReports();
       return;
     }
     list.innerHTML = items.map((report) => (
@@ -248,10 +257,12 @@ function setupTimelineFilters() {
     popup.hidden = false;
     popup.classList.add('is-visible');
     if (negPopupTimer) window.clearTimeout(negPopupTimer);
-    negPopupTimer = window.setTimeout(function () {
-      popup.classList.remove('is-visible');
-      popup.hidden = true;
-    }, 10000);
+    negPopupTimer = window.setTimeout(hideNegativeReports, 10000);
+  }
+  const negPopup = document.getElementById('gm-neg-popup');
+  if (negPopup) {
+    negPopup.addEventListener('click', hideNegativeReports);
+    negPopup.setAttribute('title', 'Click to dismiss');
   }
 
   function updateCards(payload, options) {

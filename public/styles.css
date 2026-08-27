@@ -1,5 +1,5 @@
 :root {
-  --bg: #f4f6f8;
+  --bg: #c3c5c6;
   --card: #ffffff;
   --accent: #2f6db3;
   --muted-dark: #334155;
@@ -2267,7 +2267,7 @@ form.form{
 
 /* Light office theme — simple white cards, Excel chart colors */
 :root {
-  --office-bg: #f4f6f8;
+  --office-bg: #c3c5c6;
   --office-surface: #ffffff;
   --office-surface-soft: #f7f9fb;
   --office-panel: #ffffff;
@@ -4944,6 +4944,19 @@ body button {
   justify-content:space-between;
 }
 
+.branch-parts-low-stock .pm-table-wrap{
+  overflow-x:auto;
+}
+.branch-parts-low-stock table.list{
+  width:100%;
+  min-width:100%;
+  table-layout:auto;
+}
+.branch-parts-low-stock table.list th,
+.branch-parts-low-stock table.list td{
+  white-space:nowrap;
+}
+
 .branch-parts-order-table input{
   min-width:88px;
   width:100%;
@@ -6079,7 +6092,7 @@ body.role-frontline .technician-monitor__status{
 /* ===== Global light office skin: square corners, Excel-style charts ===== */
 html,
 body{
-  background:#f4f6f8 !important;
+  background:#c3c5c6 !important;
   color:#111827 !important;
 }
 
@@ -7231,7 +7244,7 @@ button.fte-pill.fte-pill--high{
   box-shadow:none !important;
 }
 .tech-app-shell{
-  background:#f4f6f8 !important;
+  background:#c3c5c6 !important;
   color:var(--status-gray-ink) !important;
 }
 .tech-kpi-card{
@@ -7392,5 +7405,645 @@ button.fte-pill.fte-pill--high{
   }
 }
 
+/* GM dashboards and pages: sharper, higher-contrast type */
+body.role-gm{
+  color:#0f172a !important;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+body.role-gm .site-header,
+body.role-gm .site-header a,
+body.role-gm .site-header button,
+body.role-gm .site-header .brand-text,
+body.role-gm .site-header .brand-text__name,
+body.role-gm .header-user-badge,
+body.role-gm .header-user-badge--gm-lead{
+  color:#0f172a !important;
+  font-weight:800 !important;
+  text-shadow:none !important;
+}
+body.role-gm .site-header .brand-text__entity{
+  color:#1e293b !important;
+  font-weight:700 !important;
+}
+body.role-gm h1,
+body.role-gm h2,
+body.role-gm h3,
+body.role-gm .dashboard-title,
+body.role-gm .gm-title,
+body.role-gm .role-dashboard-title,
+body.role-gm .role-dashboard-title > span,
+body.role-gm .dashboard-card__header,
+body.role-gm .gm-panel-header,
+body.role-gm .admin-panel-header{
+  color:#0b1220 !important;
+  font-weight:800 !important;
+  text-shadow:none !important;
+  letter-spacing:0.01em;
+}
+body.role-gm .gm-shell--dense .dashboard-title,
+body.role-gm .gm-shell--dense .role-dashboard-title{
+  font-size:20px !important;
+  line-height:1.15 !important;
+}
+body.role-gm .role-dashboard-title > .role-dashboard-title__suffix{
+  color:#1e293b !important;
+  font-weight:800 !important;
+}
+body.role-gm .gm-panel-header,
+body.role-gm .gm-shell--dense .gm-panel-header,
+body.role-gm .dashboard-card__header,
+body.role-gm .fte-panel .gm-panel-header,
+body.role-gm .fte-panel .dashboard-card__header{
+  font-size:16px !important;
+  line-height:1.2 !important;
+}
+body.role-gm .gm-kpi-label,
+body.role-gm .gm-shell--dense .gm-kpi-card--micro .gm-kpi-label,
+body.role-gm .gm-shell--dense .gm-kpi-grid--micro .gm-kpi-label,
+body.role-gm .fte-shell .gm-kpi-label{
+  color:#0f172a !important;
+  font-size:12px !important;
+  font-weight:800 !important;
+  letter-spacing:0.04em;
+}
+body.role-gm .gm-kpi-value,
+body.role-gm .gm-kpi-card--hero .gm-kpi-value,
+body.role-gm .gm-shell--dense .gm-kpi-value,
+body.role-gm .fte-shell .gm-kpi-value{
+  color:#0b4f8a !important;
+  font-weight:800 !important;
+  text-shadow:none !important;
+}
+body.role-gm .gm-shell--dense .gm-kpi-value{
+  font-size:22px !important;
+}
+body.role-gm .gm-kpi-delta{
+  font-size:12px !important;
+  font-weight:700 !important;
+  color:#1e293b !important;
+}
+body.role-gm .dashboard-note,
+body.role-gm .admin-note,
+body.role-gm .muted,
+body.role-gm .dashboard-card .dashboard-note,
+body.role-gm .dashboard-card .dashboard-submetric,
+body.role-gm .dashboard-card .admin-note,
+body.role-gm .gm-markup-formula,
+body.role-gm .gm-interprise-section,
+body.role-gm .gm-markup-row__name,
+body.role-gm .gm-markup-row__meta,
+body.role-gm .gm-markup-row__money{
+  font-size:13px !important;
+  line-height:1.4 !important;
+  color:#1e293b !important;
+  font-weight:700 !important;
+  text-shadow:none !important;
+}
+body.role-gm .gm-reporting-form label,
+body.role-gm .gm-reporting-form--compact label,
+body.role-gm .gm-target-form label{
+  color:#0f172a !important;
+  font-size:12px !important;
+  font-weight:800 !important;
+}
+body.role-gm .gm-reporting-form input,
+body.role-gm .gm-reporting-form input[type="date"],
+body.role-gm .gm-reporting-form--compact input[type="date"],
+body.role-gm .gm-target-form input{
+  color:#0f172a !important;
+  background:#ffffff !important;
+  border-color:#64748b !important;
+  font-weight:700 !important;
+}
+body.role-gm .gm-range-pills a,
+body.role-gm .gm-range-pills button,
+body.role-gm .gm-range-pills span{
+  color:#0f172a !important;
+  font-weight:800 !important;
+}
+body.role-gm .gm-range-pills .is-active{
+  color:#ffffff !important;
+}
+body.role-gm .gm-table th,
+body.role-gm .list th,
+body.role-gm .fte-table th,
+body.role-gm .fte-ledger-table th,
+body.role-gm .gm-matrix-table th{
+  color:#ffffff !important;
+  font-weight:800 !important;
+  letter-spacing:0.03em;
+}
+body.role-gm .gm-table td,
+body.role-gm .list td,
+body.role-gm .fte-table td,
+body.role-gm .fte-ledger-table td,
+body.role-gm .gm-matrix-table td,
+body.role-gm .gm-action-table td,
+body.role-gm .gm-action-feed__item,
+body.role-gm .gm-status-stats div{
+  color:#0f172a !important;
+  font-weight:600 !important;
+}
+body.role-gm .gm-table td a,
+body.role-gm .list td a,
+body.role-gm a:not(.btn):not(.workorder-nav-card){
+  color:#0b4f8a !important;
+  font-weight:700 !important;
+}
+body.role-gm .gm-donut__center strong{
+  color:#0b1220 !important;
+  font-weight:800 !important;
+}
+body.role-gm .gm-donut__center span{
+  color:#1e293b !important;
+  font-size:12px !important;
+  font-weight:800 !important;
+}
+body.role-gm .gm-perf-col__name,
+body.role-gm .gm-perf-col__value{
+  color:#0f172a !important;
+  font-size:12px !important;
+  font-weight:800 !important;
+}
+body.role-gm .gm-markup-row__value{
+  color:#0b4f8a !important;
+  font-weight:800 !important;
+}
+body.role-gm .gm-markup-badge{
+  color:#0b4f8a !important;
+  font-weight:800 !important;
+}
+body.role-gm .gm-interprise-tool .dashboard-note{
+  font-size:13px !important;
+}
+body.role-gm .fte-feed-item,
+body.role-gm .fte-feed-item strong,
+body.role-gm .fte-feed-item span,
+body.role-gm .fte-feed-item em,
+body.role-gm .fte-feed-item small{
+  color:#0f172a !important;
+}
+body.role-gm .fte-feed-item span,
+body.role-gm .fte-feed-item em,
+body.role-gm .fte-feed-item small{
+  color:#1e293b !important;
+  font-weight:600 !important;
+}
+body.role-gm .site-footer,
+body.role-gm .site-footer a{
+  color:#1e293b !important;
+}
+body.role-gm .dms-catalog{
+  --dms-ink:#0f172a;
+  --dms-muted:#1e293b;
+  color:#0f172a;
+}
+body.role-gm .dms-catalog__title,
+body.role-gm .dms-catalog__column-header,
+body.role-gm .dms-catalog__brand-btn,
+body.role-gm .dms-catalog__engine-btn{
+  color:#0b1220 !important;
+  font-weight:800 !important;
+}
 
+/* Create / fill-out forms: no blackout fields, larger sharper type */
+main.container:has(> form.form[method="post"]:not(.auth-form):not(.service-form)) > h2,
+main.container:has(> form.form[method="POST"]:not(.auth-form):not(.service-form)) > h2{
+  color:#0b1220 !important;
+  font-size:29px !important;
+  font-weight:800 !important;
+  letter-spacing:0.01em;
+  text-shadow:none !important;
+  margin:8px 0 14px;
+}
+form.form[method="post"]:not(.auth-form):not(.service-form),
+form.form[method="POST"]:not(.auth-form):not(.service-form){
+  background:#ffffff !important;
+  color:#0b1220 !important;
+  border:1px solid #94a3b8 !important;
+  box-shadow:none !important;
+  border-radius:0 !important;
+}
+form.form[method="post"]:not(.auth-form):not(.service-form) > label,
+form.form[method="POST"]:not(.auth-form):not(.service-form) > label{
+  color:#0b1220 !important;
+  font-size:15px !important;
+  font-weight:800 !important;
+}
+form.form[method="post"]:not(.auth-form):not(.service-form) > label small,
+form.form[method="POST"]:not(.auth-form):not(.service-form) > label small,
+form.form[method="post"]:not(.auth-form):not(.service-form) > small,
+form.form[method="POST"]:not(.auth-form):not(.service-form) > small{
+  color:#1e293b !important;
+  font-size:14px !important;
+  font-weight:600 !important;
+  line-height:1.4 !important;
+}
+form.form[method="post"]:not(.auth-form):not(.service-form) input,
+form.form[method="post"]:not(.auth-form):not(.service-form) select,
+form.form[method="post"]:not(.auth-form):not(.service-form) textarea,
+form.form[method="POST"]:not(.auth-form):not(.service-form) input,
+form.form[method="POST"]:not(.auth-form):not(.service-form) select,
+form.form[method="POST"]:not(.auth-form):not(.service-form) textarea{
+  background:#ffffff !important;
+  color:#0b1220 !important;
+  border:1px solid #64748b !important;
+  border-radius:0 !important;
+  font-size:16px !important;
+  font-weight:700 !important;
+  min-height:42px;
+  text-shadow:none !important;
+}
+form.form[method="post"]:not(.auth-form):not(.service-form) textarea,
+form.form[method="POST"]:not(.auth-form):not(.service-form) textarea{
+  min-height:6.5em;
+  line-height:1.4 !important;
+}
+form.form[method="post"]:not(.auth-form):not(.service-form) input[readonly],
+form.form[method="post"]:not(.auth-form):not(.service-form) input:disabled,
+form.form[method="post"]:not(.auth-form):not(.service-form) select:disabled,
+form.form[method="POST"]:not(.auth-form):not(.service-form) input[readonly],
+form.form[method="POST"]:not(.auth-form):not(.service-form) input:disabled,
+form.form[method="POST"]:not(.auth-form):not(.service-form) select:disabled{
+  background:#e8edf3 !important;
+  color:#0b1220 !important;
+  border-color:#94a3b8 !important;
+}
+form.form[method="post"]:not(.auth-form):not(.service-form) input::placeholder,
+form.form[method="post"]:not(.auth-form):not(.service-form) textarea::placeholder,
+form.form[method="POST"]:not(.auth-form):not(.service-form) input::placeholder,
+form.form[method="POST"]:not(.auth-form):not(.service-form) textarea::placeholder,
+body.role-frontline form.form[method="post"]:not(.auth-form):not(.service-form) input::placeholder,
+body.role-frontline form.form[method="post"]:not(.auth-form):not(.service-form) textarea::placeholder{
+  color:#334155 !important;
+  opacity:1 !important;
+  font-weight:600 !important;
+}
+form.form[method="post"]:not(.auth-form):not(.service-form) .description-faded,
+form.form[method="POST"]:not(.auth-form):not(.service-form) .description-faded,
+form.form[method="post"]:not(.auth-form):not(.service-form) textarea[name="description"],
+form.form[method="POST"]:not(.auth-form):not(.service-form) textarea[name="description"]{
+  color:#0b1220 !important;
+  background:#ffffff !important;
+}
+form.form[method="post"]:not(.auth-form):not(.service-form) > button[type="submit"],
+form.form[method="post"]:not(.auth-form):not(.service-form) > button:not([type]),
+form.form[method="POST"]:not(.auth-form):not(.service-form) > button[type="submit"],
+form.form[method="POST"]:not(.auth-form):not(.service-form) > button:not([type]){
+  background:#2f6db3 !important;
+  color:#ffffff !important;
+  border:1px solid #1e4e86 !important;
+  border-radius:0 !important;
+  font-size:16px !important;
+  font-weight:800 !important;
+  min-height:42px;
+}
+form.form[method="post"]:not(.auth-form):not(.service-form) > a,
+form.form[method="POST"]:not(.auth-form):not(.service-form) > a,
+form.form[method="post"]:not(.auth-form):not(.service-form) > button[type="button"],
+form.form[method="POST"]:not(.auth-form):not(.service-form) > button[type="button"]{
+  background:#f3f3f3 !important;
+  color:#0b1220 !important;
+  border:1px solid #64748b !important;
+  border-radius:0 !important;
+  font-size:16px !important;
+  font-weight:800 !important;
+  min-height:42px;
+}
+
+/* All portals: same light fill-out fields, +20% type, high contrast */
+main.container > h2,
+.labor-charge-page h2,
+.helper h2,
+.service-form h2,
+.service-form h3{
+  color:#0b1220 !important;
+  font-weight:800 !important;
+  text-shadow:none !important;
+}
+main.container > h2{
+  font-size:29px !important;
+}
+form.form,
+form.form.service-form,
+form.form.admin-form,
+form.form.wo-edit-form,
+form.form.auth-form,
+form.form.pm-form,
+.search-billing-form,
+.wo-edit-services,
+.fte-modal,
+.fte-modal__dialog,
+.fte-modal__form,
+.pm-modal,
+.pm-modal__dialog,
+.delete-password-dialog,
+.gm-target-panel,
+.admin-inline-form,
+.stm-branch-filter,
+.fm-date-filter,
+.dashboard-card:has(> form.form),
+.admin-panel:has(> form.form){
+  background:#ffffff !important;
+  color:#0b1220 !important;
+  border-color:#94a3b8 !important;
+  box-shadow:none !important;
+}
+.auth-card form.form.auth-form{
+  background:transparent !important;
+  border:none !important;
+  box-shadow:none !important;
+  padding:0 !important;
+}
+.auth-shell .auth-form > label{
+  color:#0b1220 !important;
+  font-size:15px !important;
+  font-weight:800 !important;
+}
+form.form label,
+form.form.service-form > label,
+form.form.admin-form label,
+.search-billing-form label,
+.fte-modal__grid label,
+.fte-modal__form label,
+.pm-modal label,
+.delete-password-dialog label,
+.technician-monitor__toolbar label,
+.technician-monitor__status-form label,
+.gm-reporting-form label,
+.gm-reporting-form--compact label,
+.gm-target-form label,
+.admin-inline-form label,
+.stm-branch-filter,
+.fm-date-filter label,
+body.role-frontline .form label,
+body.role-frontline .labor-charge-page label,
+body.role-frontline main.container > h2,
+body.role-gm .gm-reporting-form label,
+body.role-gm .gm-reporting-form--compact label,
+body.role-gm .gm-target-form label{
+  color:#0b1220 !important;
+  font-weight:800 !important;
+}
+form.form label,
+form.form.service-form > label,
+.search-billing-form label,
+.gm-reporting-form label,
+.gm-reporting-form--compact label,
+.gm-target-form label,
+.admin-inline-form label,
+.stm-branch-filter,
+.fm-date-filter label,
+.technician-monitor__status-form label,
+.fte-modal__grid label,
+.pm-modal label{
+  font-size:15px !important;
+}
+form.form small,
+form.form label small,
+.search-billing-form small,
+.service-form small{
+  color:#1e293b !important;
+  font-size:14px !important;
+  font-weight:600 !important;
+}
+form.form input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+form.form select,
+form.form textarea,
+form.form.service-form input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+form.form.service-form select,
+form.form.service-form textarea,
+form.form.service-form .service-table input,
+form.form.service-form .service-table select,
+.search-billing-form input,
+.search-billing-form select,
+.fte-modal__grid input,
+.fte-modal__grid select,
+.fte-modal__grid textarea,
+.fte-modal__form input,
+.fte-modal__form select,
+.fte-modal__form textarea,
+.pm-modal input,
+.pm-modal select,
+.pm-modal textarea,
+.delete-password-dialog input,
+.technician-monitor__card input,
+.technician-monitor__card select,
+.technician-monitor__toolbar input,
+.technician-monitor__status-form input,
+.technician-monitor__status-form select,
+.wo-vehicle-finder__search input,
+.gm-reporting-form input,
+.gm-reporting-form input[type="date"],
+.gm-reporting-form--compact input[type="date"],
+.gm-target-form input,
+.gm-target-form input[type="number"],
+.gm-incentive-rate,
+.admin-inline-form select,
+.stm-branch-filter select,
+.fm-date-filter input[type="date"],
+.auth-shell .auth-form input,
+.auth-shell .auth-form select,
+.auth-shell .auth-form textarea,
+.labor-charge-page input,
+.labor-charge-page select,
+.labor-charge-page textarea,
+body.role-gm .gm-reporting-form input,
+body.role-gm .gm-reporting-form input[type="date"],
+body.role-gm .gm-reporting-form--compact input[type="date"],
+body.role-gm .gm-target-form input{
+  background:#ffffff !important;
+  color:#0b1220 !important;
+  border:1px solid #64748b !important;
+  border-radius:0 !important;
+  font-size:16px !important;
+  font-weight:700 !important;
+  min-height:42px;
+  text-shadow:none !important;
+}
+form.form textarea,
+form.form.service-form textarea,
+.fte-modal__grid textarea,
+.pm-modal textarea{
+  min-height:6.5em;
+  line-height:1.4 !important;
+}
+form.form input[readonly],
+form.form input:disabled,
+form.form select:disabled,
+form.form.service-form input[readonly],
+form.form.service-form input:disabled,
+.fte-modal__grid input[readonly],
+.pm-modal input[readonly]{
+  background:#e8edf3 !important;
+  color:#0b1220 !important;
+  border-color:#94a3b8 !important;
+}
+form.form input::placeholder,
+form.form textarea::placeholder,
+.search-billing-form input::placeholder,
+.fte-modal__grid input::placeholder,
+.pm-modal input::placeholder,
+.wo-vehicle-finder__search input::placeholder,
+body.role-frontline input::placeholder,
+body.role-frontline textarea::placeholder,
+body.role-frontline select::placeholder,
+body.role-stm input::placeholder,
+body.role-pm input::placeholder,
+body.role-fm input::placeholder,
+body.role-gm input::placeholder{
+  color:#334155 !important;
+  opacity:1 !important;
+  font-weight:600 !important;
+}
+.wo-vehicle-finder,
+.wo-vehicle-finder__cell,
+.wo-vehicle-finder__suggest,
+.wo-vehicle-finder__suggest button,
+.wo-edit-services,
+.wo-edit-services__head h3,
+.wo-edit-services__table,
+.wo-edit-services__table th,
+.wo-edit-services__table td,
+.wo-edit-services__table td small{
+  background:#ffffff !important;
+  color:#0b1220 !important;
+}
+.wo-vehicle-finder{
+  border:1px solid #94a3b8 !important;
+}
+.wo-vehicle-finder__placeholder{
+  color:#1e293b !important;
+  font-size:14px !important;
+  font-weight:600 !important;
+}
+.wo-vehicle-finder__cell{
+  font-size:16px !important;
+  font-weight:700 !important;
+}
+.wo-edit-services__head h3{
+  font-size:17px !important;
+  font-weight:800 !important;
+}
+form.form button[type="submit"],
+form.form button:not([type]),
+form.form.service-form .form-actions button,
+form.form.service-form .form-actions .btn,
+.search-billing-form button[type="submit"]{
+  background:#2f6db3 !important;
+  color:#ffffff !important;
+  border:1px solid #1e4e86 !important;
+  border-radius:0 !important;
+  font-size:16px !important;
+  font-weight:800 !important;
+  min-height:42px;
+}
+form.form a.btn,
+form.form > a,
+form.form.service-form .form-actions a,
+.search-billing-form a{
+  background:#f3f3f3 !important;
+  color:#0b1220 !important;
+  border:1px solid #64748b !important;
+  border-radius:0 !important;
+  font-size:16px !important;
+  font-weight:800 !important;
+}
+.header-logout-form,
+.header-logout-form button{
+  min-height:0 !important;
+  font-size:14px !important;
+}
+
+/* Small back chip: gray at rest, blue on hover — all portals */
+.app-back-arrow,
+.app-back-chip,
+.site-header .app-back-arrow,
+.site-header .app-back-chip,
+body.role-gm .site-header .app-back-arrow,
+body.role-frontline .site-header .app-back-arrow,
+body.role-stm .site-header .app-back-arrow,
+body.role-pm .site-header .app-back-arrow,
+body.role-fm .site-header .app-back-arrow{
+  appearance:none;
+  min-width:28px !important;
+  min-height:22px !important;
+  width:auto !important;
+  padding:0 8px !important;
+  background:#f3f3f3 !important;
+  border:1px solid #adadad !important;
+  border-radius:0 !important;
+  color:#111827 !important;
+  font-size:14px !important;
+  font-weight:400 !important;
+  line-height:1 !important;
+  box-shadow:none !important;
+  text-shadow:none !important;
+}
+.app-back-arrow:hover,
+.app-back-chip:hover,
+.site-header .app-back-arrow:hover,
+.site-header .app-back-chip:hover,
+body.role-gm .site-header .app-back-arrow:hover,
+body.role-frontline .site-header .app-back-arrow:hover,
+body.role-stm .site-header .app-back-arrow:hover,
+body.role-pm .site-header .app-back-arrow:hover,
+body.role-fm .site-header .app-back-arrow:hover{
+  background:#2f6db3 !important;
+  border-color:#2f6db3 !important;
+  color:#ffffff !important;
+}
+
+.office-stock-dialog[hidden]{
+  display:none !important;
+}
+.office-stock-dialog{
+  position:fixed;
+  inset:0;
+  z-index:80;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(15,23,42,0.28);
+}
+.office-stock-dialog__card{
+  width:min(420px, calc(100vw - 32px));
+  background:#ffffff;
+  border:1px solid #94a3b8;
+  box-shadow:0 8px 24px rgba(15,23,42,0.18);
+  padding:16px 18px 14px;
+}
+.office-stock-dialog__title{
+  margin:0 0 8px;
+  color:#1e3a8a;
+  font-size:15px;
+  font-weight:800;
+  letter-spacing:0.04em;
+  text-transform:uppercase;
+}
+.office-stock-dialog__body{
+  margin:0 0 14px;
+  color:#0b1220;
+  font-size:16px;
+  font-weight:700;
+  line-height:1.4;
+}
+.office-stock-dialog #office-stock-dialog-ok{
+  background:#2f6db3;
+  color:#ffffff;
+  border:1px solid #1e4e86;
+  border-radius:0;
+  min-height:36px;
+  padding:6px 16px;
+  font-size:14px;
+  font-weight:800;
+}
+.sa-parts-message-panel,
+.pm-stock-alerts{
+  margin-top:12px;
+}
+.pm-stock-status--pending{ color:#b45309; }
+.pm-stock-status--ordered{ color:#1d4ed8; }
+.pm-stock-status--restocked{ color:#15803d; }
 

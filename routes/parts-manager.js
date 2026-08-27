@@ -22,7 +22,8 @@ const {
 } = require('../lib/approved-parts-receipt');
 const { allocatePartsTransactionNumber } = require('../lib/parts-transaction-number');
 const inventory = require('../lib/parts-inventory-controller');
-const { WAREHOUSE_1, sameLocation } = require('../lib/parts-location-scope');
+const stockAlerts = require('../lib/parts-stock-alerts');
+const { WAREHOUSE_1, sameLocation, filterDataToLocation, withLocationOnHand } = require('../lib/parts-location-scope');
 const { buildSortedDatabaseCsv, importPartsCsv } = require('../lib/parts-csv-sync');
 const {
   pmLocationOptions,
@@ -169,10 +170,16 @@ async function loadWorkspaceLocals(req) {
   inventory.ensureCollections(data);
   const dashboardLogs = inventory.getDashboardLogs(data);
   const { filtered, q, filterType, location } = filterPartsInventory(dashboardLogs, req.query);
-  const viewRows = inventory.attachOnHand(data, filtered);
+  const scopedData = location ? filterDataToLocation(data, location) : data;
+  const viewRows = withLocationOnHand(
+    inventory.attachOnHand(scopedData, filtered),
+    inventory.allAuditRows(data),
+    location || ''
+  );
   const locationOptions = pmLocationOptions(data);
   const vitals = buildPmVitals(data);
   const approvals = buildPmApprovals(data);
+  stockAlerts.reconcileWarehouse1Stock(data);
 
   return {
     parts: viewRows,
@@ -198,6 +205,7 @@ async function loadWorkspaceLocals(req) {
     error: req.query.error || '',
     success: req.query.success || '',
     openPanel: String(req.query.panel || '').trim(),
+    stockAlerts: stockAlerts.listTransmission(data),
   };
 }
 
