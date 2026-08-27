@@ -20,11 +20,13 @@ const {
   buildApprovedTransactionRecord,
   saveApprovedReceipt,
 } = require('../lib/approved-parts-receipt');
+const { warehouseFulfillmentExtras } = require('../lib/parts-transfer-receive');
 const { allocatePartsTransactionNumber } = require('../lib/parts-transaction-number');
 const inventory = require('../lib/parts-inventory-controller');
 const stockAlerts = require('../lib/parts-stock-alerts');
 const { WAREHOUSE_1, sameLocation, filterDataToLocation, withLocationOnHand } = require('../lib/parts-location-scope');
 const { buildSortedDatabaseCsv, importPartsCsv } = require('../lib/parts-csv-sync');
+const { collectReportLookups } = require('../lib/parts-reports');
 const {
   pmLocationOptions,
   buildPmVitals,
@@ -205,7 +207,9 @@ async function loadWorkspaceLocals(req) {
     error: req.query.error || '',
     success: req.query.success || '',
     openPanel: String(req.query.panel || '').trim(),
-    stockAlerts: stockAlerts.listTransmission(data),
+    pendingPartRequests: stockAlerts.listPendingPopups(data),
+    reportLookups: collectReportLookups(data),
+    reportIncludeWholeDatabase: true,
   };
 }
 
@@ -299,9 +303,9 @@ async function buildOverview() {
   return { lowStockAlerts, pendingPOs, recentMovements, pendingPartsRequests, stockByPart: Object.fromEntries(stockByPart) };
 }
 
-async function finalizeApprovedRequest(sourceRequest, resolver) {
+async function finalizeApprovedRequest(sourceRequest, resolver, extras) {
   const data = await store.getRawData();
-  const payload = buildApprovedTransactionRecord(sourceRequest, resolver, data);
+  const payload = buildApprovedTransactionRecord(sourceRequest, resolver, data, extras);
   const record = await store.create('parts_inventory', payload);
   const receipt = await saveApprovedReceipt(record, sourceRequest);
   const fresh = await store.getRawData();
@@ -315,6 +319,141 @@ async function finalizeApprovedRequest(sourceRequest, resolver) {
   });
   await store.replaceData(fresh);
   return { record, receipt };
+}
+
+function findApprovedInventoryRow(data, opts) {
+  const rows = Array.isArray(data.parts_inventory) ? data.parts_inventory : [];
+  if (opts && opts.requestId) {
+    return rows.find((row) => String(row.linked_request_id) === String(opts.requestId) && row.approved_at) || null;
+  }
+  if (opts && opts.transferId) {
+    return rows.find((row) => String(row.linked_transfer_id) === String(opts.transferId) && row.approved_at) || null;
+  }
+  if (opts && opts.id) {
+    return rows.find((row) => String(row.id) === String(opts.id)) || null;
+  }
+  return null;
+}
+
+async function loadPendingRequestBundle(id) {
+  const data = await store.getRawData();
+  const inventoryRequest = (data.parts_inventory || []).find((row) => String(row.id) === String(id));
+  if (inventoryRequest && isPendingPartsRequest(inventoryRequest)) {
+    return { kind: 'inventory', raw: inventoryRequest, mapped: mapInventoryPartsRequest(inventoryRequest) };
+  }
+  const request = (data.parts_requests || []).find((row) => String(row.id) === String(id));
+  if (request && String(request.status || '').trim().toLowerCase() === 'pending') {
+    return { kind: 'legacy', raw: request, mapped: mapLegacyPartsRequest(request) };
+  }
+  return null;
+}
+
+function transferLineList(transfer) {
+  if (Array.isArray(transfer.lines) && transfer.lines.length) return transfer.lines;
+  return [{
+    part_number: transfer.part_number,
+    part_name: transfer.part_name,
+    sub_id: transfer.sub_id,
+    qty: transfer.qty,
+    unit: transfer.unit,
+  }];
+}
+
+function mapTransferAsRequest(transfer) {
+  const first = transferLineList(transfer)[0] || {};
+  return {
+    id: transfer.id,
+    requesting_branch: transfer.to_branch,
+    branch: transfer.from_branch,
+    from_branch: transfer.from_branch,
+    to_branch: transfer.to_branch,
+    work_order_number: '',
+    transaction_number: transfer.transaction_number,
+    part_number: first.part_number,
+    part_name: first.part_name,
+    sub_id: first.sub_id,
+    qty: first.qty,
+    unit: first.unit,
+    editor: transfer.editor || transfer.created_by || '',
+    requested_by: transfer.editor || transfer.created_by || '',
+    created_at: transfer.created_at || transfer.stamped_label || transfer.stamped_at || '',
+    packing_list_number: transfer.packing_list_number,
+    transmittal_number: transfer.transmittal_number,
+    original_transaction_type: 'Transfer Request',
+    sold_to: `Transfer ${transfer.transaction_number || ''}`.trim(),
+  };
+}
+
+function applyCompletedTransfer(data, transfer, editor) {
+  if (String(transfer.status || '').toLowerCase() === 'completed') {
+    const existing = (data.parts_inventory || []).filter((row) => String(row.linked_transfer_id) === String(transfer.id) && row.approved_at);
+    return { transfer, approvedRows: existing };
+  }
+
+  const stamp = stampNow();
+  const lines = transferLineList(transfer);
+  const approvedRows = [];
+  if (!Array.isArray(data.parts_inventory)) data.parts_inventory = [];
+
+  lines.forEach((line) => {
+    const outRow = {
+      id: genId(),
+      created_at: stamp.iso,
+      transaction_date: stamp.date,
+      transaction_number: allocatePartsTransactionNumber(data),
+      transaction_type: TYPE_SOLD,
+      present_location: transfer.from_branch,
+      branch: transfer.from_branch,
+      editor,
+      part_number: line.part_number,
+      part_name: line.part_name,
+      sub_id: line.sub_id,
+      qty: toNumber(line.qty),
+      unit: line.unit || '',
+      sold_to: `Transfer ${transfer.transaction_number}`,
+      linked_transfer_id: transfer.id,
+      requesting_branch: transfer.to_branch,
+      from_branch: transfer.from_branch,
+      to_branch: transfer.to_branch,
+      packing_list_number: transfer.packing_list_number,
+      transmittal_number: transfer.transmittal_number,
+      approved_at: stamp.iso,
+      approved_by: editor,
+      original_transaction_type: 'Transfer Request',
+    };
+    const inRow = {
+      id: genId(),
+      created_at: stamp.iso,
+      transaction_date: stamp.date,
+      transaction_number: allocatePartsTransactionNumber(data),
+      transaction_type: TYPE_RESTOCK,
+      present_location: transfer.to_branch,
+      branch: transfer.to_branch,
+      editor,
+      part_number: line.part_number,
+      part_name: line.part_name,
+      sub_id: line.sub_id,
+      qty: toNumber(line.qty),
+      unit: line.unit || '',
+      sold_to: '',
+      linked_transfer_id: transfer.id,
+    };
+    data.parts_inventory.push(outRow, inRow);
+    inventory.rememberTransaction(data, outRow);
+    inventory.rememberTransaction(data, inRow);
+    approvedRows.push(outRow);
+  });
+
+  transfer.status = 'completed';
+  transfer.completed_at = stamp.iso;
+  transfer.completed_by = editor;
+  transfer.stamped_at = stamp.iso;
+  transfer.stamped_label = stamp.label;
+  return { transfer, approvedRows };
+}
+
+function renderApprovePrint(res, locals) {
+  return res.render('parts-manager/approve-print', locals);
 }
 
 function findTransfer(data, id) {
@@ -338,6 +477,175 @@ router.get('/approved-receipts/:filename', async (req, res) => {
   } catch (error) {
     return res.status(404).send('Receipt not found.');
   }
+});
+
+router.get('/requests/:id/preview', async (req, res) => {
+  const bundle = await loadPendingRequestBundle(req.params.id);
+  if (!bundle) {
+    const data = await store.getRawData();
+    const existing = findApprovedInventoryRow(data, { requestId: req.params.id });
+    if (existing) {
+      return res.redirect('/parts-manager/approved/' + encodeURIComponent(existing.id));
+    }
+    return res.redirect('/parts-manager?panel=approvals&error=' + encodeURIComponent('Pending request not found.'));
+  }
+
+  const data = await store.getRawData();
+  const resolver = currentEditor(req);
+  const extras = warehouseFulfillmentExtras(bundle.mapped);
+  const record = buildApprovedTransactionRecord(bundle.mapped, resolver, data, extras);
+  record.approved_at = '';
+  return renderApprovePrint(res, {
+    mode: 'preview',
+    kindLabel: 'Parts Request',
+    record,
+    source: bundle.mapped,
+    lines: [],
+    proceedAction: '/parts-manager/requests/' + encodeURIComponent(bundle.mapped.id) + '/proceed',
+    cancelHref: '/parts-manager?panel=approvals',
+    autoPrint: '',
+    error: '',
+    success: '',
+  });
+});
+
+router.post('/requests/:id/proceed', async (req, res) => {
+  const bundle = await loadPendingRequestBundle(req.params.id);
+  if (!bundle) {
+    const data = await store.getRawData();
+    const existing = findApprovedInventoryRow(data, { requestId: req.params.id });
+    if (existing) {
+      return res.redirect('/parts-manager/approved/' + encodeURIComponent(existing.id) + '?print=1');
+    }
+    return res.redirect('/parts-manager?panel=approvals&error=' + encodeURIComponent('Pending request not found.'));
+  }
+
+  const resolver = currentEditor(req);
+  if (bundle.kind === 'inventory') {
+    await store.update('parts_inventory', bundle.raw.id, {
+      request_status: 'approved',
+      resolved_at: new Date().toISOString(),
+      resolved_by: resolver,
+    });
+  } else {
+    await store.update('parts_requests', bundle.raw.id, {
+      status: 'approved',
+      resolved_at: new Date().toISOString(),
+      resolved_by: resolver,
+    });
+  }
+
+  const { record } = await finalizeApprovedRequest(bundle.mapped, resolver, warehouseFulfillmentExtras(bundle.mapped));
+  return res.redirect('/parts-manager/approved/' + encodeURIComponent(record.id) + '?print=1');
+});
+
+router.get('/transfers/:id/preview', async (req, res) => {
+  const data = await store.getRawData();
+  const transfer = findTransfer(data, req.params.id);
+  if (!transfer) {
+    return res.redirect('/parts-manager?panel=approvals&error=' + encodeURIComponent('Transfer not found.'));
+  }
+  if (String(transfer.status || '').toLowerCase() === 'completed') {
+    const existing = findApprovedInventoryRow(data, { transferId: transfer.id });
+    if (existing) {
+      return res.redirect('/parts-manager/approved/' + encodeURIComponent(existing.id));
+    }
+    return res.redirect('/parts-manager?panel=approvals&error=' + encodeURIComponent('That transfer is already completed.'));
+  }
+
+  const source = mapTransferAsRequest(transfer);
+  const record = buildApprovedTransactionRecord(source, currentEditor(req), data, {
+    original_transaction_type: 'Transfer Request',
+    sold_to: source.sold_to,
+    linked_request_id: '',
+    linked_transfer_id: transfer.id,
+    from_branch: transfer.from_branch,
+    to_branch: transfer.to_branch,
+  });
+  record.approved_at = '';
+  return renderApprovePrint(res, {
+    mode: 'preview',
+    kindLabel: 'Transfer Request',
+    record,
+    source,
+    lines: transferLineList(transfer),
+    proceedAction: '/parts-manager/transfers/' + encodeURIComponent(transfer.id) + '/proceed',
+    cancelHref: '/parts-manager?panel=approvals',
+    autoPrint: '',
+    error: '',
+    success: '',
+  });
+});
+
+router.post('/transfers/:id/proceed', async (req, res) => {
+  const data = await store.getRawData();
+  const transfer = findTransfer(data, req.params.id);
+  if (!transfer) {
+    return res.redirect('/parts-manager?panel=approvals&error=' + encodeURIComponent('Transfer not found.'));
+  }
+
+  const editor = currentEditor(req);
+  const { approvedRows } = applyCompletedTransfer(data, transfer, editor);
+  const printable = approvedRows[0];
+  if (printable) {
+    const source = mapTransferAsRequest(transfer);
+    await saveApprovedReceipt(printable, source);
+    rememberDocument(data, {
+      kind: 'receipt',
+      serial: printable.transaction_number,
+      transaction_number: printable.transaction_number,
+      related_id: printable.id,
+      created_by: editor,
+      title: 'Approved Transfer Receipt',
+    });
+  }
+  await store.replaceData(data);
+
+  if (printable) {
+    return res.redirect('/parts-manager/approved/' + encodeURIComponent(printable.id) + '?print=1');
+  }
+  return res.redirect('/parts-manager?panel=approvals&success=' + encodeURIComponent('Transfer completed.'));
+});
+
+router.get('/approved/:id', async (req, res) => {
+  const data = await store.getRawData();
+  const record = findApprovedInventoryRow(data, { id: req.params.id })
+    || (data.parts_inventory || []).find((row) => String(row.id) === String(req.params.id));
+  if (!record || !record.approved_at) {
+    return res.redirect('/parts-manager?panel=approvals&error=' + encodeURIComponent('Approved transaction not found.'));
+  }
+
+  let source = {
+    requested_by: record.approved_by || record.editor || '',
+    editor: record.editor || '',
+    created_at: record.created_at || record.approved_at || '',
+  };
+  if (record.linked_request_id) {
+    const inventoryRequest = (data.parts_inventory || []).find((row) => String(row.id) === String(record.linked_request_id));
+    if (inventoryRequest) source = mapInventoryPartsRequest(inventoryRequest);
+    else {
+      const legacy = (data.parts_requests || []).find((row) => String(row.id) === String(record.linked_request_id));
+      if (legacy) source = mapLegacyPartsRequest(legacy);
+    }
+  } else if (record.linked_transfer_id) {
+    const transfer = findTransfer(data, record.linked_transfer_id);
+    if (transfer) source = mapTransferAsRequest(transfer);
+  }
+
+  return renderApprovePrint(res, {
+    mode: 'final',
+    kindLabel: record.original_transaction_type || 'Parts Request',
+    record,
+    source,
+    lines: record.linked_transfer_id && findTransfer(data, record.linked_transfer_id)
+      ? transferLineList(findTransfer(data, record.linked_transfer_id))
+      : [],
+    proceedAction: '',
+    cancelHref: '/parts-manager?panel=approvals',
+    autoPrint: String(req.query.print || '') === '1' ? '1' : '',
+    error: '',
+    success: '',
+  });
 });
 
 router.get('/', async (req, res) => {
@@ -612,69 +920,10 @@ router.post('/api/transfers/:id/complete', async (req, res) => {
   const data = await store.getRawData();
   const transfer = findTransfer(data, req.params.id);
   if (!transfer) return res.status(404).json({ error: 'Transfer not found.' });
-  if (String(transfer.status || '').toLowerCase() === 'completed') {
-    return res.json({ ok: true, transfer });
-  }
 
-  const stamp = stampNow();
-  const editor = currentEditor(req);
-  const lines = Array.isArray(transfer.lines) && transfer.lines.length
-    ? transfer.lines
-    : [{
-      part_number: transfer.part_number,
-      part_name: transfer.part_name,
-      sub_id: transfer.sub_id,
-      qty: transfer.qty,
-      unit: transfer.unit,
-    }];
-
-  lines.forEach((line) => {
-    const outRow = {
-      id: genId(),
-      created_at: stamp.iso,
-      transaction_date: stamp.date,
-      transaction_number: allocatePartsTransactionNumber(data),
-      transaction_type: TYPE_SOLD,
-      present_location: transfer.from_branch,
-      branch: transfer.from_branch,
-      editor,
-      part_number: line.part_number,
-      part_name: line.part_name,
-      sub_id: line.sub_id,
-      qty: toNumber(line.qty),
-      unit: line.unit || '',
-      sold_to: `Transfer ${transfer.transaction_number}`,
-      linked_transfer_id: transfer.id,
-    };
-    const inRow = {
-      id: genId(),
-      created_at: stamp.iso,
-      transaction_date: stamp.date,
-      transaction_number: allocatePartsTransactionNumber(data),
-      transaction_type: TYPE_RESTOCK,
-      present_location: transfer.to_branch,
-      branch: transfer.to_branch,
-      editor,
-      part_number: line.part_number,
-      part_name: line.part_name,
-      sub_id: line.sub_id,
-      qty: toNumber(line.qty),
-      unit: line.unit || '',
-      sold_to: '',
-      linked_transfer_id: transfer.id,
-    };
-    data.parts_inventory.push(outRow, inRow);
-    inventory.rememberTransaction(data, outRow);
-    inventory.rememberTransaction(data, inRow);
-  });
-
-  transfer.status = 'completed';
-  transfer.completed_at = stamp.iso;
-  transfer.completed_by = editor;
-  transfer.stamped_at = stamp.iso;
-  transfer.stamped_label = stamp.label;
+  const { transfer: updated } = applyCompletedTransfer(data, transfer, currentEditor(req));
   await store.replaceData(data);
-  return res.json({ ok: true, transfer });
+  return res.json({ ok: true, transfer: updated });
 });
 
 router.post('/api/purchase-orders/:id/receive', async (req, res) => {
@@ -738,6 +987,15 @@ router.get('/api/workspace', async (req, res) => {
   return res.json({
     vitals: buildPmVitals(data),
     approvals: buildPmApprovals(data),
+  });
+});
+
+router.get('/api/part-request-popups', async (req, res) => {
+  const data = await store.getRawData();
+  stockAlerts.reconcileWarehouse1Stock(data);
+  return res.json({
+    ok: true,
+    items: stockAlerts.listPendingPopups(data),
   });
 });
 
@@ -837,7 +1095,7 @@ router.post('/api/parts-requests/:id/resolve', async (req, res) => {
 
     if (decision === 'approved') {
       const sourceRequest = mapInventoryPartsRequest(inventoryRequest);
-      const { receipt } = await finalizeApprovedRequest(sourceRequest, resolver);
+      const { receipt } = await finalizeApprovedRequest(sourceRequest, resolver, warehouseFulfillmentExtras(sourceRequest));
       const overview = await buildOverview();
       return res.json({ ok: true, decision, overview, receiptUrl: receipt.receiptUrl, receiptFile: receipt.filename });
     }
@@ -859,7 +1117,7 @@ router.post('/api/parts-requests/:id/resolve', async (req, res) => {
 
   if (decision === 'approved') {
     const sourceRequest = mapLegacyPartsRequest(request);
-    const { receipt } = await finalizeApprovedRequest(sourceRequest, resolver);
+    const { receipt } = await finalizeApprovedRequest(sourceRequest, resolver, warehouseFulfillmentExtras(sourceRequest));
     const overview = await buildOverview();
     return res.json({ ok: true, decision, overview, receiptUrl: receipt.receiptUrl, receiptFile: receipt.filename });
   }

@@ -12,6 +12,7 @@ const {
   buildPartsRequestInventoryPayload,
   displayPartsTransactionType,
 } = require('../lib/parts-request');
+const { listInboundApprovedTransfers, receiveApprovedPartsTransfer } = require('../lib/parts-transfer-receive');
 const { allocatePartsTransactionNumber } = require('../lib/parts-transaction-number');
 const { allocateTransferNumbers, stampNow, rememberDocument } = require('../lib/parts-document-serial');
 const inventory = require('../lib/parts-inventory-controller');
@@ -325,6 +326,7 @@ async function renderDashboard(req, res, extras = {}) {
 
   stockAlerts.reconcileWarehouse1Stock(data);
   const readyMessages = stockAlerts.listReadyMessages(data, branch);
+  const inboundTransfers = listInboundApprovedTransfers(data, branch);
 
   return res.render('branch-parts/index', {
     branch,
@@ -337,6 +339,7 @@ async function renderDashboard(req, res, extras = {}) {
     catalog: buildCatalog(allParts, branch, stockMap),
     draftLines: (draft && Array.isArray(draft.lines) && draft.lines.length) ? draft.lines : [{}],
     sentOrders,
+    inboundTransfers,
     warehouse: WAREHOUSE_1,
     displayPartsTransactionType,
     readyMessages,
@@ -347,6 +350,21 @@ async function renderDashboard(req, res, extras = {}) {
 
 router.get('/', async (req, res) => {
   return renderDashboard(req, res);
+});
+
+router.post('/receive/:id', async (req, res) => {
+  const data = await store.getRawData();
+  const result = receiveApprovedPartsTransfer(data, req.params.id, {
+    receiver: String(req.frontlineUser.username || '').trim(),
+    branch: req.frontlineBranch,
+  });
+  if (!result.ok) {
+    return renderDashboard(req, res, { error: result.error });
+  }
+  await store.replaceData(data);
+  return res.redirect('/branch-parts?success=' + encodeURIComponent(
+    `Verified and received ${result.record.part_number}. Location is now ${req.frontlineBranch}.`
+  ));
 });
 
 router.post('/orders', async (req, res) => {

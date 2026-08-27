@@ -660,7 +660,7 @@ textarea[name$="[description]"],
 @media print{
   @page{size:A4;margin:10mm}
   body{background:#fff!important;color:#000!important}
-  .site-header,.site-footer,.app-back-chip,.app-back-arrow,.customer-invoice__actions{display:none!important}
+  .site-header,.site-footer,.app-back-chip,.app-back-arrow,.customer-invoice__actions,.pm-print-actions{display:none!important}
   .container{padding:0!important}
   .customer-invoice{max-width:none;margin:0;padding:0;border:0;box-shadow:none}
   .customer-invoice__table th{background:#eee!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -5880,6 +5880,116 @@ body.role-frontline .technician-monitor__status{
   gap:12px;
 }
 
+.pm-approve-print{
+  max-width:860px;
+  margin:0 auto 24px;
+  display:grid;
+  gap:16px;
+}
+
+.pm-approve-print__banner{
+  margin:0;
+  padding:10px 12px;
+  border:1px solid #7f90a3;
+  border-radius:6px;
+  background:#eef4fb;
+  color:#10202f;
+  font-weight:700;
+}
+
+.pm-approve-print__banner--final{
+  background:#e4f4ea;
+  border-color:#1f8f53;
+}
+
+.pm-approve-print__sheet{
+  background:#fff;
+  color:#10202f;
+  border:1px solid #ccd5df;
+  border-radius:8px;
+  padding:20px;
+}
+
+.pm-approve-print__sheet h1{
+  margin:0 0 6px;
+  font-size:22px;
+}
+
+.pm-approve-print__auth{
+  margin:0 0 12px;
+  font-size:16px;
+  font-weight:800;
+}
+
+.pm-approve-print__meta{
+  margin:0 0 16px;
+  color:#445;
+  font-size:13px;
+}
+
+.pm-approve-print__table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:13px;
+}
+
+.pm-approve-print__table th,
+.pm-approve-print__table td{
+  border:1px solid #ccd5df;
+  padding:8px 10px;
+  text-align:left;
+  vertical-align:top;
+}
+
+.pm-approve-print__table th{
+  background:#eef4fb;
+  width:32%;
+}
+
+.pm-approve-print__signatures{
+  margin-top:36px;
+  display:grid;
+  gap:28px;
+  max-width:420px;
+}
+
+.pm-approve-print__signature span{
+  display:block;
+  margin:8px 0 0;
+  border-bottom:1px solid #10202f;
+  min-height:28px;
+}
+
+.pm-print-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
+}
+
+.pm-print-actions .btn--proceed{
+  background:linear-gradient(180deg, #1a6bbf, #124e8c);
+  color:#fff;
+  border-color:#0d3a6b;
+}
+
+.pm-print-actions .btn--cancel{
+  background:#c0392b;
+  color:#fff;
+  border-color:#922b21;
+}
+
+@media print{
+  .pm-print-actions,
+  .pm-approve-print__banner{
+    display:none !important;
+  }
+  .pm-approve-print__sheet{
+    border:0;
+    padding:0;
+  }
+}
+
 .pm-vitals{
   grid-template-columns:repeat(7, minmax(0, 1fr));
 }
@@ -8039,11 +8149,18 @@ body.role-fm .site-header .app-back-arrow:hover{
   font-size:14px;
   font-weight:800;
 }
-.sa-parts-message-panel,
-.pm-stock-alerts{
+.sa-parts-message-panel{
   margin-top:12px;
 }
-.pm-stock-status--pending{ color:#b45309; }
-.pm-stock-status--ordered{ color:#1d4ed8; }
-.pm-stock-status--restocked{ color:#15803d; }
+.pm-request-popup__list{
+  margin:0 0 14px;
+  padding-left:18px;
+  color:#0b1220;
+  font-size:16px;
+  font-weight:700;
+  line-height:1.45;
+}
+.pm-request-popup__list li + li{
+  margin-top:8px;
+}
 

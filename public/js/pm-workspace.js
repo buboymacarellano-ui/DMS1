@@ -196,4 +196,66 @@
       postJson('/parts-manager/api/purchase-orders/' + encodeURIComponent(receiveBtn.getAttribute('data-pm-receive-po')) + '/receive');
     }
   });
+
+  (function bindPartRequestPopup() {
+    const overlay = document.getElementById('pm-request-popup');
+    const list = document.getElementById('pm-request-popup-list');
+    const okBtn = document.getElementById('pm-request-popup-ok');
+    if (!overlay || !list || !okBtn) return;
+    const seenKey = 'pm_part_request_popup_seen';
+
+    function seenIds() {
+      try {
+        return JSON.parse(sessionStorage.getItem(seenKey) || '[]');
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function markSeen(ids) {
+      const next = Array.from(new Set(seenIds().concat(ids)));
+      sessionStorage.setItem(seenKey, JSON.stringify(next));
+    }
+
+    function hide() {
+      overlay.hidden = true;
+    }
+
+    function show(items) {
+      const unseen = (items || []).filter((row) => row && row.id && seenIds().indexOf(row.id) === -1);
+      if (!unseen.length) return;
+      list.innerHTML = unseen.map((row) => (
+        '<li>' + String(row.message || ('Branch ' + (row.branch || '') + ' requesting a Parts- Part#' + (row.part_number || ''))).replace(/</g, '&lt;') + '</li>'
+      )).join('');
+      overlay.hidden = false;
+      overlay.dataset.seenIds = unseen.map((row) => row.id).join(',');
+      okBtn.focus();
+    }
+
+    function parseInitial() {
+      try {
+        return JSON.parse(decodeURIComponent(root.getAttribute('data-pending-requests') || '%5B%5D'));
+      } catch (error) {
+        return [];
+      }
+    }
+
+    okBtn.addEventListener('click', function () {
+      const ids = String(overlay.dataset.seenIds || '').split(',').filter(Boolean);
+      markSeen(ids);
+      hide();
+    });
+    overlay.addEventListener('click', function (event) {
+      if (event.target === overlay) okBtn.click();
+    });
+
+    show(parseInitial());
+    setInterval(function () {
+      if (!overlay.hidden) return;
+      fetch('/parts-manager/api/part-request-popups', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+        .then(function (res) { return res.json(); })
+        .then(function (data) { show(data && data.items ? data.items : []); })
+        .catch(function () { /* keep the workspace usable if the popup poll fails */ });
+    }, 15000);
+  })();
 })();

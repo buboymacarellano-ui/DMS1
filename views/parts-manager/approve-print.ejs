@@ -1,0 +1,127 @@
+<%- include('../partials/header') %>
+<%
+  function money(value) {
+    return 'P ' + Number(value || 0).toFixed(2);
+  }
+  const sheet = typeof record !== 'undefined' && record ? record : {};
+  const sourceRow = typeof source !== 'undefined' && source ? source : {};
+  const extraLines = Array.isArray(lines) ? lines : [];
+  const isPreview = String(mode || '') === 'preview';
+  const lineTotal = Number(sheet.retail_price || 0) * Number(sheet.qty || 0);
+  const authNumber = sheet.transaction_number || sheet.id || '—';
+  const approvedLabel = sheet.approved_at
+    ? new Date(sheet.approved_at).toLocaleString('en-PH', { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+    : 'Pending confirm';
+%>
+
+<section class="dashboard-shell gm-shell pm-approve-print"<% if (String(autoPrint || '') === '1') { %> data-auto-print="1"<% } %>>
+  <% if (isPreview) { %>
+    <p class="pm-approve-print__banner">Review this transfer. Proceed to complete and print, or Cancel to leave it pending in the Approval Window.</p>
+  <% } else { %>
+    <p class="pm-approve-print__banner pm-approve-print__banner--final">Transaction complete. Print or save as PDF. This record is now on the Approved transactions grid.</p>
+  <% } %>
+
+  <article class="pm-approve-print__sheet">
+    <h1><%= isPreview ? 'Parts Transfer — Print Preview' : 'Approved Parts Transaction Receipt' %></h1>
+    <p class="pm-approve-print__auth">Transaction Number (Auth): <%= authNumber %></p>
+    <p class="pm-approve-print__meta">
+      <% if (sheet.id) { %>Receipt ID: <%= sheet.id %><br /><% } %>
+      <%= isPreview ? 'Previewed' : 'Approved' %>: <%= approvedLabel %><br />
+      <%= isPreview ? 'Prepared by' : 'Approved by' %>: <%= sheet.approved_by || sheet.editor || '—' %>
+    </p>
+    <table class="pm-approve-print__table">
+      <tbody>
+        <tr><th>Transaction Date</th><td><%= sheet.transaction_date || '' %></td></tr>
+        <tr><th>Transaction Number</th><td><%= authNumber %></td></tr>
+        <tr><th>Transaction Type</th><td><%= sheet.transaction_type || '' %></td></tr>
+        <tr><th>Present Location</th><td><%= sheet.present_location || sheet.branch || '' %></td></tr>
+        <tr><th>Original Request Type</th><td><%= sheet.original_transaction_type || kindLabel || 'Parts Request' %></td></tr>
+        <tr><th>Editor</th><td><%= sheet.editor || '' %></td></tr>
+        <tr><th>Part Number</th><td><%= sheet.part_number || '' %></td></tr>
+        <tr><th>Part Name</th><td><%= sheet.part_name || '' %></td></tr>
+        <tr><th>Sub-ID</th><td><%= sheet.sub_id || '' %></td></tr>
+        <tr><th>Generic</th><td><%= sheet.generic || '' %></td></tr>
+        <tr><th>Supplier</th><td><%= sheet.supplier || '' %></td></tr>
+        <tr><th>Unit</th><td><%= sheet.unit || '' %></td></tr>
+        <tr><th>Qty</th><td><%= sheet.qty != null ? sheet.qty : '' %></td></tr>
+        <tr><th>Cost Price</th><td><%= money(sheet.cost_price) %></td></tr>
+        <tr><th>Markup (%)</th><td><%= sheet.markup != null ? sheet.markup : '' %></td></tr>
+        <tr><th>Retail Price</th><td><%= money(sheet.retail_price) %></td></tr>
+        <tr><th>Line Total</th><td><%= money(lineTotal) %></td></tr>
+        <tr><th>Sold To (WO#)</th><td><%= sheet.sold_to || '' %></td></tr>
+        <% if (sheet.from_branch) { %>
+          <tr><th>From</th><td><%= sheet.from_branch %></td></tr>
+        <% } %>
+        <tr><th>Requesting Branch</th><td><%= sheet.requesting_branch || sheet.to_branch || '' %></td></tr>
+        <tr><th>Fulfilling Branch</th><td><%= sheet.branch || sheet.from_branch || '' %></td></tr>
+        <% if (sheet.packing_list_number) { %>
+          <tr><th>Packing List</th><td><%= sheet.packing_list_number %></td></tr>
+        <% } %>
+        <% if (sheet.transmittal_number) { %>
+          <tr><th>Transmittal</th><td><%= sheet.transmittal_number %></td></tr>
+        <% } %>
+        <tr><th>Linked Request ID</th><td><%= sheet.linked_request_id || sheet.linked_transfer_id || '' %></td></tr>
+        <tr><th>Requested By</th><td><%= sourceRow.requested_by || sourceRow.editor || sourceRow.created_by || '' %></td></tr>
+        <tr><th>Request Created</th><td><%= sourceRow.created_at || sourceRow.stamped_label || '' %></td></tr>
+      </tbody>
+    </table>
+
+    <% if (extraLines.length > 1) { %>
+      <h2 style="font-size:16px;margin:20px 0 8px;">Lines</h2>
+      <table class="pm-approve-print__table">
+        <thead>
+          <tr><th>Part #</th><th>Name</th><th>Qty</th><th>Unit</th></tr>
+        </thead>
+        <tbody>
+          <% extraLines.forEach((line) => { %>
+            <tr>
+              <td><%= line.part_number || '' %></td>
+              <td><%= line.part_name || '' %></td>
+              <td><%= line.qty != null ? line.qty : '' %></td>
+              <td><%= line.unit || '' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+
+    <div class="pm-approve-print__signatures">
+      <div class="pm-approve-print__signature">Recieved By:<span></span></div>
+      <div class="pm-approve-print__signature">Deliver By:<span></span></div>
+    </div>
+  </article>
+
+  <div class="pm-print-actions">
+    <% if (isPreview) { %>
+      <form method="post" action="<%= proceedAction %>" style="margin:0;">
+        <button type="submit" class="btn btn--proceed">Proceed</button>
+      </form>
+      <a class="btn btn--cancel" href="<%= cancelHref || '/parts-manager?panel=approvals' %>">Cancel</a>
+    <% } else { %>
+      <button type="button" class="btn btn--proceed" id="pm-print-btn">Print</button>
+      <button type="button" class="btn" id="pm-pdf-btn">Save as PDF</button>
+      <a class="btn" href="/parts-manager?panel=approvals">Back to Approval Window</a>
+    <% } %>
+  </div>
+</section>
+
+<script>
+  (function () {
+    var root = document.querySelector('.pm-approve-print');
+    function openPrint() { window.print(); }
+    var printBtn = document.getElementById('pm-print-btn');
+    var pdfBtn = document.getElementById('pm-pdf-btn');
+    if (printBtn) printBtn.addEventListener('click', openPrint);
+    if (pdfBtn) {
+      pdfBtn.addEventListener('click', function () {
+        window.alert('In the print dialog, choose Save as PDF / Microsoft Print to PDF as the printer.');
+        openPrint();
+      });
+    }
+    if (root && root.getAttribute('data-auto-print') === '1') {
+      window.addEventListener('load', function () { setTimeout(openPrint, 250); });
+    }
+  })();
+</script>
+
+<%- include('../partials/footer') %>

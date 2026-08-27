@@ -1,0 +1,88 @@
+<%
+  const lookups = typeof reportLookups !== 'undefined' && reportLookups ? reportLookups : { suppliers: [], warehouses: [], partNumbers: [] };
+  const reportView = typeof partsView !== 'undefined' && partsView ? partsView : {};
+  const includeWholeDb = typeof reportIncludeWholeDatabase !== 'undefined'
+    ? Boolean(reportIncludeWholeDatabase)
+    : !reportView.isFrontline;
+  const reportScope = reportView.scope === 'warehouse1' ? 'warehouse1' : '';
+%>
+<div id="parts-report-modal" class="parts-report-modal" hidden>
+  <div class="parts-report-modal__backdrop" data-report-close></div>
+  <form id="parts-report-form" class="parts-report-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="parts-report-title" data-report-scope="<%= reportScope %>">
+    <header class="parts-report-modal__header">
+      <h2 id="parts-report-title">Advanced Report Pre-Sorter</h2>
+      <button type="button" class="parts-report-modal__close" data-report-close aria-label="Close">&times;</button>
+    </header>
+    <div class="parts-report-modal__body">
+      <label>Targeted Report
+        <select id="report-type" name="type" required>
+          <option value="">Select a report…</option>
+          <option value="lifecycle">1. Single Part Lifecycle</option>
+          <option value="date-range">2. Report by Date Range</option>
+          <option value="supplier">3. Report by Supplier</option>
+          <option value="warehouse">4. Report by Warehouse</option>
+          <option value="audit">5. System Audit Trail</option>
+          <option value="low-stock">6. Critical Low Stock Report</option>
+          <% if (includeWholeDb) { %>
+          <option value="whole-database">7. Download Whole Database CSV</option>
+          <% } %>
+        </select>
+      </label>
+      <p id="report-type-hint" class="dashboard-note admin-note">Choose a report to reveal the matching criteria.</p>
+
+      <div class="report-criteria" data-for="lifecycle" hidden>
+        <label>Part Number
+          <input id="report-part-number" name="partNumber" list="report-part-options" placeholder="Enter or select a part number" autocomplete="off" />
+        </label>
+      </div>
+      <div class="report-criteria" data-for="date-range audit" hidden>
+        <label>Month
+          <input id="report-month" name="month" type="month" />
+        </label>
+        <div class="parts-report-modal__dates">
+          <label>Start Date
+            <input id="report-start-date" name="startDate" type="date" />
+          </label>
+          <label>End Date
+            <input id="report-end-date" name="endDate" type="date" />
+          </label>
+        </div>
+      </div>
+      <div class="report-criteria" data-for="supplier" hidden>
+        <label>Supplier
+          <input id="report-supplier" name="supplier" list="report-supplier-options" placeholder="Type or select supplier" autocomplete="off" />
+        </label>
+      </div>
+      <div class="report-criteria" data-for="warehouse" hidden>
+        <label>Warehouse / Location
+          <input id="report-warehouse" name="warehouse" list="report-warehouse-options" placeholder="Type or select warehouse" autocomplete="off" />
+        </label>
+      </div>
+      <div class="report-criteria" data-for="low-stock" hidden>
+        <label>Safe minimum threshold
+          <input id="report-threshold" name="threshold" type="number" min="0" step="1" placeholder="Leave blank to use each part's safe minimum (default 5)" />
+        </label>
+      </div>
+
+      <datalist id="report-part-options">
+        <% (lookups.partNumbers || []).forEach((value) => { %>
+          <option value="<%= value %>"></option>
+        <% }) %>
+      </datalist>
+      <datalist id="report-supplier-options">
+        <% (lookups.suppliers || []).forEach((value) => { %>
+          <option value="<%= value %>"></option>
+        <% }) %>
+      </datalist>
+      <datalist id="report-warehouse-options">
+        <% (lookups.warehouses || []).forEach((value) => { %>
+          <option value="<%= value %>"></option>
+        <% }) %>
+      </datalist>
+    </div>
+    <footer class="parts-report-modal__footer">
+      <button type="button" class="btn" data-report-close>Cancel</button>
+      <button type="submit" class="btn parts-report-modal__generate">Generate Report</button>
+    </footer>
+  </form>
+</div>

@@ -6,13 +6,13 @@
   const view = typeof partsView !== 'undefined' && partsView ? partsView : { label: 'All branches + Warehouse 1 General Parts Database' };
   const v = (typeof vitals !== 'undefined' && vitals) ? vitals : { cards: {}, fastMoving: [], idle: [], mostVolume: [], mostCostlyOnHand: [] };
   const cards = v.cards || {};
-  const approvalDesk = (typeof approvals !== 'undefined' && approvals) ? approvals : { requests: [], requestsByLocation: [], transfers: [], purchaseOrders: [], documents: [], transactions: [] };
+  const approvalDesk = (typeof approvals !== 'undefined' && approvals) ? approvals : { requests: [], requestsByLocation: [], transfers: [], purchaseOrders: [], documents: [], transactions: [], approvedTransactions: [] };
   const locations = Array.isArray(locationOptions) ? locationOptions : [];
   const warehouseLabel = typeof warehouse1 !== 'undefined' && warehouse1 ? warehouse1 : 'Warehouse 1';
   const panel = typeof openPanel !== 'undefined' ? String(openPanel || '') : '';
 %>
 
-<section class="dashboard-shell gm-shell stm-shell pm-workspace" id="pm-workspace" data-open-panel="<%= panel %>">
+<section class="dashboard-shell gm-shell stm-shell pm-workspace" id="pm-workspace" data-open-panel="<%= panel %>" data-pending-requests="<%= encodeURIComponent(JSON.stringify(typeof pendingPartRequests !== 'undefined' && Array.isArray(pendingPartRequests) ? pendingPartRequests : [])) %>">
   <div class="stm-head">
     <div class="dashboard-title gm-title role-dashboard-title"><span>PM</span> <span class="role-dashboard-title__suffix">Parts Monitor</span></div>
     <p class="dashboard-note stm-section__note">Sole owner of <%= warehouseLabel %> · view / edit / check every branch P-db</p>
@@ -26,42 +26,18 @@
     <button type="button" class="btn pm-role-btn<%= panel === 'edit' ? ' pm-role-btn--active' : '' %>" data-pm-panel="edit">2. Edit Parts</button>
     <button type="button" class="btn pm-role-btn<%= panel === 'vitals' ? ' pm-role-btn--active' : '' %>" data-pm-panel="vitals">3. Fast Moving / Idle / Vitals</button>
     <button type="button" class="btn pm-role-btn<%= panel === 'approvals' ? ' pm-role-btn--active' : '' %>" data-pm-panel="approvals">4. Approval Window</button>
+    <button type="button" class="btn pm-role-btn" id="parts-report-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="parts-report-modal">5. Create Report</button>
   </nav>
 
-  <section class="dashboard-card gm-panel pm-panel--wide pm-stock-alerts" id="pm-message-transmission">
-    <div class="dashboard-card__header gm-panel-header">Parts Manager Message Transmission (Failed to Load a Parts, Out of Stock)</div>
-    <p class="dashboard-note">SA / SR / SSR Warehouse 1 order-grid lookups with no Warehouse 1 on-hand. Status stays Pending until an order is sent, then Ordered, then Restocked when Warehouse 1 on-hand is greater than 0.</p>
-    <div class="table-scroll">
-      <table class="list">
-        <thead>
-          <tr>
-            <th>View</th>
-            <th>Part Number</th>
-            <th>Date and Time</th>
-            <th>Branch</th>
-            <th>Account</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% const transmission = Array.isArray(typeof stockAlerts !== 'undefined' ? stockAlerts : null) ? stockAlerts : []; %>
-          <% if (!transmission.length) { %>
-            <tr><td colspan="6">No failed-to-load messages yet.</td></tr>
-          <% } %>
-          <% transmission.forEach((row) => { %>
-            <tr>
-              <td><%= row.pm_message || '' %></td>
-              <td style="white-space:nowrap;"><%= row.part_number || '' %></td>
-              <td style="white-space:nowrap;"><%= row.date_time || row.stamp_label || '' %></td>
-              <td><%= row.branch || '—' %></td>
-              <td><%= row.account || '—' %></td>
-              <td><strong class="pm-stock-status pm-stock-status--<%= String(row.status || 'pending').toLowerCase() %>"><%= row.status_label || 'Pending' %></strong></td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table>
+  <%- include('../partials/parts-report-modal') %>
+
+  <div class="office-stock-dialog" id="pm-request-popup" hidden>
+    <div class="office-stock-dialog__card" role="alertdialog" aria-modal="true" aria-labelledby="pm-request-popup-title" aria-describedby="pm-request-popup-list">
+      <div class="office-stock-dialog__title" id="pm-request-popup-title">Branch parts request</div>
+      <ul class="pm-request-popup__list" id="pm-request-popup-list"></ul>
+      <button type="button" class="btn" id="pm-request-popup-ok">OK</button>
     </div>
-  </section>
+  </div>
 
   <section class="pm-panel-card dashboard-card gm-panel" id="pm-panel-csv" data-pm-section="csv" hidden>
     <div class="dashboard-card__header gm-panel-header">Load / Download CSV Update</div>
@@ -259,9 +235,34 @@
                   <td style="text-align:right;"><%= row.qty %></td>
                   <td><%= row.requested_by || row.editor || '—' %></td>
                   <td style="white-space:nowrap;">
-                    <button type="button" class="btn" data-pm-resolve="<%= row.id %>" data-decision="approved">Approve</button>
+                    <a class="btn" href="/parts-manager/requests/<%= encodeURIComponent(row.id) %>/preview">Approve</a>
                     <button type="button" class="btn" data-pm-resolve="<%= row.id %>" data-decision="rejected" style="background:#c0392b;">Reject</button>
                   </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="dashboard-card gm-panel">
+        <div class="dashboard-card__header gm-panel-header">Approved transactions</div>
+        <div class="table-scroll">
+          <table class="list">
+            <thead><tr><th>Stamp</th><th>Auth / PTN</th><th>Branch</th><th>Part #</th><th>Qty</th><th>Approved by</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <% const approvedRows = Array.isArray(approvalDesk.approvedTransactions) ? approvalDesk.approvedTransactions : []; %>
+              <% if (!approvedRows.length) { %><tr><td colspan="8">No approved transfer transactions yet.</td></tr><% } %>
+              <% approvedRows.forEach((row) => { %>
+                <tr>
+                  <td style="white-space:nowrap;"><%= row.approved_at || row.created_at || '' %></td>
+                  <td style="white-space:nowrap;"><%= row.transaction_number || row.id %></td>
+                  <td><%= row.requesting_branch || row.branch || '—' %></td>
+                  <td><%= row.part_number || '' %></td>
+                  <td style="text-align:right;"><%= row.qty %></td>
+                  <td><%= row.approved_by || row.editor || '—' %></td>
+                  <td><%= row.fulfillment_label || 'Approved' %></td>
+                  <td><a class="btn" href="/parts-manager/approved/<%= encodeURIComponent(row.id) %>" style="font-size:11px;padding:4px 8px;">View / Print</a></td>
                 </tr>
               <% }) %>
             </tbody>
@@ -332,7 +333,7 @@
                   <td><%= row.status || '' %></td>
                   <td>
                     <% if (String(row.status || '').toLowerCase() !== 'completed') { %>
-                      <button type="button" class="btn" data-pm-complete-transfer="<%= row.id %>">Complete</button>
+                      <a class="btn" href="/parts-manager/transfers/<%= encodeURIComponent(row.id) %>/preview">Approve</a>
                     <% } %>
                   </td>
                 </tr>
@@ -484,4 +485,5 @@
 </section>
 
 <script src="/js/pm-workspace.js"></script>
+<script src="/js/parts-report-modal.js"></script>
 <%- include('../partials/footer') %>

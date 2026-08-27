@@ -178,6 +178,55 @@
   </article>
 
   <article class="dashboard-card admin-panel" style="margin-top:12px;">
+    <div class="dashboard-card__header admin-panel-header">Approved transfers — verify receipt</div>
+    <p class="dashboard-note admin-note">Parts Manager already approved these lines. After the printed transfer arrives, verify each line. That completes the PM approved transaction and moves Warehouse 1 stock to <%= branch %>.</p>
+    <div class="table-scroll" style="max-height:min(52vh, calc(100vh - 220px));">
+      <table class="list branch-parts-order-table">
+        <thead>
+          <tr>
+            <th>Part Number</th>
+            <th>Part Name</th>
+            <th>Sub-ID</th>
+            <th>Generic</th>
+            <th>Supplier</th>
+            <th>Qty</th>
+            <th>Cost Price</th>
+            <th>Markup (%)</th>
+            <th>Retail Price</th>
+            <th>Sold To (WO#)</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% const inboundRows = Array.isArray(inboundTransfers) ? inboundTransfers : []; %>
+          <% if (!inboundRows.length) { %>
+            <tr><td colspan="11">No approved Warehouse 1 transfers waiting for receipt.</td></tr>
+          <% } %>
+          <% inboundRows.forEach((row) => { %>
+            <tr>
+              <td><%= row.part_number || '' %></td>
+              <td><%= row.part_name || '' %></td>
+              <td><%= row.sub_id || '' %></td>
+              <td><%= row.generic || '' %></td>
+              <td><%= row.supplier || '' %></td>
+              <td><%= row.qty != null ? row.qty : '' %></td>
+              <td><%= row.cost_price != null && row.cost_price !== '' ? Number(row.cost_price).toFixed(2) : '' %></td>
+              <td><%= row.markup != null && row.markup !== '' ? row.markup : '' %></td>
+              <td><%= row.retail_price != null && row.retail_price !== '' ? Number(row.retail_price).toFixed(2) : '' %></td>
+              <td><%= row.sold_to || row.work_order_number || '' %></td>
+              <td>
+                <form method="post" action="/branch-parts/receive/<%= encodeURIComponent(row.id) %>" style="margin:0;">
+                  <button type="submit" class="btn" style="background:#1f8f53;">Verified and Received</button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="dashboard-card admin-panel" style="margin-top:12px;">
     <div class="dashboard-card__header admin-panel-header"><%= branch %> Parts Database <span class="pm-badge"><%= total %></span></div>
     <div class="table-scroll" style="max-height:min(72vh, calc(100vh - 160px));">
       <table class="list" style="min-width:max-content;font-size:12px;">
