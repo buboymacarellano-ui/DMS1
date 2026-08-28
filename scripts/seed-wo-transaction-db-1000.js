@@ -747,17 +747,6 @@ async function main() {
       };
       data.parts_inventory.push(movement);
       inventory.rememberTransaction(data, movement);
-      const soldLog = Object.assign({}, movement, {
-        id: `inv-${BATCH_ID}-soldlog-${wo.work_order_number}-${line}`,
-        created_via: 'create-parts-log',
-        activity_log: true,
-        source_part_id: movement.id,
-        present_location: 'Warehouse 1',
-        branch: 'Warehouse 1',
-        transaction_number: allocatePartsTransactionNumber(data, new Date(soldAt)),
-      });
-      data.parts_inventory.push(soldLog);
-      inventory.rememberTransaction(data, soldLog);
     });
   });
 

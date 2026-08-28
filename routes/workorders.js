@@ -2,9 +2,9 @@
 const store = require('../data/store');
 const { isIncomingStockType, isPartsActivityLog, TYPE_STOCK, TYPE_SOLD } = require('../lib/parts-request');
 const inventory = require('../lib/parts-inventory-controller');
+const { WAREHOUSE_1, sameLocation } = require('../lib/parts-location-scope');
 const { frontlineSessionBranch } = require('../lib/frontline-roles');
 const { canonicalizeBranchName, normalizeBranchKey } = require('../lib/branches');
-const { WAREHOUSE_1 } = require('../lib/parts-location-scope');
 const { saveBillingPdf, BILLING_WARRANTY_NOTE } = require('../lib/billing-pdf');
 const { loadLaborPriceMatrix } = require('../lib/labor-price-matrix');
 const {
@@ -525,34 +525,7 @@ async function applyPartsInventoryAdjustments(existingItems, nextItems, workOrde
     partsInventory.push(movement);
     inventory.rememberTransaction(data, movement);
 
-    if (isSold) {
-      const soldLog = {
-        id: genId(),
-        created_at: new Date().toISOString(),
-        created_via: 'create-parts-log',
-        activity_log: true,
-        source_part_id: movement.id,
-        created_branch: createdBranch,
-        transaction_date: today,
-        transaction_type: TYPE_SOLD,
-        present_location: WAREHOUSE_1,
-        branch: WAREHOUSE_1,
-        editor: String(username || '').trim(),
-        part_number: stockInfo.part_number,
-        part_name: stockInfo.part_name || '',
-        sub_id: stockInfo.sub_id || '',
-        generic: stockInfo.generic || '',
-        supplier: stockInfo.supplier || '',
-        unit: stockInfo.unit || '',
-        qty,
-        cost_price: toNumber(stockInfo.cost_price),
-        markup: toNumber(stockInfo.markup),
-        retail_price: toNumber(stockInfo.retail_price),
-        sold_to: String(workOrderNumber || ''),
-      };
-      partsInventory.push(soldLog);
-      inventory.rememberTransaction(data, soldLog);
-    }
+    // Warehouse 1 does not sell. Branch Sold stays at the branch; stock leaves W1 only by transfer.
 
     stockInfo.stock += isSold ? -qty : qty;
     index.set(key, stockInfo);
