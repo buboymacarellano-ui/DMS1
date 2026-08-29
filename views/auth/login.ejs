@@ -206,14 +206,29 @@
         idInput.required = true;
         if (isGm) {
           fillRoles('gm', 'general_manager');
-        } else {
-          const keepRole = fromDepartmentChange ? '' : (roleSelect.value || selectedRole);
-          fillRoles(department, keepRole);
+          roleField.hidden = true;
+          roleSelect.required = false;
+          idField.hidden = false;
+          idInput.required = true;
+          idLabel.textContent = 'Name';
+          idInput.placeholder = 'GM';
+          if (fromDepartmentChange || !String(idInput.value || '').trim()) {
+            idInput.value = 'GM';
+          }
+          locationField.hidden = true;
+          locationInput.required = false;
+          locationInput.value = '';
+          return;
         }
+        const keepRole = fromDepartmentChange ? '' : (roleSelect.value || selectedRole);
+        fillRoles(department, keepRole);
         const keepLocation = fromDepartmentChange ? '' : (locationInput.value || selectedLocation);
         syncLocation(department, keepLocation);
         idLabel.textContent = 'Employee ID';
         idInput.placeholder = 'Enter employee ID from Employee DB';
+        if (fromDepartmentChange && String(idInput.value || '').trim().toUpperCase() === 'GM') {
+          idInput.value = '';
+        }
       }
 
       departmentSelect.addEventListener('change', function onDepartmentChange() {

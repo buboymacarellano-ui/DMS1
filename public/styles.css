@@ -273,7 +273,6 @@ body:has(.app-back-arrow--under-logo) .container{
 .auth-form label[hidden],
 .auth-form [hidden]{display:none!important}
 .auth-form:has(#login-department option[value="gm"]:checked) #login-role-field,
-.auth-form:has(#login-department option[value="gm"]:checked) #login-id-field,
 .auth-form:has(#login-department option[value="gm"]:checked) #login-location-field{
   display:none!important
 }
