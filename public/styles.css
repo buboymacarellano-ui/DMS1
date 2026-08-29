@@ -25,7 +25,7 @@
   --excel-green: #70ad47;
   --excel-grid: #d6dce4;
   --excel-plot: #ffffff;
-  --user-name-gold: #c47a1c;
+  --user-name-gold: rgba(196, 122, 28, 0.5);
 }
 
 *{box-sizing:border-box;font-family:"Segoe UI",Calibri,Arial,Helvetica,sans-serif}
@@ -8163,7 +8163,7 @@ body.role-fm .site-header .app-back-arrow:hover{
   margin-top:8px;
 }
 
-/* Signed-in name: letters only, golden industrial orange */
+/* Signed-in name: letters only, golden industrial orange faded to 50% */
 body .site-header .header-user-badge,
 body .site-header .header-user-badge--gm-lead,
 body.role-gm .header-user-badge,
@@ -8174,5 +8174,6 @@ body.role-pm .header-user-badge,
 body.role-fm .header-user-badge{
   color:var(--user-name-gold) !important;
   font-weight:800 !important;
+  opacity:1;
 }
 
