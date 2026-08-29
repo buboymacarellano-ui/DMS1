@@ -2274,6 +2274,23 @@ app.get('/api/gm/ocpd', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
   }
 });
 
+app.post('/api/gm/branch-parts-10pct-flow', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
+  try {
+    const force = String((req.body && req.body.force) || req.query.force || '').trim() === '1';
+    const dryRun = String((req.body && req.body.dryRun) || req.query.dryRun || '').trim() === '1';
+    const { runBranchParts10pctFlow } = require('./lib/branch-parts-10pct-flow');
+    const result = await runBranchParts10pctFlow({
+      force,
+      dryRun,
+      pmName: req.session && req.session.user && req.session.user.username,
+    });
+    return res.status(result.ok ? 200 : 400).json(result);
+  } catch (error) {
+    console.error('POST /api/gm/branch-parts-10pct-flow failed', error);
+    return res.status(500).json({ ok: false, error: error.message || 'Unable to run branch parts flow' });
+  }
+});
+
 app.post('/gm/branch-targets', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
   const current = await store.getPricingSettings();
   const resolved = resolveGmBranchSalesTargets(current);

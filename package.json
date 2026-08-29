@@ -18,6 +18,8 @@
     "seed:wo-txdb-1000:dry-run": "node scripts/seed-wo-transaction-db-1000.js --dry-run",
     "seed:w1-replenish-today": "node scripts/seed-warehouse1-replenish-today.js",
     "seed:w1-replenish-today:dry-run": "node scripts/seed-warehouse1-replenish-today.js --dry-run",
+    "flow:branch-parts-10pct": "node scripts/run-branch-parts-10pct-flow.js",
+    "flow:branch-parts-10pct:dry-run": "node scripts/run-branch-parts-10pct-flow.js --dry-run",
     "normalize:technicians": "node scripts/normalize-technician-identities.js",
     "migrate:proposed-location-branch": "node scripts/migrate-add-proposed-location-branch.js",
     "migrate:proposed-location-branch:dry-run": "node scripts/migrate-add-proposed-location-branch.js --dry-run",
