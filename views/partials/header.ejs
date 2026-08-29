@@ -185,17 +185,17 @@
       <p class="error global-error-message"><%= globalError %></p>
     <% } %>
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const fsToggle = document.getElementById('fullscreen-toggle');
-
+  (function() {
     function activateFullscreen() {
+      // ONLY trigger if the browser is completely out of fullscreen mode
       if (!document.fullscreenElement && 
           !document.webkitFullscreenElement && 
+          !document.mozFullScreenElement &&
           !document.msFullscreenElement) {
           
           let elem = document.documentElement;
           if (elem.requestFullscreen) {
-              elem.requestFullscreen();
+              elem.requestFullscreen().catch(err => console.log(err));
           } else if (elem.webkitRequestFullscreen) {
               elem.webkitRequestFullscreen();
           } else if (elem.msRequestFullscreen) {
@@ -204,14 +204,17 @@
       }
     }
 
-    // 1. Keeps your manual "Full Screen" header button fully functional
-    if (fsToggle) {
-      fsToggle.addEventListener('click', activateFullscreen);
-    }
+    // Runs safely after the page structure is fully interactive
+    document.addEventListener('DOMContentLoaded', () => {
+      const fsToggle = document.getElementById('fullscreen-toggle');
+      if (fsToggle) {
+        fsToggle.addEventListener('click', activateFullscreen);
+      }
 
-    // 2. Automates full screen globally on the very first tap, click, or key press anywhere
-    ['click', 'touchstart', 'keydown'].forEach(eventType => {
-        document.addEventListener(eventType, activateFullscreen, { once: true });
+      // Listens to global interactions ONCE per page load to prevent flashing loops
+      ['click', 'touchstart', 'keydown'].forEach(eventType => {
+          document.addEventListener(eventType, activateFullscreen, { once: true, passive: true });
+      });
     });
-  });
+  })();
 </script>
