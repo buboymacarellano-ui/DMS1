@@ -184,3 +184,34 @@
     <% if (typeof globalError !== 'undefined' && globalError) { %>
       <p class="error global-error-message"><%= globalError %></p>
     <% } %>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const fsToggle = document.getElementById('fullscreen-toggle');
+
+    function activateFullscreen() {
+      if (!document.fullscreenElement && 
+          !document.webkitFullscreenElement && 
+          !document.msFullscreenElement) {
+          
+          let elem = document.documentElement;
+          if (elem.requestFullscreen) {
+              elem.requestFullscreen();
+          } else if (elem.webkitRequestFullscreen) {
+              elem.webkitRequestFullscreen();
+          } else if (elem.msRequestFullscreen) {
+              elem.msRequestFullscreen();
+          }
+      }
+    }
+
+    // 1. Keeps your manual "Full Screen" header button fully functional
+    if (fsToggle) {
+      fsToggle.addEventListener('click', activateFullscreen);
+    }
+
+    // 2. Automates full screen globally on the very first tap, click, or key press anywhere
+    ['click', 'touchstart', 'keydown'].forEach(eventType => {
+        document.addEventListener(eventType, activateFullscreen, { once: true });
+    });
+  });
+</script>
