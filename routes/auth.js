@@ -26,6 +26,11 @@ const {
   PRIMARY_BRANCH_NAME,
 } = require('../lib/branches');
 const { isLoginAuthDisabled, setOpenLoginEnabled } = require('../lib/login-auth');
+const {
+  authorizeEmployeeLogin,
+  sessionFromEmployee,
+  passwordAccepted,
+} = require('../lib/employee-login');
 const portals = require('../lib/portals');
 
 const router = express.Router();
@@ -345,58 +350,44 @@ router.post('/login', async (req, res) => {
   if (!String(req.body.department || '').trim()) {
     return renderLogin(400, 'Department is required.');
   }
-  if (department !== portals.PORTAL_GM && !String(req.body.access_level || '').trim()) {
+  if (!String(req.body.access_level || '').trim() && department !== portals.PORTAL_GM) {
     return renderLogin(400, 'Role is required.');
   }
-  if (department !== portals.PORTAL_GM && !loginInputRaw) {
+  if (!loginInputRaw) {
     return renderLogin(400, missingIdError(accessLevel));
   }
-  const requiresBranch = isFrontlineRole(accessLevel);
-  if (requiresBranch && !selectedBranch) {
-    return renderLogin(400, 'Select your assigned branch to continue.');
+  if (!selectedBranch) {
+    return renderLogin(400, 'Select your assigned location to continue.');
   }
   if (!password) {
     return renderLogin(400, 'Password is required.');
   }
 
-  if (department === portals.PORTAL_GM || accessLevel === ROLE_GENERAL_MANAGER) {
-    if (isLoginAuthDisabled()) {
-      const role = applyOpenLoginSession(req, ROLE_GENERAL_MANAGER, '', '', portals.PORTAL_GM);
-      return res.redirect(redirectForRole(role));
-    }
-    const gmAccounts = getGmAccounts(users).slice(0, MAX_GM_USERS);
-    const matchedGm = gmAccounts.find((account) => (
-      account.password_enabled !== false
-      && account.password_salt
-      && account.password_hash
-      && verifyPassword(password, account.password_salt, account.password_hash)
-    ));
-    if (!matchedGm) {
-      return renderLogin(401, 'Invalid GM password.');
-    }
-    req.session.user = {
-      id: matchedGm.id,
-      username: matchedGm.username,
-      role: ROLE_GENERAL_MANAGER,
-      technician_name: '',
-      technician_employee_id: '',
-      employee_id: '',
-      receptionist_employee_id: '',
-      receptionist_name: '',
-      job_code: '',
-      branch: '',
-      location: '',
-      department: portals.PORTAL_GM,
-    };
-    return res.redirect(redirectForRole(ROLE_GENERAL_MANAGER));
+  if (isLoginAuthDisabled()) {
+    const role = applyOpenLoginSession(req, accessLevel, loginInputRaw, selectedBranch, department);
+    return res.redirect(redirectForRole(role));
   }
 
-  function locationsMatch(selected, assigned) {
-    const left = portals.canonicalizeLocation(department, selected);
-    const right = portals.canonicalizeLocation(department, assigned);
-    if (!left || !right) return false;
-    return String(left).toLowerCase() === String(right).toLowerCase()
-      || branchesMatch(left, right);
+  const authorized = authorizeEmployeeLogin({
+    employees,
+    users,
+    department,
+    role: accessLevel,
+    loginInput: loginInputRaw,
+    location: selectedBranch,
+    password,
+  });
+
+  if (authorized.ok) {
+    req.session.user = sessionFromEmployee({
+      employee: authorized.employee,
+      account: authorized.account,
+      role: accessLevel,
+      department,
+      location: authorized.location,
+      loginInput: loginInputRaw,
+    });
+    return res.redirect(redirectForRole(req.session.user.role));
   }
 
   function findDepartmentAccount() {
@@ -410,7 +401,7 @@ router.post('/login', async (req, res) => {
       return findFrontlineAccount(users, receptionistEmployeeIdInput, accessLevel);
     }
     if (accessLevel === ROLE_STM) {
-      return findStmAccount(users, loginInputRaw, matchedEmployee);
+      return findStmAccount(users, loginInputRaw, null);
     }
     const employeeId = normalizeEmployeeId(loginInputRaw);
     return (users || []).find((user) => {
@@ -421,83 +412,40 @@ router.post('/login', async (req, res) => {
     }) || null;
   }
 
-  if (isLoginAuthDisabled()) {
-    const role = applyOpenLoginSession(req, accessLevel, loginInputRaw, selectedBranch, department);
-    return res.redirect(redirectForRole(role));
-  }
-
-  let matchedEmployee = null;
-  if (isFrontlineRole(accessLevel)) {
-    matchedEmployee = employees.find((item) => normalizeEmployeeId(item.employee_id) === receptionistEmployeeIdInput);
-    if (!matchedEmployee) {
-      return renderLogin(401, `${frontlineIdLabel(accessLevel)} was not found in Employee DB.`);
-    }
-    if (!employeeMatchesAccess(matchedEmployee, accessLevel)) {
-      const expectedJob = jobCodeForRole(accessLevel);
-      return renderLogin(403, `This employee ID is not listed as ${expectedJob} in Employee DB.`);
-    }
-    const employeeAssignedBranch = employeeBranch(matchedEmployee);
-    if (!locationsMatch(selectedBranch, employeeAssignedBranch)) {
-      return renderLogin(403, 'Selected location must match this employee ID in Employee DB.');
-    }
-  } else if (accessLevel === ROLE_STM) {
-    matchedEmployee = findStmEmployee(employees, loginInputRaw);
-  } else {
-    matchedEmployee = employees.find((item) => normalizeEmployeeId(item.employee_id) === receptionistEmployeeIdInput) || null;
-    if (matchedEmployee && !portals.employeeMatchesPortalRole(matchedEmployee, accessLevel)) {
-      return renderLogin(403, 'This employee ID is not listed for the selected role in Employee DB.');
-    }
+  const employeeMissing = /not found in Employee DB/i.test(String(authorized.error || ''));
+  if (!employeeMissing) {
+    return renderLogin(authorized.status || 401, authorized.error);
   }
 
   const account = findDepartmentAccount();
-
   if (!account) {
-    if (isFrontlineRole(accessLevel)) {
-      return renderLogin(401, `No login account yet for this ${frontlineIdLabel(accessLevel)}. Ask HR to create one.`);
-    }
-    if (accessLevel === ROLE_STM) {
-      return renderLogin(401, 'STM account was not recognized. Use the STM employee ID registered for Service & Technical Manager.');
-    }
-    return renderLogin(401, 'No login account yet for this employee ID. Ask HR to create one.');
+    return renderLogin(authorized.status || 401, authorized.error);
   }
-
   if (account.password_enabled === false) {
     return renderLogin(403, 'This account password is disabled. Contact HR.');
   }
-
-  if (accessLevel === ROLE_GENERAL_MANAGER && !isAllowedGmLogin(account, users)) {
-    return renderLogin(403, 'This GM account is not in the active GM slots.');
-  }
-
-  if (!password || !account.password_salt || !account.password_hash || !verifyPassword(password, account.password_salt, account.password_hash)) {
+  if (!passwordAccepted(password, account)) {
     return renderLogin(401, 'Invalid password.');
+  }
+  const assignedLocation = String(account.branch || account.location || '').trim();
+  if (assignedLocation && !branchesMatch(selectedBranch, assignedLocation)
+    && portals.canonicalizeLocation(department, selectedBranch) !== portals.canonicalizeLocation(department, assignedLocation)) {
+    return renderLogin(403, 'Selected location must match this employee ID in Employee DB.');
   }
 
   const accountRole = normalizeRole(account.role || accessLevel);
-  if (!portals.accountRoleMatches(accountRole, accessLevel)) {
-    return renderLogin(403, 'Please use the correct department and role for this account.');
-  }
-
-  const liveName = matchedEmployee ? getTechnicianDisplayName(matchedEmployee) : account.username;
-  const liveEmployeeId = matchedEmployee
-    ? normalizeEmployeeId(matchedEmployee.employee_id)
-    : (accountEmployeeId(account) || account.receptionist_employee_id || normalizeEmployeeId(loginInputRaw));
-  const sessionBranch = isFrontlineRole(accountRole)
-    ? selectedBranch
-    : (employeeBranch(matchedEmployee) || String(account.branch || account.location || '').trim());
-
   req.session.user = {
     id: account.id,
-    username: liveName || account.username,
+    username: account.username,
     role: accountRole === ROLE_HR ? ROLE_HR_MANAGER : accountRole,
     technician_name: account.technician_name || '',
     technician_employee_id: account.technician_employee_id || '',
-    employee_id: liveEmployeeId,
-    receptionist_employee_id: isReceptionistFamily(accountRole) ? liveEmployeeId : (account.receptionist_employee_id || ''),
-    receptionist_name: isFrontlineRole(accountRole) ? liveName : (account.receptionist_name || ''),
-    job_code: matchedEmployee ? String(matchedEmployee.job_code || '').trim() : (account.receptionist_job_code || ''),
-    branch: sessionBranch,
-    location: sessionBranch,
+    employee_id: accountEmployeeId(account) || normalizeEmployeeId(loginInputRaw),
+    receptionist_employee_id: isReceptionistFamily(accountRole) ? (accountEmployeeId(account) || receptionistEmployeeIdInput) : (account.receptionist_employee_id || ''),
+    receptionist_name: isFrontlineRole(accountRole) ? account.username : (account.receptionist_name || ''),
+    job_code: account.job_code || account.receptionist_job_code || '',
+    branch: selectedBranch,
+    location: selectedBranch,
     department,
   };
 

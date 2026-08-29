@@ -118,8 +118,9 @@ const BYPASS_ROLES = new Set([
   ROLE_CASHIER,
   ROLE_STORES_CLERK,
 ]);
+const { provisionEmployeeLogins } = require('./lib/employee-login');
 const HR_SEED_USERNAME = 'HR';
-const HR_SEED_PASSWORD = '123456';
+const HR_SEED_PASSWORD = 'PW123456';
 
 // Temporary env toggle: set DISABLE_LOGIN=1 to auto-bypass login in local dev.
 // HR Sign Up also has a Disable Login Auth button for empty-form login while building.
@@ -2971,10 +2972,22 @@ app.use('/approvals', approvalsRouter);
 app.use('/api/kpi', kpiRouter);
 app.use('/kpi', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_ADMIN, ROLE_STM), kpiRouter);
 
-ensureSeedHrAccount()
+async function ensureEmployeeDbLogins() {
+  await ensureSeedHrAccount();
+  const result = await provisionEmployeeLogins(store);
+  console.log('Employee DB login ready', {
+    csv_rows: result.csv_rows,
+    employees: result.employees,
+    accounts_created: result.accounts_created,
+    accounts_updated: result.accounts_updated,
+    by_role: result.by_role,
+  });
+}
+
+ensureEmployeeDbLogins()
   .then(() => loadLoginAuthState())
   .catch((error) => {
-    console.error('Failed to seed HR account:', error);
+    console.error('Failed to provision Employee DB logins:', error);
   })
   .finally(() => {
     app.listen(PORT, '0.0.0.0', () => {

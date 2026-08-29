@@ -8,7 +8,8 @@ const crypto = require('crypto');
 const store = require('../data/store');
 const { loadLoginAuthState } = require('../lib/login-auth');
 
-const TEMP_PASSWORD = '123456';
+const { SHOP_PASSWORD } = require('../lib/employee-login');
+const TEMP_PASSWORD = SHOP_PASSWORD;
 const ITERATIONS = 120000;
 
 function hashPassword(password, salt) {

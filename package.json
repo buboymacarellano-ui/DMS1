@@ -22,7 +22,8 @@
     "migrate:proposed-location-branch": "node scripts/migrate-add-proposed-location-branch.js",
     "migrate:proposed-location-branch:dry-run": "node scripts/migrate-add-proposed-location-branch.js --dry-run",
     "import:transactions": "node scripts/import-transaction-records.js",
-    "import:transactions:replace": "node scripts/import-transaction-records.js --replace"
+    "import:transactions:replace": "node scripts/import-transaction-records.js --replace",
+    "provision:employee-logins": "node scripts/provision-employee-logins.js"
   },
   "author": "",
   "license": "MIT",
