@@ -10,3 +10,9 @@ data/sqlite-path.txt
 .env.*
 npm-debug.log
 .DS_Store
+
+# Runtime data dir (SQLite + JSON snapshot) when LOCALAPPDATA is unset
+AE-DMS/
+data/AE-DMS/
+data/data-snapshot.json
+session-secret.txt

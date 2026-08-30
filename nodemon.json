@@ -1,0 +1,5 @@
+{
+  "watch": ["app.js", "routes", "lib", "views", "data/store.js"],
+  "ext": "js,ejs,json",
+  "ignore": ["data/*.json", "data/AE-DMS/**", "AE-DMS/**", "logs/**", "public/**"]
+}
