@@ -1,0 +1,92 @@
+@layer tokens {
+  :root {
+    /* Brand — unchanged from the legacy sheet */
+    --c-accent: #2f6db3;
+    --c-accent-strong: #1e4e86;
+    --c-accent-soft: #eff4fa;
+    --c-orange: #ed7d31;
+    --c-orange-soft: #fef6ee;
+    --c-gold: #ffc000;
+    --c-gold-soft: #fffaeb;
+    --c-green: #70ad47;
+
+    /* Surfaces — new, cool slate */
+    --c-bg: #eef1f5;
+    --c-surface: #ffffff;
+    --c-surface-soft: #f8fafc;
+    --c-border: #e2e8f0;
+    --c-border-strong: #cbd5e1;
+    --c-rule: #f1f5f9;
+
+    /* Ink */
+    --c-text: #0f172a;
+    --c-text-muted: #64748b;
+    --c-text-subtle: #94a3b8;
+    --c-text-invert: #ffffff;
+
+    /* Status — tinted pill plus state dot */
+    --c-ok-bg: #ecfdf3;
+    --c-ok-ink: #067647;
+    --c-ok-dot: #12b76a;
+    --c-bad-bg: #fef3f2;
+    --c-bad-ink: #b42318;
+    --c-bad-dot: #f04438;
+    --c-idle-bg: #f2f4f7;
+    --c-idle-ink: #475467;
+    --c-idle-dot: #98a2b3;
+
+    /* Type */
+    --font-ui: "IBM Plex Sans", "Segoe UI", Calibri, Arial, Helvetica, sans-serif;
+    --font-mono: "IBM Plex Mono", Consolas, monospace;
+    --fs-metric: 2rem;
+    --fs-page-title: 1.625rem;
+    --fs-section-title: 0.9375rem;
+    --fs-body: 0.875rem;
+    --fs-small: 0.8125rem;
+    --fs-micro: 0.6875rem;
+    --lh-tight: 1.15;
+    --lh-body: 1.6;
+    --ls-tight: -0.01em;
+    --fw-normal: 400;
+    --fw-medium: 500;
+    --fw-semibold: 600;
+    --fw-bold: 700;
+
+    /* Space */
+    --sp-1: 4px;
+    --sp-2: 8px;
+    --sp-3: 12px;
+    --sp-4: 16px;
+    --sp-5: 24px;
+    --sp-6: 32px;
+    --sp-7: 48px;
+
+    /* Shape */
+    --radius-sm: 6px;
+    --radius: 10px;
+    --radius-pill: 999px;
+    --border-w: 1px;
+    --shadow-card: 0 1px 2px rgba(16, 24, 40, .04), 0 4px 12px rgba(16, 24, 40, .06);
+    --shadow-raised: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .08);
+    --focus-ring: 0 0 0 3px rgba(47, 109, 179, .16);
+
+    /* Nav and chrome */
+    --c-surface-nav: #f8fafc;
+    --c-surface-nav-active: #eff4fa;
+    --c-grid: #f1f5f9;
+    --c-chart-blue: #5b9bd5;
+    --shadow-header: 0 1px 2px rgba(16, 24, 40, .06);
+
+    /* Status borders — used by pills and alerts */
+    --c-ok-line: #a6f4c5;
+    --c-bad-line: #fecdca;
+    --c-idle-line: #e4e7ec;
+
+    /* Controls */
+    --control-h: 40px;
+    --control-h-touch: 48px;
+
+    /* Layout */
+    --container-max: 1136px;
+  }
+}
