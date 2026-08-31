@@ -128,6 +128,12 @@ const AUTH_DISABLED = envLoginDisabled();
 const requestedBypassRole = String(process.env.BYPASS_ROLE || ROLE_SERVICE_RECEPTIONIST).trim().toLowerCase();
 const BYPASS_ROLE = BYPASS_ROLES.has(requestedBypassRole) ? requestedBypassRole : ROLE_SERVICE_RECEPTIONIST;
 
+// v2 stylesheet rollout. Add a portal key to migrate it; remove to roll back.
+const SKIN_V2_PORTALS = new Set([]);
+
+// Routes with no portal (portalForPath returns '') that have migrated.
+const SKIN_V2_PATH_PREFIXES = [];
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -223,6 +229,10 @@ app.use(async (req, res, next) => {
   res.locals.isGmSupervisor = activeRole === ROLE_GENERAL_MANAGER;
   res.locals.currentPortal = activePortal;
   res.locals.portalLabel = portals.portalLabel(activePortal);
+  // Which portals have migrated to the v2 stylesheet. Remove an entry to roll
+  // that portal back to /styles.css. See docs/superpowers/specs/2026-08-31-dms-ui-reskin-design.md
+  res.locals.skinV2 = SKIN_V2_PORTALS.has(activePortal)
+    || SKIN_V2_PATH_PREFIXES.some((prefix) => req.path === prefix || req.path.indexOf(`${prefix}/`) === 0);
   res.locals.accessiblePortals = activeRole ? portals.accessiblePortals(activeRole) : [];
   res.locals.canGrant = (portalKey, grantKey) => portals.hasGrant(activeRole, portalKey, grantKey);
   res.locals.pendingApprovalCount = res.locals.canApproveRequests

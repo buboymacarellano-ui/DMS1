@@ -4,7 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Auto Shop Manager</title>
-  <link rel="stylesheet" href="/styles.css">
+  <% if (typeof skinV2 !== 'undefined' && skinV2) { %>
+    <link rel="stylesheet" href="/css/app.css">
+  <% } else { %>
+    <link rel="stylesheet" href="/styles.css">
+  <% } %>
 </head>
 <% const activeRole = currentUser ? String(currentUser.role || '').toLowerCase() : ''; %>
 <%
