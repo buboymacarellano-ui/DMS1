@@ -184,37 +184,3 @@
     <% if (typeof globalError !== 'undefined' && globalError) { %>
       <p class="error global-error-message"><%= globalError %></p>
     <% } %>
-<script>
-  (function() {
-    function activateFullscreen() {
-      // ONLY trigger if the browser is completely out of fullscreen mode
-      if (!document.fullscreenElement && 
-          !document.webkitFullscreenElement && 
-          !document.mozFullScreenElement &&
-          !document.msFullscreenElement) {
-          
-          let elem = document.documentElement;
-          if (elem.requestFullscreen) {
-              elem.requestFullscreen().catch(err => console.log(err));
-          } else if (elem.webkitRequestFullscreen) {
-              elem.webkitRequestFullscreen();
-          } else if (elem.msRequestFullscreen) {
-              elem.msRequestFullscreen();
-          }
-      }
-    }
-
-    // Runs safely after the page structure is fully interactive
-    document.addEventListener('DOMContentLoaded', () => {
-      const fsToggle = document.getElementById('fullscreen-toggle');
-      if (fsToggle) {
-        fsToggle.addEventListener('click', activateFullscreen);
-      }
-
-      // Listens to global interactions ONCE per page load to prevent flashing loops
-      ['click', 'touchstart', 'keydown'].forEach(eventType => {
-          document.addEventListener(eventType, activateFullscreen, { once: true, passive: true });
-      });
-    });
-  })();
-</script>
