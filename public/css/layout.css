@@ -1,2 +1,177 @@
 @layer layout {
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+    padding: var(--sp-2) var(--sp-4);
+    background: var(--c-surface);
+    border-bottom: var(--border-w) solid var(--c-border);
+    box-shadow: var(--shadow-header);
+  }
+
+  .site-header h1 { margin: 0; }
+
+  .brand-heading {
+    display: inline-flex;
+    align-items: center;
+    color: var(--c-text);
+    text-decoration: none;
+  }
+
+  .brand-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sp-6);
+    height: var(--sp-6);
+    border-radius: var(--radius-sm);
+    background: var(--c-accent);
+    color: var(--c-text-invert);
+    font-size: var(--fs-small);
+    font-weight: var(--fw-bold);
+  }
+
+  .brand-text {
+    display: flex;
+    flex-direction: column;
+    line-height: var(--lh-tight);
+  }
+
+  .brand-text__name {
+    font-size: var(--fs-section-title);
+    font-weight: var(--fw-bold);
+  }
+
+  .brand-text__entity {
+    font-size: var(--fs-micro);
+    color: var(--c-text-muted);
+    letter-spacing: 0.08em;
+  }
+
+  .site-header nav {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+  }
+
+  .site-header nav a {
+    padding: var(--sp-2) var(--sp-3);
+    color: var(--c-text);
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+  }
+
+  .site-header nav a:hover { background: var(--c-surface-nav); }
+  .nav-link--active { background: var(--c-accent-soft); color: var(--c-accent); font-weight: var(--fw-semibold); }
+
+  .site-header__actions,
+  .site-header__session-btns {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+  }
+
+  .header-logout-form { margin: 0; }
+
+  .header-user-badge {
+    color: var(--c-text-muted);
+    font-size: var(--fs-small);
+    white-space: nowrap;
+  }
+
+  .approval-nav--pending { color: var(--c-orange); font-weight: var(--fw-bold); }
+
+  .approval-nav__count {
+    display: inline-block;
+    min-width: 20px;
+    padding: 0 var(--sp-1);
+    background: var(--c-orange);
+    color: var(--c-text-invert);
+    font-size: var(--fs-micro);
+    text-align: center;
+  }
+
+  .container {
+    width: 100%;
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: var(--sp-5) var(--sp-4);
+  }
+
+  .site-footer {
+    padding: var(--sp-4);
+    color: var(--c-text-muted);
+    font-size: var(--fs-small);
+    text-align: center;
+  }
+
+  /* The full-screen layout class set by initFullscreenToggle in footer.ejs */
+  body.app-fullscreen .site-footer { display: none; }
+  body.app-fullscreen .container { max-width: none; padding: var(--sp-3) var(--sp-4); }
+
+  /* Auth */
+  .auth-shell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: var(--sp-4);
+  }
+
+  .auth-card {
+    width: 100%;
+    max-width: 420px;
+    padding: var(--sp-6);
+    background: var(--c-surface);
+    border: var(--border-w) solid var(--c-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-raised);
+  }
+
+  .auth-brand { text-align: center; margin-bottom: var(--sp-5); }
+  .auth-subtitle { color: var(--c-text-muted); font-size: var(--fs-small); text-align: center; }
+  .auth-hint { margin-top: var(--sp-4); font-size: var(--fs-small); color: var(--c-text-muted); }
+  .auth-form button[type="submit"] { width: 100%; margin-top: var(--sp-2); }
+
+  /* Breakpoints — these four only. Do not introduce a fifth. */
+  @media (max-width: 1799px) {
+    :root { --container-max: 1400px; }
+  }
+
+  @media (max-width: 1199px) {
+    .site-header { padding: var(--sp-2) var(--sp-3); }
+    .container { padding: var(--sp-4) var(--sp-3); }
+  }
+
+  @media (max-width: 767px) {
+    :root {
+      --control-h: var(--control-h-touch);
+      --fs-page-title: 1.5rem;
+    }
+    .site-header { gap: var(--sp-2); }
+    .site-header nav { width: 100%; overflow-x: auto; }
+    .card-grid,
+    .card-grid--4,
+    .summary-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 479px) {
+    .container { padding: var(--sp-3) var(--sp-2); }
+    .header-user-badge { display: none; }
+    .auth-card { padding: var(--sp-4); border: none; box-shadow: none; }
+  }
+
+  @media (min-width: 1800px) {
+    :root {
+      --container-max: 1760px;
+      --fs-body: 1.125rem;
+      --fs-page-title: 2.25rem;
+    }
+  }
 }
