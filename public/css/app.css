@@ -1,0 +1,10 @@
+/* Layer order is declared once, here. A rule in a later layer always wins,
+   regardless of source order or where it is imported from. This is the fix
+   for the override-pass problem in the legacy sheet. */
+@layer tokens, base, components, layout, overrides;
+
+@import url("tokens.css");
+@import url("base.css");
+@import url("components.css");
+@import url("layout.css");
+@import url("print.css");
