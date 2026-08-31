@@ -47,6 +47,7 @@
     --lh-tight: 1.15;
     --lh-body: 1.6;
     --ls-tight: -0.01em;
+    --ls-wide: 0.08em;
     --fw-normal: 400;
     --fw-medium: 500;
     --fw-semibold: 600;
@@ -88,5 +89,7 @@
 
     /* Layout */
     --container-max: 1136px;
+    --z-header: 1000;
+    --auth-card-max: 420px;
   }
 }
