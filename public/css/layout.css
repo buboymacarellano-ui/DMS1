@@ -89,6 +89,39 @@
     margin: 0;
   }
 
+  .site-header__left--gm-stack {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: var(--sp-1);
+  }
+
+  .header-user-badge--gm-lead {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .portal-watermark {
+    position: absolute;
+    right: var(--portal-watermark-inset);
+    left: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    pointer-events: none;
+    font-size: var(--fs-page-title);
+    font-weight: var(--fw-bold);
+    letter-spacing: var(--ls-wide);
+    color: var(--c-text-subtle);
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  .site-header > *:not(.portal-watermark) {
+    position: relative;
+    z-index: 1;
+  }
+
   .site-header nav {
     display: flex;
     align-items: center;
@@ -131,6 +164,13 @@
     white-space: nowrap;
   }
 
+  .approval-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    font-size: var(--fs-small);
+  }
+
   .approval-nav--pending { color: var(--c-orange); font-weight: var(--fw-bold); }
 
   .approval-nav__count {
@@ -160,6 +200,56 @@
   /* The full-screen layout class set by initFullscreenToggle in footer.ejs */
   body.app-fullscreen .site-footer { display: none; }
   body.app-fullscreen .container { max-width: none; padding: var(--sp-3) var(--sp-4); }
+
+  /* Delete-password dialog — guards every destructive action, renders on every page */
+  .delete-password-dialog {
+    width: min(var(--auth-card-max), calc(100vw - var(--sp-5) * 2));
+    padding: 0;
+    border: none;
+    border-radius: var(--radius);
+    background: var(--c-surface);
+    color: var(--c-text);
+    box-shadow: var(--shadow-raised);
+  }
+
+  .delete-password-dialog::backdrop {
+    background: var(--c-backdrop);
+  }
+
+  .delete-password-dialog__form {
+    display: grid;
+    gap: var(--sp-3);
+    padding: var(--sp-5);
+  }
+
+  .delete-password-dialog__form h3,
+  .delete-password-dialog__form p {
+    margin: 0;
+    color: var(--c-text);
+  }
+
+  .delete-password-dialog__form label {
+    display: grid;
+    gap: var(--sp-1);
+    font-weight: var(--fw-semibold);
+    color: var(--c-text);
+  }
+
+  .delete-password-dialog__form input {
+    width: 100%;
+    height: var(--control-h);
+    padding: var(--sp-2) var(--sp-3);
+    border: var(--border-w) solid var(--c-border);
+    border-radius: var(--radius-sm);
+    background: var(--c-surface);
+    color: var(--c-text);
+  }
+
+  .delete-password-dialog__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--sp-2);
+  }
 
   /* Auth */
   .auth-shell {

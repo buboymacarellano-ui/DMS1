@@ -17,6 +17,7 @@
     --c-border: #e2e8f0;
     --c-border-strong: #cbd5e1;
     --c-rule: #f1f5f9;
+    --c-backdrop: rgba(15, 23, 42, .5);
 
     /* Ink */
     --c-text: #0f172a;
@@ -91,5 +92,6 @@
     --container-max: 1136px;
     --z-header: 1000;
     --auth-card-max: 420px;
+    --portal-watermark-inset: 210px;
   }
 }
