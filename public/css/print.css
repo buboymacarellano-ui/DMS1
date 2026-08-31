@@ -14,7 +14,7 @@
   .btn,
   .header-logout-form,
   .approval-nav,
-  .back-chip { display: none !important; }
+  .app-back-arrow { display: none !important; }
 
   .container {
     max-width: none;
