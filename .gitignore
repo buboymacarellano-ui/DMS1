@@ -16,3 +16,6 @@ AE-DMS/
 data/AE-DMS/
 data/data-snapshot.json
 session-secret.txt
+
+# UI reskin baseline screenshots (local reference only)
+docs/superpowers/plans/baselines/
