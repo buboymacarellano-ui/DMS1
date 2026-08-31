@@ -210,6 +210,35 @@
     color: var(--c-ok-ink);
   }
 
+  /* Status pills */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-1) var(--sp-3);
+    border-radius: var(--radius-pill);
+    background: var(--c-idle-bg);
+    color: var(--c-idle-ink);
+    font-size: var(--fs-micro);
+    font-weight: var(--fw-semibold);
+    white-space: nowrap;
+  }
+
+  .pill::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+    background: var(--c-idle-dot);
+  }
+
+  .pill--ok { background: var(--c-ok-bg); color: var(--c-ok-ink); }
+  .pill--ok::before { background: var(--c-ok-dot); }
+
+  .pill--bad { background: var(--c-bad-bg); color: var(--c-bad-ink); }
+  .pill--bad::before { background: var(--c-bad-dot); }
+
   /* Lists */
   .list {
     margin: 0;
