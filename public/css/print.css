@@ -14,7 +14,8 @@
   .btn,
   .header-logout-form,
   .approval-nav,
-  .app-back-arrow { display: none !important; }
+  .app-back-arrow,
+  #kpi-warn-overlay { display: none !important; }
 
   .container {
     max-width: none;
@@ -26,7 +27,7 @@
   .kpi-card,
   .home-card,
   .nav-card {
-    border: 1px solid #000000;
+    border: var(--border-w) solid #000000;
     box-shadow: none;
     break-inside: avoid;
   }
