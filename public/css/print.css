@@ -1,2 +1,44 @@
 @media print {
+  /* Chrome drops backgrounds when printing unless asked. Status colours
+     carry meaning on printed job sheets, so force them. */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  html, body {
+    background: #ffffff;
+    color: #000000;
+    font-size: 11pt;
+  }
+
+  .site-header,
+  .site-footer,
+  .btn,
+  .header-logout-form,
+  .approval-nav,
+  .back-chip { display: none !important; }
+
+  .container {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .panel,
+  .kpi-card,
+  .home-card,
+  .nav-card {
+    border: 1px solid #000000;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  .table-scroll {
+    overflow: visible;
+    border: none;
+  }
+
+  table { break-inside: auto; }
+  thead { display: table-header-group; }
+  tr { break-inside: avoid; }
+
+  a[href]::after { content: ""; }
 }
