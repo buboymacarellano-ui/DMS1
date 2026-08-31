@@ -19,3 +19,7 @@ session-secret.txt
 
 # UI reskin baseline screenshots (local reference only)
 docs/superpowers/plans/baselines/
+
+# Seeded design-canvas payload — 2.5MB build artifact, re-seed from the
+# .dc.html working files with the design skill's seed-canvas helper.
+docs/superpowers/plans/canvas-1/ae-dms-foundations.html

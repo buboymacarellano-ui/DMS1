@@ -1,0 +1,284 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; background: #ffffff; font-family: "IBM Plex Sans", "Segoe UI", Calibri, sans-serif; color: #1a1a1a; }
+    a { color: #2f6db3; text-decoration: none; } a:hover { color: #1e4e86; }
+
+    .page { width: 1123px; box-sizing: border-box; padding: 56px 64px; }
+    .brk { break-before: page; page-break-before: always; }
+    .keep { break-inside: avoid; page-break-inside: avoid; }
+
+    .eyebrow { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #8a8a8a; }
+    .h1 { margin: 10px 0 0; font-size: 42px; font-weight: 600; letter-spacing: -.02em; line-height: 1.1; color: #111827; }
+    .lede { margin: 16px 0 0; font-size: 17px; line-height: 1.6; color: #3f3f46; max-width: 720px; }
+
+    .opt-num { font-size: 52px; font-weight: 700; line-height: 1; color: #d4d4d8; }
+    .opt-name { margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -.01em; color: #111827; }
+    .opt-sub { margin: 5px 0 0; font-size: 15px; color: #71717a; }
+    .body { margin: 0; font-size: 15px; line-height: 1.65; color: #3f3f46; }
+
+    .meta-l { margin: 0 0 5px; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #8a8a8a; }
+    .meta-v { margin: 0; font-size: 14px; line-height: 1.55; color: #3f3f46; }
+
+    .shot { border: 1px solid #e4e4e7; border-radius: 4px; overflow: hidden; }
+    .shot-cap { margin: 8px 0 0; font-size: 12px; color: #8a8a8a; font-style: italic; }
+  </style>
+</helmet>
+
+<div style="background: #ffffff;">
+
+  <!-- ============ COVER ============ -->
+  <div class="page" style="min-height: 794px; display: flex; flex-direction: column; justify-content: space-between;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 40px; height: 40px; border-radius: 9px; background: #2f6db3; display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 15px; font-weight: 700;">AE</div>
+        <div style="font-size: 15px; font-weight: 600; color: #111827; line-height: 1.25;">A&amp;E Auto Service Group Inc.<br><span style="font-weight: 400; color: #71717a;">Dealer Management System</span></div>
+      </div>
+
+      <p class="eyebrow" style="margin-top: 72px;">Design review</p>
+      <h1 class="h1">Three directions for<br>the DMS interface</h1>
+      <p class="lede">The system works. It does not look like it works. These are three ways to modernise the interface without changing how anyone does their job &mdash; same screens, same steps, same data. Only the appearance changes.</p>
+      <p class="lede" style="margin-top: 20px;">Each direction is shown on the same screen, the Stores dashboard, with the same figures. That way the only difference you are judging is the design itself.</p>
+    </div>
+
+    <div style="border-top: 1px solid #e4e4e7; padding-top: 24px;">
+      <p class="meta-l">What we need from you</p>
+      <p class="meta-v" style="max-width: 640px;">Pick one letter &mdash; A, B or C. You are choosing a look, not a final screen: once a direction is agreed, every screen in the system gets rebuilt to match it, one department at a time, starting with the login page and the Stores portal.</p>
+      <p class="meta-v" style="margin-top: 14px; color: #71717a;">Nothing changes for staff until each department is signed off separately.</p>
+    </div>
+  </div>
+
+  <!-- ============ A ============ -->
+  <div class="page brk">
+    <div style="display: flex; align-items: flex-start; gap: 20px;">
+      <div class="opt-num">A</div>
+      <div style="padding-top: 6px;">
+        <h2 class="opt-name">Refined corporate</h2>
+        <p class="opt-sub">The current look, brought up to date</p>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 300px; gap: 40px; margin-top: 26px;">
+      <p class="body">Keeps the company blue and the general shape of what staff already use, then fixes what makes it feel old: hard square corners become soft ones, flat grey boxes gain gentle shadow and depth, and cramped rows get room to breathe. Numbers grow larger with a small arrow showing whether they are up or down on yesterday.<br><br>Anyone using the system today would recognise it immediately. Nothing needs re-learning &mdash; buttons stay where they are, the same words label the same things. It simply looks like software maintained this year rather than a decade ago.</p>
+      <div>
+        <div class="keep" style="margin-bottom: 18px;"><p class="meta-l">Best for</p><p class="meta-v">Keeping every branch comfortable while still looking current.</p></div>
+        <div class="keep" style="margin-bottom: 18px;"><p class="meta-l">The trade-off</p><p class="meta-v">It is the safe choice. Modern and tidy, but no one will call it striking.</p></div>
+        <div class="keep"><p class="meta-l">Retraining needed</p><p class="meta-v">None.</p></div>
+      </div>
+    </div>
+
+    <div class="shot keep" style="margin-top: 26px;">
+      <div style="font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif; background: #eef1f5;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: #ffffff; border-bottom: 1px solid #e2e8f0;">
+          <div style="display: flex; align-items: center; gap: 22px;">
+            <div style="display: flex; align-items: center; gap: 9px;"><div style="width: 26px; height: 26px; border-radius: 6px; background: #2f6db3; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 700;">AE</div><span style="font-size: 14px; font-weight: 600; color: #0f172a;">Auto Service Group</span></div>
+            <div style="display: flex; gap: 4px;"><span style="padding: 6px 12px; border-radius: 6px; background: #eff4fa; color: #2f6db3; font-size: 13px; font-weight: 600;">Stores</span><span style="padding: 6px 12px; color: #64748b; font-size: 13px;">Requests</span></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;"><span style="font-size: 12px; color: #64748b;">Carmen branch</span><div style="width: 28px; height: 28px; border-radius: 50%; background: #d6e6f5; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #1e4e86;">JS</div></div>
+        </div>
+        <div style="padding: 22px 24px;">
+          <div style="display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 18px;">
+            <div><div style="font-size: 22px; font-weight: 600; letter-spacing: -.01em; color: #0f172a;">Stores</div><div style="font-size: 13px; color: #64748b; margin-top: 3px;">Fourteen grocery stores &middot; POS, shelving and cashier control</div></div>
+            <div style="padding: 8px 14px; border-radius: 7px; background: #2f6db3; color: #fff; font-size: 13px; font-weight: 600;">Open till</div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 13px; margin-bottom: 18px;">
+            <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 9px; box-shadow: 0 4px 12px rgba(16,24,40,.06); padding: 15px 17px;"><div style="font-size: 12px; font-weight: 500; color: #64748b;">Grocery Stores</div><div style="font-size: 27px; font-weight: 600; color: #0f172a; margin-top: 5px;">14</div></div>
+            <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 9px; box-shadow: 0 4px 12px rgba(16,24,40,.06); padding: 15px 17px;"><div style="font-size: 12px; font-weight: 500; color: #64748b;">POS Tickets</div><div style="font-size: 27px; font-weight: 600; color: #0f172a; margin-top: 5px;">1,284</div><span style="display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 999px; background: #ecfdf3; color: #067647; font-size: 11px; font-weight: 600;">&#9650; 12%</span></div>
+            <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 9px; box-shadow: 0 4px 12px rgba(16,24,40,.06); padding: 15px 17px;"><div style="font-size: 12px; font-weight: 500; color: #64748b;">POS Sales</div><div style="font-size: 27px; font-weight: 600; color: #0f172a; margin-top: 5px;">&#8369;318k</div><span style="display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 999px; background: #ecfdf3; color: #067647; font-size: 11px; font-weight: 600;">&#9650; 4%</span></div>
+            <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 9px; box-shadow: 0 4px 12px rgba(16,24,40,.06); padding: 15px 17px;"><div style="font-size: 12px; font-weight: 500; color: #64748b;">Shelf On Hand</div><div style="font-size: 27px; font-weight: 600; color: #0f172a; margin-top: 5px;">9,540</div><span style="display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 999px; background: #fef3f2; color: #b42318; font-size: 11px; font-weight: 600;">&#9660; 3%</span></div>
+          </div>
+          <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 9px; box-shadow: 0 4px 12px rgba(16,24,40,.06); overflow: hidden;">
+            <div style="padding: 13px 18px; border-bottom: 1px solid #e2e8f0; font-size: 14px; font-weight: 600; color: #0f172a;">All stores</div>
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead><tr><th style="padding: 9px 18px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; letter-spacing: .04em; text-transform: uppercase; border-bottom: 1px solid #e2e8f0;">Store</th><th style="padding: 9px 18px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; letter-spacing: .04em; text-transform: uppercase; border-bottom: 1px solid #e2e8f0;">Tickets</th><th style="padding: 9px 18px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; letter-spacing: .04em; text-transform: uppercase; border-bottom: 1px solid #e2e8f0;">Sales</th><th style="padding: 9px 18px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; letter-spacing: .04em; text-transform: uppercase; border-bottom: 1px solid #e2e8f0;">Till</th></tr></thead>
+              <tbody>
+                <tr><td style="padding: 11px 18px; font-size: 13px; font-weight: 500; border-bottom: 1px solid #f1f5f9;">Carmen Grocery</td><td style="padding: 11px 18px; font-size: 13px; border-bottom: 1px solid #f1f5f9;">318</td><td style="padding: 11px 18px; font-size: 13px; border-bottom: 1px solid #f1f5f9;">&#8369; 74,910</td><td style="padding: 11px 18px; border-bottom: 1px solid #f1f5f9;"><span style="display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; background: #ecfdf3; color: #067647; font-size: 11px; font-weight: 600;"><span style="width: 5px; height: 5px; border-radius: 50%; background: #12b76a;"></span>Open</span></td></tr>
+                <tr><td style="padding: 11px 18px; font-size: 13px; font-weight: 500; border-bottom: 1px solid #f1f5f9;">CebuCity Grocery</td><td style="padding: 11px 18px; font-size: 13px; border-bottom: 1px solid #f1f5f9;">276</td><td style="padding: 11px 18px; font-size: 13px; border-bottom: 1px solid #f1f5f9;">&#8369; 66,430</td><td style="padding: 11px 18px; border-bottom: 1px solid #f1f5f9;"><span style="display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; background: #fef3f2; color: #b42318; font-size: 11px; font-weight: 600;"><span style="width: 5px; height: 5px; border-radius: 50%; background: #f04438;"></span>Variance</span></td></tr>
+                <tr><td style="padding: 11px 18px; font-size: 13px; font-weight: 500;">Carx2 Grocery</td><td style="padding: 11px 18px; font-size: 13px;">142</td><td style="padding: 11px 18px; font-size: 13px;">&#8369; 38,200</td><td style="padding: 11px 18px;"><span style="display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; background: #f2f4f7; color: #475467; font-size: 11px; font-weight: 600;"><span style="width: 5px; height: 5px; border-radius: 50%; background: #98a2b3;"></span>Closed</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="shot-cap">Direction A &mdash; Stores dashboard</p>
+  </div>
+
+  <!-- ============ B ============ -->
+  <div class="page brk">
+    <div style="display: flex; align-items: flex-start; gap: 20px;">
+      <div class="opt-num">B</div>
+      <div style="padding-top: 6px;">
+        <h2 class="opt-name">Dense operations console</h2>
+        <p class="opt-sub">Built for the people who live in it all day</p>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 300px; gap: 40px; margin-top: 26px;">
+      <p class="body">A working tool rather than a website. Dark background, a permanent menu down the left, and rows packed tight so far more fits on one screen without scrolling. Figures are set in a fixed-width typeface so columns of pesos line up exactly &mdash; easier to scan for the odd one out, and easier to spot a variance.<br><br>This is the direction that respects a cashier's or a parts clerk's time most: fewer clicks, less scrolling, more visible at once. It is also the least welcoming to someone who only opens the system occasionally.</p>
+      <div>
+        <div class="keep" style="margin-bottom: 18px;"><p class="meta-l">Best for</p><p class="meta-v">Desk staff on the system for hours &mdash; parts, finance, cashier control.</p></div>
+        <div class="keep" style="margin-bottom: 18px;"><p class="meta-l">The trade-off</p><p class="meta-v">Reads as technical. A dark screen is an unusual choice in a bright shop, and occasional users may find it cold.</p></div>
+        <div class="keep"><p class="meta-l">Retraining needed</p><p class="meta-v">Light &mdash; the menu moves from the top to the left.</p></div>
+      </div>
+    </div>
+
+    <div class="shot keep" style="margin-top: 26px;">
+      <div style="font-family: 'Public Sans', 'Segoe UI', sans-serif; background: #0f1419; display: flex; min-height: 330px;">
+        <div style="width: 170px; flex: 0 0 170px; background: #12181e; border-right: 1px solid #262e38; padding: 12px 9px;">
+          <div style="display: flex; align-items: center; gap: 7px; padding: 3px 7px 12px;"><div style="width: 20px; height: 20px; border-radius: 4px; background: #2f6db3; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 9px; font-weight: 700;">AE</div><span style="font-size: 12px; font-weight: 600; color: #e6eaee;">Auto Service</span></div>
+          <div style="padding: 5px 7px 3px; font-size: 9px; font-weight: 700; color: #55606c; letter-spacing: .1em;">STORES</div>
+          <div style="padding: 5px 10px; border-radius: 4px; background: #1e2731; color: #e6eaee; font-size: 12px; font-weight: 500;">Overview</div>
+          <div style="padding: 5px 10px; color: #9aa5b1; font-size: 12px;">POS sales</div>
+          <div style="padding: 5px 10px; color: #9aa5b1; font-size: 12px;">Shelving</div>
+          <div style="padding: 5px 10px; color: #9aa5b1; font-size: 12px;">Cashier control</div>
+          <div style="padding: 5px 10px; color: #9aa5b1; font-size: 12px;">Procurement</div>
+        </div>
+        <div style="flex: 1 1 auto; min-width: 0; padding: 15px 18px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 13px;">
+            <div style="display: flex; align-items: baseline; gap: 9px;"><span style="font-size: 16px; font-weight: 600; color: #e6eaee;">Stores overview</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #6b7785;">14 stores &middot; updated 09:42</span></div>
+            <div style="display: flex; gap: 5px;"><span style="padding: 4px 10px; border: 1px solid #333d49; border-radius: 4px; background: #1b222a; color: #d5dae0; font-size: 11px;">Filter</span><span style="padding: 4px 10px; border-radius: 4px; background: #2f6db3; color: #fff; font-size: 11px; font-weight: 600;">Open till</span></div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: #262e38; border: 1px solid #262e38; margin-bottom: 13px;">
+            <div style="background: #171d24; padding: 9px 12px;"><div style="font-size: 10px; color: #6b7785; letter-spacing: .05em; text-transform: uppercase;">Stores</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 19px; color: #e6eaee; margin-top: 2px;">14</div></div>
+            <div style="background: #171d24; padding: 9px 12px;"><div style="font-size: 10px; color: #6b7785; letter-spacing: .05em; text-transform: uppercase;">Tickets</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 19px; color: #e6eaee; margin-top: 2px;">1,284 <span style="font-size: 10px; color: #4ade80;">+12%</span></div></div>
+            <div style="background: #171d24; padding: 9px 12px;"><div style="font-size: 10px; color: #6b7785; letter-spacing: .05em; text-transform: uppercase;">Sales</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 19px; color: #e6eaee; margin-top: 2px;">318,470</div></div>
+            <div style="background: #171d24; padding: 9px 12px;"><div style="font-size: 10px; color: #6b7785; letter-spacing: .05em; text-transform: uppercase;">On hand</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 19px; color: #e6eaee; margin-top: 2px;">9,540 <span style="font-size: 10px; color: #f87171;">&minus;3%</span></div></div>
+          </div>
+          <div style="background: #171d24; border: 1px solid #262e38;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead><tr>
+                <th style="padding: 6px 12px; text-align: left; font-size: 10px; font-weight: 600; color: #6b7785; letter-spacing: .07em; text-transform: uppercase; background: #12181e; border-bottom: 1px solid #262e38;">Store</th>
+                <th style="padding: 6px 12px; text-align: left; font-size: 10px; font-weight: 600; color: #6b7785; letter-spacing: .07em; text-transform: uppercase; background: #12181e; border-bottom: 1px solid #262e38;">Tickets</th>
+                <th style="padding: 6px 12px; text-align: left; font-size: 10px; font-weight: 600; color: #6b7785; letter-spacing: .07em; text-transform: uppercase; background: #12181e; border-bottom: 1px solid #262e38;">Sales</th>
+                <th style="padding: 6px 12px; text-align: left; font-size: 10px; font-weight: 600; color: #6b7785; letter-spacing: .07em; text-transform: uppercase; background: #12181e; border-bottom: 1px solid #262e38;">Variance</th>
+                <th style="padding: 6px 12px; text-align: left; font-size: 10px; font-weight: 600; color: #6b7785; letter-spacing: .07em; text-transform: uppercase; background: #12181e; border-bottom: 1px solid #262e38;">Till</th>
+              </tr></thead>
+              <tbody>
+                <tr><td style="padding: 6px 12px; font-size: 12px; color: #d5dae0; border-bottom: 1px solid #1d242c;">Carmen Grocery</td><td style="padding: 6px 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #d5dae0; border-bottom: 1px solid #1d242c;">318</td><td style="padding: 6px 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #d5dae0; border-bottom: 1px solid #1d242c;">74,910</td><td style="padding: 6px 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #d5dae0; border-bottom: 1px solid #1d242c;">0.00</td><td style="padding: 6px 12px; border-bottom: 1px solid #1d242c;"><span style="padding: 1px 6px; border-radius: 3px; background: #12331f; color: #4ade80; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;">open</span></td></tr>
+                <tr><td style="padding: 6px 12px; font-size: 12px; color: #d5dae0; border-bottom: 1px solid #1d242c;">CebuCity Grocery</td><td style="padding: 6px 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #d5dae0; border-bottom: 1px solid #1d242c;">276</td><td style="padding: 6px 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #d5dae0; border-bottom: 1px solid #1d242c;">66,430</td><td style="padding: 6px 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #f87171; border-bottom: 1px solid #1d242c;">&minus;420.00</td><td style="padding: 6px 12px; border-bottom: 1px solid #1d242c;"><span style="padding: 1px 6px; border-radius: 3px; background: #3a1414; color: #f87171; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;">variance</span></td></tr>
+                <tr><td style="padding: 6px 12px; font-size: 12px; color: #d5dae0; border-bottom: 1px solid #1d242c;">Carx2 Grocery</td><td style="padding: 6px 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #d5dae0; border-bottom: 1px solid #1d242c;">142</td><td style="padding: 6px 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #d5dae0; border-bottom: 1px solid #1d242c;">38,200</td><td style="padding: 6px 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #d5dae0; border-bottom: 1px solid #1d242c;">0.00</td><td style="padding: 6px 12px; border-bottom: 1px solid #1d242c;"><span style="padding: 1px 6px; border-radius: 3px; background: #232b34; color: #8b95a1; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;">closed</span></td></tr>
+                <tr><td style="padding: 6px 12px; font-size: 12px; color: #d5dae0;">ITPark Grocery</td><td style="padding: 6px 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #d5dae0;">158</td><td style="padding: 6px 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #d5dae0;">45,240</td><td style="padding: 6px 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #d5dae0;">0.00</td><td style="padding: 6px 12px;"><span style="padding: 1px 6px; border-radius: 3px; background: #12331f; color: #4ade80; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;">open</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="shot-cap">Direction B &mdash; Stores dashboard</p>
+  </div>
+
+  <!-- ============ C ============ -->
+  <div class="page brk">
+    <div style="display: flex; align-items: flex-start; gap: 20px;">
+      <div class="opt-num">C</div>
+      <div style="padding-top: 6px;">
+        <h2 class="opt-name">Warm and roomy</h2>
+        <p class="opt-sub">Easiest on a tablet and on the eye</p>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 300px; gap: 40px; margin-top: 26px;">
+      <p class="body">The friendliest of the three. Warm off-white instead of grey, generously rounded cards, and noticeably larger text throughout. Every button and row is sized for a finger rather than a mouse, so it works properly on a tablet carried around the shop floor. The dashboard opens by telling you what needs attention today rather than listing everything at once.<br><br>This is the direction that looks least like traditional business software. It is the most pleasant to use occasionally, and the one that shows the least information per screen.</p>
+      <div>
+        <div class="keep" style="margin-bottom: 18px;"><p class="meta-l">Best for</p><p class="meta-v">Tablets on the shop floor, and staff who use the system in short bursts.</p></div>
+        <div class="keep" style="margin-bottom: 18px;"><p class="meta-l">The trade-off</p><p class="meta-v">Least information per screen. Desk staff working through long lists will scroll more.</p></div>
+        <div class="keep"><p class="meta-l">Retraining needed</p><p class="meta-v">Light &mdash; same screens, larger and rearranged.</p></div>
+      </div>
+    </div>
+
+    <div class="shot keep" style="margin-top: 26px;">
+      <div style="font-family: 'Outfit', 'Segoe UI', sans-serif; background: #faf7f2;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 26px; background: #ffffff; border-bottom: 1px solid #f0eae1;">
+          <div style="display: flex; align-items: center; gap: 11px;"><div style="width: 36px; height: 36px; border-radius: 11px; background: #b45309; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; font-weight: 700;">AE</div><div><div style="font-size: 15px; font-weight: 600; color: #2d2620; line-height: 1.2;">Auto Service Group</div><div style="font-size: 12px; color: #8a7f72;">Carmen branch</div></div></div>
+          <div style="display: flex; align-items: center; gap: 10px;"><span style="padding: 9px 18px; border: 2px solid #e8dfd2; border-radius: 12px; font-size: 14px; font-weight: 600; color: #2d2620;">Log out</span><div style="width: 40px; height: 40px; border-radius: 50%; background: #fdf0dd; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; color: #b45309;">JS</div></div>
+        </div>
+        <div style="padding: 26px;">
+          <div style="font-size: 30px; font-weight: 600; letter-spacing: -.02em; color: #2d2620;">Good morning, Jo</div>
+          <div style="font-size: 15px; color: #8a7f72; margin: 4px 0 22px;">Fourteen stores. Three tills need attention today.</div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 22px;">
+            <div style="background: #fff; border-radius: 15px; box-shadow: 0 8px 24px rgba(120,100,80,.08); padding: 20px 22px;"><div style="font-size: 13px; font-weight: 500; color: #8a7f72;">Tickets today</div><div style="font-size: 32px; font-weight: 600; color: #2d2620; margin-top: 6px; line-height: 1;">1,284</div></div>
+            <div style="background: #fff; border-radius: 15px; box-shadow: 0 8px 24px rgba(120,100,80,.08); padding: 20px 22px;"><div style="font-size: 13px; font-weight: 500; color: #8a7f72;">Sales today</div><div style="font-size: 32px; font-weight: 600; color: #2d2620; margin-top: 6px; line-height: 1;">&#8369;318k</div></div>
+            <div style="background: #fef6e7; border-radius: 15px; box-shadow: 0 8px 24px rgba(120,100,80,.08); padding: 20px 22px;"><div style="font-size: 13px; font-weight: 500; color: #92400e;">Needs attention</div><div style="font-size: 32px; font-weight: 600; color: #92400e; margin-top: 6px; line-height: 1;">3 tills</div></div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+            <div style="background: #fff; border-radius: 15px; box-shadow: 0 8px 24px rgba(120,100,80,.08); padding: 18px 22px; display: flex; align-items: center; gap: 16px;"><div style="width: 48px; height: 48px; border-radius: 14px; background: #fdf0dd; display: flex; align-items: center; justify-content: center; flex: 0 0 auto;"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="1.9" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="3"></rect><path d="M2 10h20"></path></svg></div><div><div style="font-size: 17px; font-weight: 600; color: #2d2620;">POS Sales</div><div style="font-size: 14px; color: #8a7f72; margin-top: 2px;">Tickets by store</div></div></div>
+            <div style="background: #fff; border-radius: 15px; box-shadow: 0 8px 24px rgba(120,100,80,.08); padding: 18px 22px; display: flex; align-items: center; gap: 16px;"><div style="width: 48px; height: 48px; border-radius: 14px; background: #e8f2ea; display: flex; align-items: center; justify-content: center; flex: 0 0 auto;"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#3f7a52" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4v10l-9 4-9-4z"></path><path d="M3 7l9 4 9-4"></path></svg></div><div><div style="font-size: 17px; font-weight: 600; color: #2d2620;">Shelving</div><div style="font-size: 14px; color: #8a7f72; margin-top: 2px;">Facings and stock</div></div></div>
+            <div style="background: #fff; border-radius: 15px; box-shadow: 0 8px 24px rgba(120,100,80,.08); padding: 18px 22px; display: flex; align-items: center; gap: 16px;"><div style="width: 48px; height: 48px; border-radius: 14px; background: #fdeceb; display: flex; align-items: center; justify-content: center; flex: 0 0 auto;"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#b4483d" stroke-width="1.9" stroke-linecap="round"><rect x="2" y="6" width="20" height="12" rx="3"></rect><circle cx="12" cy="12" r="3"></circle></svg></div><div><div style="font-size: 17px; font-weight: 600; color: #2d2620;">Cashier</div><div style="font-size: 14px; color: #8a7f72; margin-top: 2px;">Drawer and variance</div></div></div>
+            <div style="background: #fff; border-radius: 15px; box-shadow: 0 8px 24px rgba(120,100,80,.08); padding: 18px 22px; display: flex; align-items: center; gap: 16px;"><div style="width: 48px; height: 48px; border-radius: 14px; background: #eaeef6; display: flex; align-items: center; justify-content: center; flex: 0 0 auto;"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#41598c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6v3H9z"></path><path d="M7 5H6v15h12V5h-1"></path><path d="M9 11h6M9 15h4"></path></svg></div><div><div style="font-size: 17px; font-weight: 600; color: #2d2620;">Procurement</div><div style="font-size: 14px; color: #8a7f72; margin-top: 2px;">Warehouse requests</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="shot-cap">Direction C &mdash; Stores dashboard</p>
+  </div>
+
+  <!-- ============ CLOSING ============ -->
+  <div class="page brk">
+    <p class="eyebrow">Side by side</p>
+    <h2 class="h1" style="font-size: 32px;">Which one suits the business?</h2>
+
+    <table style="width: 100%; border-collapse: collapse; margin-top: 30px;">
+      <thead>
+        <tr>
+          <th style="padding: 12px 14px; text-align: left; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #8a8a8a; border-bottom: 2px solid #e4e4e7; width: 190px;"></th>
+          <th style="padding: 12px 14px; text-align: left; font-size: 15px; font-weight: 600; color: #111827; border-bottom: 2px solid #e4e4e7;">A &middot; Refined corporate</th>
+          <th style="padding: 12px 14px; text-align: left; font-size: 15px; font-weight: 600; color: #111827; border-bottom: 2px solid #e4e4e7;">B &middot; Dense console</th>
+          <th style="padding: 12px 14px; text-align: left; font-size: 15px; font-weight: 600; color: #111827; border-bottom: 2px solid #e4e4e7;">C &middot; Warm and roomy</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding: 13px 14px; font-size: 13px; font-weight: 600; color: #52525b; border-bottom: 1px solid #f4f4f5;">Feels like</td>
+          <td style="padding: 13px 14px; font-size: 14px; color: #3f3f46; border-bottom: 1px solid #f4f4f5;">Today's version of what you have</td>
+          <td style="padding: 13px 14px; font-size: 14px; color: #3f3f46; border-bottom: 1px solid #f4f4f5;">A professional trading tool</td>
+          <td style="padding: 13px 14px; font-size: 14px; color: #3f3f46; border-bottom: 1px solid #f4f4f5;">A modern consumer app</td>
+        </tr>
+        <tr>
+          <td style="padding: 13px 14px; font-size: 13px; font-weight: 600; color: #52525b; border-bottom: 1px solid #f4f4f5;">Strongest on</td>
+          <td style="padding: 13px 14px; font-size: 14px; color: #3f3f46; border-bottom: 1px solid #f4f4f5;">Branch desktops</td>
+          <td style="padding: 13px 14px; font-size: 14px; color: #3f3f46; border-bottom: 1px solid #f4f4f5;">Large monitors, all-day use</td>
+          <td style="padding: 13px 14px; font-size: 14px; color: #3f3f46; border-bottom: 1px solid #f4f4f5;">Tablets and phones</td>
+        </tr>
+        <tr>
+          <td style="padding: 13px 14px; font-size: 13px; font-weight: 600; color: #52525b; border-bottom: 1px solid #f4f4f5;">Information per screen</td>
+          <td style="padding: 13px 14px; font-size: 14px; color: #3f3f46; border-bottom: 1px solid #f4f4f5;">Moderate</td>
+          <td style="padding: 13px 14px; font-size: 14px; color: #3f3f46; border-bottom: 1px solid #f4f4f5;">Highest</td>
+          <td style="padding: 13px 14px; font-size: 14px; color: #3f3f46; border-bottom: 1px solid #f4f4f5;">Lowest</td>
+        </tr>
+        <tr>
+          <td style="padding: 13px 14px; font-size: 13px; font-weight: 600; color: #52525b; border-bottom: 1px solid #f4f4f5;">Staff adjustment</td>
+          <td style="padding: 13px 14px; font-size: 14px; color: #3f3f46; border-bottom: 1px solid #f4f4f5;">None</td>
+          <td style="padding: 13px 14px; font-size: 14px; color: #3f3f46; border-bottom: 1px solid #f4f4f5;">Light</td>
+          <td style="padding: 13px 14px; font-size: 14px; color: #3f3f46; border-bottom: 1px solid #f4f4f5;">Light</td>
+        </tr>
+        <tr>
+          <td style="padding: 13px 14px; font-size: 13px; font-weight: 600; color: #52525b;">Keeps the company blue</td>
+          <td style="padding: 13px 14px; font-size: 14px; color: #3f3f46;">Yes</td>
+          <td style="padding: 13px 14px; font-size: 14px; color: #3f3f46;">Yes, as an accent</td>
+          <td style="padding: 13px 14px; font-size: 14px; color: #3f3f46;">No &mdash; warm amber instead</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top: 44px; padding: 26px 28px; background: #f7f7f8; border-radius: 6px;">
+      <p class="meta-l">What happens after you choose</p>
+      <p class="meta-v" style="max-width: 760px; margin-top: 8px;">The chosen direction is drawn up properly &mdash; every shared piece of the interface, plus the login page and the Stores portal in full. Those two go live first, on their own, so any problem affects one small part of the system rather than all of it. Each remaining department follows the same way, and each one can be reversed on its own if a branch is unhappy.</p>
+      <p class="meta-v" style="max-width: 760px; margin-top: 12px;">Nothing about how the system works is changing. Same screens, same steps, same records.</p>
+    </div>
+
+    <p style="margin-top: 40px; font-size: 12px; color: #a1a1aa;">A&amp;E Auto Service Group Inc. &middot; DMS interface design review &middot; Figures shown are illustrative.</p>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: "IBM Plex Sans", "Segoe UI", Calibri, sans-serif; background: #eef1f5; }
+    a { color: #2f6db3; text-decoration: none; } a:hover { color: #1e4e86; }
+    .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 4px 12px rgba(16,24,40,.06); padding: 24px; }
+    .grp { margin: 0 0 14px; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #64748b; }
+    .sw-chip { height: 52px; border-radius: 8px; border: 1px solid rgba(16,24,40,.08); }
+    .sw-name { margin-top: 7px; font-size: 12px; font-weight: 600; color: #0f172a; }
+    .sw-tok { font-size: 11px; color: #64748b; font-family: "IBM Plex Mono", Consolas, monospace; }
+    .sw-hex { font-size: 11px; color: #94a3b8; font-variant-numeric: tabular-nums; }
+  </style>
+</helmet>
+
+<div style="padding: 40px; display: flex; flex-direction: column; gap: 24px; background: #eef1f5;">
+
+  <div>
+    <p style="margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #64748b;">Direction A &middot; Refined corporate</p>
+    <h1 style="margin: 8px 0 0; font-size: 30px; font-weight: 600; letter-spacing: -.02em; color: #0f172a; line-height: 1.15;">Design foundations</h1>
+    <p style="margin: 10px 0 0; font-size: 15px; color: #64748b; max-width: 760px; line-height: 1.6;">The single token set replacing the three competing <code style="font-family: 'IBM Plex Mono', Consolas, monospace; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 4px; padding: 1px 5px; font-size: 13px;">:root</code> blocks in the current stylesheet. The company navy is unchanged; greys, corners, elevation and type are new.</p>
+  </div>
+
+  <!-- COLOUR -->
+  <div class="card">
+    <p class="grp">Brand &amp; accent</p>
+    <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px;">
+      <div><div class="sw-chip" style="background: #2f6db3;"></div><div class="sw-name">Accent</div><div class="sw-tok">--c-accent</div><div class="sw-hex">#2f6db3</div></div>
+      <div><div class="sw-chip" style="background: #1e4e86;"></div><div class="sw-name">Accent strong</div><div class="sw-tok">--c-accent-strong</div><div class="sw-hex">#1e4e86</div></div>
+      <div><div class="sw-chip" style="background: #eff4fa;"></div><div class="sw-name">Accent soft</div><div class="sw-tok">--c-accent-soft</div><div class="sw-hex">#eff4fa</div></div>
+      <div><div class="sw-chip" style="background: #ed7d31;"></div><div class="sw-name">Orange</div><div class="sw-tok">--c-orange</div><div class="sw-hex">#ed7d31</div></div>
+      <div><div class="sw-chip" style="background: #ffc000;"></div><div class="sw-name">Gold</div><div class="sw-tok">--c-gold</div><div class="sw-hex">#ffc000</div></div>
+      <div><div class="sw-chip" style="background: #70ad47;"></div><div class="sw-name">Green</div><div class="sw-tok">--c-green</div><div class="sw-hex">#70ad47</div></div>
+    </div>
+
+    <p class="grp" style="margin-top: 26px;">Surfaces &amp; ink</p>
+    <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px;">
+      <div><div class="sw-chip" style="background: #eef1f5;"></div><div class="sw-name">Page</div><div class="sw-tok">--c-bg</div><div class="sw-hex">#eef1f5</div></div>
+      <div><div class="sw-chip" style="background: #ffffff;"></div><div class="sw-name">Surface</div><div class="sw-tok">--c-surface</div><div class="sw-hex">#ffffff</div></div>
+      <div><div class="sw-chip" style="background: #f8fafc;"></div><div class="sw-name">Surface soft</div><div class="sw-tok">--c-surface-soft</div><div class="sw-hex">#f8fafc</div></div>
+      <div><div class="sw-chip" style="background: #e2e8f0;"></div><div class="sw-name">Border</div><div class="sw-tok">--c-border</div><div class="sw-hex">#e2e8f0</div></div>
+      <div><div class="sw-chip" style="background: #0f172a;"></div><div class="sw-name">Text</div><div class="sw-tok">--c-text</div><div class="sw-hex">#0f172a</div></div>
+      <div><div class="sw-chip" style="background: #64748b;"></div><div class="sw-name">Text muted</div><div class="sw-tok">--c-text-muted</div><div class="sw-hex">#64748b</div></div>
+    </div>
+
+    <p class="grp" style="margin-top: 26px;">Status</p>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px;">
+      <div style="border-radius: 8px; background: #ecfdf3; padding: 14px 16px;">
+        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: #d1fadf; color: #067647; font-size: 12px; font-weight: 600;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #12b76a;"></span>Open</span>
+        <div class="sw-tok" style="margin-top: 9px;">--c-ok-bg / -ink / -dot</div><div class="sw-hex">#ecfdf3 &middot; #067647 &middot; #12b76a</div>
+      </div>
+      <div style="border-radius: 8px; background: #fef3f2; padding: 14px 16px;">
+        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: #fee4e2; color: #b42318; font-size: 12px; font-weight: 600;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #f04438;"></span>Variance</span>
+        <div class="sw-tok" style="margin-top: 9px;">--c-bad-bg / -ink / -dot</div><div class="sw-hex">#fef3f2 &middot; #b42318 &middot; #f04438</div>
+      </div>
+      <div style="border-radius: 8px; background: #f2f4f7; padding: 14px 16px;">
+        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: #e4e7ec; color: #475467; font-size: 12px; font-weight: 600;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #98a2b3;"></span>Closed</span>
+        <div class="sw-tok" style="margin-top: 9px;">--c-idle-bg / -ink / -dot</div><div class="sw-hex">#f2f4f7 &middot; #475467 &middot; #98a2b3</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TYPE / SHAPE -->
+  <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px;">
+    <div class="card">
+      <p class="grp">Type scale &mdash; IBM Plex Sans</p>
+      <div style="display: flex; flex-direction: column; gap: 13px;">
+        <div><div style="font-size: 32px; font-weight: 600; color: #0f172a; line-height: 1.1; letter-spacing: -.02em;">1,284</div><div class="sw-tok">--fs-metric &middot; 32px / 600 &middot; KPI figures</div></div>
+        <div><div style="font-size: 26px; font-weight: 600; color: #0f172a; line-height: 1.15; letter-spacing: -.01em;">Stores</div><div class="sw-tok">--fs-page-title &middot; 26px / 600</div></div>
+        <div><div style="font-size: 15px; font-weight: 600; color: #0f172a;">All stores</div><div class="sw-tok">--fs-section-title &middot; 15px / 600</div></div>
+        <div><div style="font-size: 14px; color: #0f172a; line-height: 1.6;">Body copy, table cells and field values.</div><div class="sw-tok">--fs-body &middot; 14px / 400</div></div>
+        <div><div style="font-size: 13px; color: #64748b;">Supporting notes and captions.</div><div class="sw-tok">--fs-small &middot; 13px / 400</div></div>
+        <div><div style="font-size: 11px; font-weight: 600; color: #64748b; letter-spacing: .04em; text-transform: uppercase;">Column header</div><div class="sw-tok">--fs-micro &middot; 11px / 600 &middot; uppercase</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="grp">Shape &amp; elevation</p>
+      <div style="display: flex; gap: 12px; margin-bottom: 18px;">
+        <div style="flex: 1; height: 58px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #64748b;">6px</div>
+        <div style="flex: 1; height: 58px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #64748b;">8px</div>
+        <div style="flex: 1; height: 58px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #64748b;">10px</div>
+        <div style="flex: 1; height: 58px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #64748b;">pill</div>
+      </div>
+      <div style="font-size: 13px; color: #0f172a; line-height: 1.9;">
+        <div><span class="sw-tok">--radius-sm</span> 6px &mdash; inputs, buttons</div>
+        <div><span class="sw-tok">--radius</span> 10px &mdash; cards, panels</div>
+        <div><span class="sw-tok">--radius-pill</span> 999px &mdash; status</div>
+      </div>
+      <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+        <div class="sw-tok" style="margin-bottom: 8px;">--shadow-card</div>
+        <div style="font-size: 12px; color: #64748b; line-height: 1.6;">0 1px 2px rgba(16,24,40,.04),<br>0 4px 12px rgba(16,24,40,.06)</div>
+      </div>
+      <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #0f172a; line-height: 1.9;">
+        <div><span class="sw-tok">--control-h</span> 40px desktop</div>
+        <div><span class="sw-tok">--control-h-touch</span> 48px tablet, phone</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="card">
+    <p class="grp">Buttons</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+      <button style="min-height: 40px; padding: 9px 16px; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #0f172a; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;">Secondary</button>
+      <button style="min-height: 40px; padding: 9px 16px; border: 0; border-radius: 6px; background: #2f6db3; color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;">Primary</button>
+      <button style="min-height: 40px; padding: 9px 16px; border: 0; border-radius: 6px; background: #1e4e86; color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;">Primary hover</button>
+      <button style="min-height: 40px; padding: 9px 16px; border: 1px solid #fecdca; border-radius: 6px; background: #fef3f2; color: #b42318; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;">Danger</button>
+      <button style="min-height: 40px; padding: 9px 16px; border: 0; border-radius: 6px; background: #2f6db3; color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 600; opacity: .5; cursor: not-allowed;">Disabled</button>
+      <button style="min-height: 48px; padding: 9px 20px; border: 0; border-radius: 6px; background: #2f6db3; color: #ffffff; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer;">Touch 48px</button>
+    </div>
+
+    <p class="grp" style="margin: 26px 0 14px;">Form fields</p>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px;">
+      <div>
+        <label style="display: block; font-size: 13px; font-weight: 600; color: #0f172a; margin-bottom: 6px;">Default</label>
+        <input type="text" value="Carx2" style="display: block; width: 100%; box-sizing: border-box; min-height: 40px; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #0f172a; font-family: inherit; font-size: 14px;" />
+      </div>
+      <div>
+        <label style="display: block; font-size: 13px; font-weight: 600; color: #0f172a; margin-bottom: 6px;">Focus</label>
+        <input type="text" value="Carmen" style="display: block; width: 100%; box-sizing: border-box; min-height: 40px; padding: 9px 12px; border: 1px solid #2f6db3; border-radius: 6px; background: #ffffff; color: #0f172a; font-family: inherit; font-size: 14px; box-shadow: 0 0 0 3px rgba(47,109,179,.16);" />
+      </div>
+      <div>
+        <label style="display: block; font-size: 13px; font-weight: 600; color: #0f172a; margin-bottom: 6px;">Error</label>
+        <input type="text" value="" style="display: block; width: 100%; box-sizing: border-box; min-height: 40px; padding: 9px 12px; border: 1px solid #f04438; border-radius: 6px; background: #ffffff; color: #0f172a; font-family: inherit; font-size: 14px;" />
+        <span style="display: block; margin-top: 5px; font-size: 12px; color: #b42318;">Employee ID is required.</span>
+      </div>
+      <div>
+        <label style="display: block; font-size: 13px; font-weight: 600; color: #64748b; margin-bottom: 6px;">Disabled</label>
+        <input type="text" value="CebuCity" disabled style="display: block; width: 100%; box-sizing: border-box; min-height: 40px; padding: 9px 12px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; color: #94a3b8; font-family: inherit; font-size: 14px;" />
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="card" style="padding: 0; overflow: hidden;">
+    <div style="padding: 18px 24px 14px;"><p class="grp" style="margin: 0;">Table</p></div>
+    <table style="width: 100%; border-collapse: collapse;">
+      <thead><tr>
+        <th style="padding: 10px 24px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; letter-spacing: .04em; text-transform: uppercase; border-bottom: 1px solid #e2e8f0;">Store</th>
+        <th style="padding: 10px 24px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; letter-spacing: .04em; text-transform: uppercase; border-bottom: 1px solid #e2e8f0;">Tickets</th>
+        <th style="padding: 10px 24px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; letter-spacing: .04em; text-transform: uppercase; border-bottom: 1px solid #e2e8f0;">Sales</th>
+        <th style="padding: 10px 24px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; letter-spacing: .04em; text-transform: uppercase; border-bottom: 1px solid #e2e8f0;">Till</th>
+      </tr></thead>
+      <tbody>
+        <tr><td style="padding: 12px 24px; font-size: 14px; font-weight: 500; color: #0f172a; border-bottom: 1px solid #f1f5f9;">Carmen Grocery</td><td style="padding: 12px 24px; font-size: 14px; color: #0f172a; border-bottom: 1px solid #f1f5f9;">318</td><td style="padding: 12px 24px; font-size: 14px; color: #0f172a; border-bottom: 1px solid #f1f5f9;">&#8369; 74,910</td><td style="padding: 12px 24px; border-bottom: 1px solid #f1f5f9;"><span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: #ecfdf3; color: #067647; font-size: 12px; font-weight: 600;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #12b76a;"></span>Open</span></td></tr>
+        <tr><td style="padding: 12px 24px; font-size: 14px; font-weight: 500; color: #0f172a; border-bottom: 1px solid #f1f5f9;">CebuCity Grocery</td><td style="padding: 12px 24px; font-size: 14px; color: #0f172a; border-bottom: 1px solid #f1f5f9;">276</td><td style="padding: 12px 24px; font-size: 14px; color: #0f172a; border-bottom: 1px solid #f1f5f9;">&#8369; 66,430</td><td style="padding: 12px 24px; border-bottom: 1px solid #f1f5f9;"><span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: #fef3f2; color: #b42318; font-size: 12px; font-weight: 600;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #f04438;"></span>Variance</span></td></tr>
+        <tr><td style="padding: 12px 24px; font-size: 14px; font-weight: 500; color: #0f172a;">Carx2 Grocery</td><td style="padding: 12px 24px; font-size: 14px; color: #0f172a;">142</td><td style="padding: 12px 24px; font-size: 14px; color: #0f172a;">&#8369; 38,200</td><td style="padding: 12px 24px;"><span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: #f2f4f7; color: #475467; font-size: 12px; font-weight: 600;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #98a2b3;"></span>Closed</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: "IBM Plex Sans", "Segoe UI", Calibri, sans-serif; background: #eef1f5; }
+    a { color: #2f6db3; text-decoration: none; } a:hover { color: #1e4e86; }
+    .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 4px 12px rgba(16,24,40,.06); }
+    .kpi-l { margin: 0; font-size: 13px; font-weight: 500; color: #64748b; letter-spacing: .01em; }
+    .kpi-v { margin: 6px 0 0; font-size: 32px; font-weight: 600; line-height: 1.1; color: #0f172a; font-variant-numeric: tabular-nums; }
+    .delta { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+    .nc-h { margin: 0; font-size: 15px; font-weight: 600; color: #0f172a; }
+    .nc-p { margin: 3px 0 0; font-size: 13px; color: #64748b; }
+    th { padding: 11px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #64748b; letter-spacing: .04em; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; }
+    td { padding: 13px 16px; font-size: 14px; color: #0f172a; border-bottom: 1px solid #f1f5f9; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; }
+  </style>
+</helmet>
+
+<div style="min-height: 1560px; background: #eef1f5; padding: 0 0 40px;">
+
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: #ffffff; border-bottom: 1px solid #e2e8f0;">
+    <div style="display: flex; align-items: center; gap: 28px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 30px; height: 30px; border-radius: 7px; background: #2f6db3; display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 13px; font-weight: 700;">AE</div>
+        <span style="font-size: 15px; font-weight: 600; color: #0f172a;">Auto Service Group</span>
+      </div>
+      <nav style="display: flex; gap: 4px;">
+        <a href="#" style="padding: 7px 13px; border-radius: 7px; background: #eff4fa; color: #2f6db3; font-size: 14px; font-weight: 600;">Stores</a>
+        
+      </nav>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      
+      <div style="width: 32px; height: 32px; border-radius: 50%; background: #d6e6f5; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #1e4e86;">JS</div>
+    </div>
+  </header>
+
+  <main style="max-width: 100%; margin: 0 auto; padding: 14px;">
+
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 24px;">
+      <div>
+        <h1 style="margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.01em; color: #0f172a;">Stores</h1>
+        <p style="margin: 5px 0 0; font-size: 14px; color: #64748b;">Fourteen grocery stores &middot; POS, shelving and cashier control</p>
+      </div>
+      <button style="min-height: 48px; padding: 9px 18px; border: 0; border-radius: 8px; background: #2f6db3; color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;">Open till</button>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 24px;">
+      <div class="card" style="padding: 18px 20px;"><p class="kpi-l">Grocery Stores</p><p class="kpi-v">14</p></div>
+      <div class="card" style="padding: 18px 20px;"><p class="kpi-l">POS Tickets</p><p class="kpi-v">1,284</p><span class="delta" style="background: #ecfdf3; color: #067647;">&#9650; 12%</span></div>
+      <div class="card" style="padding: 18px 20px;"><p class="kpi-l">POS Sales</p><p class="kpi-v">&#8369;318k</p><span class="delta" style="background: #ecfdf3; color: #067647;">&#9650; 4%</span></div>
+      <div class="card" style="padding: 18px 20px;"><p class="kpi-l">Shelf On Hand</p><p class="kpi-v">9,540</p><span class="delta" style="background: #fef3f2; color: #b42318;">&#9660; 3%</span></div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 24px;">
+      <a class="card" href="#" style="padding: 18px 20px; display: flex; gap: 13px; align-items: flex-start;">
+        <div style="width: 36px; height: 36px; border-radius: 8px; background: #eff4fa; display: flex; align-items: center; justify-content: center; flex: 0 0 auto;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#2f6db3" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path></svg></div>
+        <div><h3 class="nc-h">POS Sales</h3><p class="nc-p">Tickets by store</p></div>
+      </a>
+      <a class="card" href="#" style="padding: 18px 20px; display: flex; gap: 13px; align-items: flex-start;">
+        <div style="width: 36px; height: 36px; border-radius: 8px; background: #fef6ee; display: flex; align-items: center; justify-content: center; flex: 0 0 auto;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#ed7d31" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4v10l-9 4-9-4z"></path><path d="M3 7l9 4 9-4"></path></svg></div>
+        <div><h3 class="nc-h">Shelving</h3><p class="nc-p">Facings, on hand</p></div>
+      </a>
+      <a class="card" href="#" style="padding: 18px 20px; display: flex; gap: 13px; align-items: flex-start;">
+        <div style="width: 36px; height: 36px; border-radius: 8px; background: #fffaeb; display: flex; align-items: center; justify-content: center; flex: 0 0 auto;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#b54708" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="3"></circle></svg></div>
+        <div><h3 class="nc-h">Cashier</h3><p class="nc-p">Drawer, variance</p></div>
+      </a>
+      <a class="card" href="#" style="padding: 18px 20px; display: flex; gap: 13px; align-items: flex-start;">
+        <div style="width: 36px; height: 36px; border-radius: 8px; background: #eff4fa; display: flex; align-items: center; justify-content: center; flex: 0 0 auto;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#2f6db3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6v3H9z"></path><path d="M7 5H6v15h12V5h-1"></path><path d="M9 11h6M9 15h4"></path></svg></div>
+        <div><h3 class="nc-h">Procurement</h3><p class="nc-p">Warehouse requests</p></div>
+      </a>
+    </div>
+
+    <div class="card" style="overflow: hidden;">
+      <div style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0;">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 600; color: #0f172a;">All stores</h2>
+      </div>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead><tr><th>Store</th><th>Tickets</th><th>Sales</th><th>On hand</th><th>Till</th></tr></thead>
+        <tbody>
+          <tr><td style="font-weight: 500;">Carx2 Grocery</td><td>142</td><td>&#8369; 38,200</td><td>820</td><td><span class="pill" style="background: #f2f4f7; color: #475467;"><span class="dot" style="background: #98a2b3;"></span>Closed</span></td></tr>
+          <tr><td style="font-weight: 500;">Carmen Grocery</td><td>318</td><td>&#8369; 74,910</td><td>1,240</td><td><span class="pill" style="background: #ecfdf3; color: #067647;"><span class="dot" style="background: #12b76a;"></span>Open</span></td></tr>
+          <tr><td style="font-weight: 500;">CebuCity Grocery</td><td>276</td><td>&#8369; 66,430</td><td>1,105</td><td><span class="pill" style="background: #fef3f2; color: #b42318;"><span class="dot" style="background: #f04438;"></span>Variance</span></td></tr>
+          <tr><td style="font-weight: 500;">Lapux2 Grocery</td><td>198</td><td>&#8369; 47,880</td><td>930</td><td><span class="pill" style="background: #ecfdf3; color: #067647;"><span class="dot" style="background: #12b76a;"></span>Open</span></td></tr>
+          <tr><td style="border-bottom: 0; font-weight: 500;">Bogo Grocery</td><td style="border-bottom: 0;">88</td><td style="border-bottom: 0;">&#8369; 21,050</td><td style="border-bottom: 0;">610</td><td style="border-bottom: 0;"><span class="pill" style="background: #f2f4f7; color: #475467;"><span class="dot" style="background: #98a2b3;"></span>Closed</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</div>
+</x-dc>
+</body>
+</html>

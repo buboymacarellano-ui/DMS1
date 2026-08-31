@@ -1,0 +1,49 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "Direction A · approved" },
+    { "id": "page-2", "name": "Client handout" },
+    { "id": "page-3", "name": "Not chosen" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1200, "h": 1560, "page": "page-1", "title": "Foundations · Direction A" },
+    { "file": "Login480.dc.html", "x": 1400, "y": 0, "w": 480, "h": 800, "page": "page-1", "title": "Login · phone 480" },
+    { "file": "Login768.dc.html", "x": 1960, "y": 0, "w": 768, "h": 700, "page": "page-1", "title": "Login · tablet 768" },
+    { "file": "Login1200.dc.html", "x": 2810, "y": 0, "w": 1200, "h": 760, "page": "page-1", "title": "Login · desktop 1200" },
+    { "file": "Stores480.dc.html", "x": 1400, "y": 980, "w": 480, "h": 1560, "page": "page-1", "title": "Stores · phone 480" },
+    { "file": "Stores768.dc.html", "x": 1960, "y": 980, "w": 768, "h": 1240, "page": "page-1", "title": "Stores · tablet 768" },
+    { "file": "Stores1200.dc.html", "x": 2810, "y": 980, "w": 1200, "h": 900, "page": "page-1", "title": "Stores · desktop 1200" },
+
+    { "file": "Handout.dc.html", "x": 0, "y": 0, "w": 1123, "h": 3600, "page": "page-2", "title": "Three directions · handout", "print": "flow" },
+
+    { "file": "DirectionA.dc.html", "x": 0, "y": 0, "w": 1200, "h": 900, "page": "page-3", "title": "A · chosen (sketch)" },
+    { "file": "DirectionB.dc.html", "x": 1400, "y": 0, "w": 1200, "h": 900, "page": "page-3", "title": "B · dense console (not chosen)" },
+    { "file": "DirectionC.dc.html", "x": 2800, "y": 0, "w": 1200, "h": 900, "page": "page-3", "title": "C · warm and roomy (not chosen)" }
+  ],
+  "annotations": [
+    {
+      "id": "approved",
+      "x": 0,
+      "y": -240,
+      "w": 1000,
+      "page": "page-1",
+      "text": "Direction A, built out. These are the values the CSS gets written from.\n\nWhat changes from the current app: corners go from square to 6px on controls and 10px on cards; flat grey boxes gain a two-layer shadow; the grey family moves to a cooler slate; type becomes IBM Plex Sans; KPI figures grow to 32px with a trend chip.\n\nWhat does not change: the company navy #2f6db3, the orange #ed7d31, and every screen, field and step in the system.\n\nControls are 40px tall on desktop and 48px on tablet and phone."
+    },
+    {
+      "id": "handout-note",
+      "x": 1300,
+      "y": 0,
+      "w": 500,
+      "page": "page-2",
+      "text": "The five-page client handout, kept as it was sent. Export PDF from the toolbar — switch away from the other pages first, or the export picks up every visible artboard.\n\nPDF export cannot embed web fonts, so exported type falls back to the nearest system face. Colour, layout and spacing export correctly."
+    },
+    {
+      "id": "notchosen",
+      "x": 0,
+      "y": -180,
+      "w": 900,
+      "page": "page-3",
+      "text": "Kept for the record. B and C were not chosen; A is here as the original sketch the built-out version on page 1 came from."
+    }
+  ],
+  "launch": { "view": "canvas", "page": "page-1" }
+}

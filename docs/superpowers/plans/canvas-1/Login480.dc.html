@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: "IBM Plex Sans", "Segoe UI", Calibri, sans-serif; background: #eef1f5; }
+    a { color: #2f6db3; text-decoration: none; } a:hover { color: #1e4e86; }
+    .lbl { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #0f172a; }
+    .fld { margin-bottom: 16px; }
+  </style>
+</helmet>
+
+<div style="min-height: 800px; display: flex; align-items: center; justify-content: center; padding: 0; background: #ffffff;">
+  <div style="width: 100%; max-width: 100%; padding: 24px 20px; background: #ffffff; border: 0; border-radius: 0; box-shadow: none;">
+
+    <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 26px;">
+      <div style="width: 46px; height: 46px; border-radius: 11px; background: #2f6db3; display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 17px; font-weight: 700; margin-bottom: 14px;">AE</div>
+      <div style="font-size: 18px; font-weight: 600; color: #0f172a; line-height: 1.25;">A&amp;E Auto Service</div>
+      <div style="font-size: 11px; font-weight: 600; color: #94a3b8; letter-spacing: .12em;">GROUP INC.</div>
+    </div>
+
+    <h1 style="margin: 0 0 6px; font-size: 22px; font-weight: 600; letter-spacing: -.01em; color: #0f172a; text-align: center;">Sign in</h1>
+    <p style="margin: 0 0 26px; font-size: 13px; color: #64748b; text-align: center; line-height: 1.55;">Employee DB authorises every role, including GM.</p>
+
+    <div class="fld">
+      <label class="lbl">Department</label>
+      <select style="display: block; width: 100%; box-sizing: border-box; min-height: 48px; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #0f172a; font-family: inherit; font-size: 14px;">
+        <option>Service</option><option>Parts</option><option>Stores</option><option>HR</option><option>GM</option><option>Finance Office</option>
+      </select>
+    </div>
+
+    <div class="fld">
+      <label class="lbl">Role</label>
+      <select style="display: block; width: 100%; box-sizing: border-box; min-height: 48px; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #64748b; font-family: inherit; font-size: 14px;">
+        <option>Select role</option><option>Service Advisor</option><option>Service Receptionist</option><option>Technician</option>
+      </select>
+    </div>
+
+    <div class="fld">
+      <label class="lbl">Employee ID</label>
+      <input type="text" value="" style="display: block; width: 100%; box-sizing: border-box; min-height: 48px; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #0f172a; font-family: inherit; font-size: 14px;" />
+    </div>
+
+    <div class="fld">
+      <label class="lbl">Location / Branch</label>
+      <select style="display: block; width: 100%; box-sizing: border-box; min-height: 48px; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #64748b; font-family: inherit; font-size: 14px;">
+        <option>Select your assigned location</option><option>Carx2</option><option>Carmen</option><option>CebuCity</option><option>Lapux2</option><option>Bogo</option><option>Toledo</option><option>ITPark</option>
+      </select>
+    </div>
+
+    <div class="fld" style="margin-bottom: 24px;">
+      <label class="lbl">Password</label>
+      <input type="password" value="" style="display: block; width: 100%; box-sizing: border-box; min-height: 48px; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #0f172a; font-family: inherit; font-size: 14px;" />
+    </div>
+
+    <button style="width: 100%; min-height: 48px; border: 0; border-radius: 6px; background: #2f6db3; color: #ffffff; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer;">Log in</button>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

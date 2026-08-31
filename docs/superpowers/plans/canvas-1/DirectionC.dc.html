@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: "Outfit", "Segoe UI", sans-serif; background: #faf7f2; }
+    a { color: #b45309; text-decoration: none; } a:hover { color: #92400e; }
+    .card { background: #ffffff; border-radius: 18px; box-shadow: 0 2px 4px rgba(120,100,80,.05), 0 8px 24px rgba(120,100,80,.08); }
+    .kpi-l { margin: 0; font-size: 15px; font-weight: 500; color: #8a7f72; }
+    .kpi-v { margin: 8px 0 0; font-size: 40px; font-weight: 600; line-height: 1; color: #2d2620; }
+    th { padding: 16px 20px; text-align: left; font-size: 14px; font-weight: 600; color: #8a7f72; border-bottom: 2px solid #f0eae1; }
+    td { padding: 18px 20px; font-size: 17px; color: #2d2620; border-bottom: 1px solid #f5f1eb; }
+    .chip { display: inline-flex; align-items: center; gap: 7px; padding: 7px 16px; border-radius: 999px; font-size: 15px; font-weight: 600; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; }
+  </style>
+</helmet>
+
+<div style="min-height: 900px; background: #faf7f2; padding: 0 0 48px;">
+
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 20px 36px; background: #ffffff; border-bottom: 1px solid #f0eae1;">
+    <div style="display: flex; align-items: center; gap: 13px;">
+      <div style="width: 42px; height: 42px; border-radius: 13px; background: #b45309; display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 16px; font-weight: 700;">AE</div>
+      <div>
+        <div style="font-size: 17px; font-weight: 600; color: #2d2620; line-height: 1.2;">Auto Service Group</div>
+        <div style="font-size: 14px; color: #8a7f72;">Carmen branch</div>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <button style="min-height: 48px; padding: 12px 22px; border: 2px solid #e8dfd2; border-radius: 14px; background: #ffffff; color: #2d2620; font-family: inherit; font-size: 16px; font-weight: 600; cursor: pointer;">Log out</button>
+      <div style="width: 48px; height: 48px; border-radius: 50%; background: #fdf0dd; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; color: #b45309;">JS</div>
+    </div>
+  </header>
+
+  <main style="max-width: 1120px; margin: 0 auto; padding: 36px;">
+
+    <h1 style="margin: 0 0 6px; font-size: 38px; font-weight: 600; letter-spacing: -.02em; color: #2d2620;">Good morning, Jo</h1>
+    <p style="margin: 0 0 32px; font-size: 18px; color: #8a7f72;">Fourteen stores. Three tills need attention today.</p>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin-bottom: 32px;">
+      <div class="card" style="padding: 26px 28px;"><p class="kpi-l">Tickets today</p><p class="kpi-v">1,284</p></div>
+      <div class="card" style="padding: 26px 28px;"><p class="kpi-l">Sales today</p><p class="kpi-v">&#8369;318k</p></div>
+      <div class="card" style="padding: 26px 28px; background: #fef6e7;"><p class="kpi-l" style="color: #92400e;">Needs attention</p><p class="kpi-v" style="color: #92400e;">3 tills</p></div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-bottom: 36px;">
+      <a class="card" href="#" style="padding: 26px 28px; display: flex; align-items: center; gap: 20px; min-height: 96px;">
+        <div style="width: 60px; height: 60px; border-radius: 18px; background: #fdf0dd; display: flex; align-items: center; justify-content: center; flex: 0 0 auto;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="1.9" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="3"></rect><path d="M2 10h20"></path></svg></div>
+        <div><div style="font-size: 20px; font-weight: 600; color: #2d2620;">POS Sales</div><div style="font-size: 16px; color: #8a7f72; margin-top: 3px;">Tickets by store</div></div>
+      </a>
+      <a class="card" href="#" style="padding: 26px 28px; display: flex; align-items: center; gap: 20px; min-height: 96px;">
+        <div style="width: 60px; height: 60px; border-radius: 18px; background: #e8f2ea; display: flex; align-items: center; justify-content: center; flex: 0 0 auto;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3f7a52" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4v10l-9 4-9-4z"></path><path d="M3 7l9 4 9-4"></path></svg></div>
+        <div><div style="font-size: 20px; font-weight: 600; color: #2d2620;">Shelving</div><div style="font-size: 16px; color: #8a7f72; margin-top: 3px;">Facings and stock</div></div>
+      </a>
+      <a class="card" href="#" style="padding: 26px 28px; display: flex; align-items: center; gap: 20px; min-height: 96px;">
+        <div style="width: 60px; height: 60px; border-radius: 18px; background: #fdeceb; display: flex; align-items: center; justify-content: center; flex: 0 0 auto;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b4483d" stroke-width="1.9" stroke-linecap="round"><rect x="2" y="6" width="20" height="12" rx="3"></rect><circle cx="12" cy="12" r="3"></circle></svg></div>
+        <div><div style="font-size: 20px; font-weight: 600; color: #2d2620;">Cashier</div><div style="font-size: 16px; color: #8a7f72; margin-top: 3px;">Drawer and variance</div></div>
+      </a>
+      <a class="card" href="#" style="padding: 26px 28px; display: flex; align-items: center; gap: 20px; min-height: 96px;">
+        <div style="width: 60px; height: 60px; border-radius: 18px; background: #eaeef6; display: flex; align-items: center; justify-content: center; flex: 0 0 auto;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#41598c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6v3H9z"></path><path d="M7 5H6v15h12V5h-1"></path><path d="M9 11h6M9 15h4"></path></svg></div>
+        <div><div style="font-size: 20px; font-weight: 600; color: #2d2620;">Procurement</div><div style="font-size: 16px; color: #8a7f72; margin-top: 3px;">Warehouse requests</div></div>
+      </a>
+    </div>
+
+    <div class="card" style="overflow: hidden;">
+      <div style="padding: 24px 28px 4px;"><h2 style="margin: 0; font-size: 22px; font-weight: 600; color: #2d2620;">All stores</h2></div>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead><tr><th>Store</th><th>Tickets</th><th>Sales</th><th>Till</th></tr></thead>
+        <tbody>
+          <tr><td style="font-weight: 500;">Carx2 Grocery</td><td>142</td><td>&#8369; 38,200</td><td><span class="chip" style="background: #f4f1ec; color: #6b6259;"><span class="dot" style="background: #a89e93;"></span>Closed</span></td></tr>
+          <tr><td style="font-weight: 500;">Carmen Grocery</td><td>318</td><td>&#8369; 74,910</td><td><span class="chip" style="background: #e8f2ea; color: #2f6b45;"><span class="dot" style="background: #4a9b6a;"></span>Open</span></td></tr>
+          <tr><td style="font-weight: 500;">CebuCity Grocery</td><td>276</td><td>&#8369; 66,430</td><td><span class="chip" style="background: #fdeceb; color: #a13b31;"><span class="dot" style="background: #d05c50;"></span>Variance</span></td></tr>
+          <tr><td style="border-bottom: 0; font-weight: 500;">Lapux2 Grocery</td><td style="border-bottom: 0;">198</td><td style="border-bottom: 0;">&#8369; 47,880</td><td style="border-bottom: 0;"><span class="chip" style="background: #e8f2ea; color: #2f6b45;"><span class="dot" style="background: #4a9b6a;"></span>Open</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</div>
+</x-dc>
+</body>
+</html>
