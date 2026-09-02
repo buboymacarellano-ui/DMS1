@@ -176,7 +176,7 @@ async function main() {
 
   const already = data.work_orders.filter((row) => row && row.seed_batch === BATCH_ID).length;
   if (already && !FORCE) {
-    console.log(JSON.stringify({ skipped: true, reason: 'batch already present', count: already, hint: 're-run with --force' }, null, 2));
+    console.log('Skipped existing seed batch. Re-run with --force to replace it.');
     return;
   }
   if (already && FORCE) stripBatch(data);
