@@ -16,6 +16,8 @@
     "simulate:july-2026:dry-run": "node scripts/generate-july-2026-simulation.js --dry-run",
     "seed:wo-txdb-1000": "node scripts/seed-wo-transaction-db-1000.js",
     "seed:wo-txdb-1000:dry-run": "node scripts/seed-wo-transaction-db-1000.js --dry-run",
+    "seed:sa-sr-ssr-wo-100": "node scripts/seed-sa-sr-ssr-dashboard-100.js",
+    "seed:sa-sr-ssr-wo-100:dry-run": "node scripts/seed-sa-sr-ssr-dashboard-100.js --dry-run",
     "seed:w1-replenish-today": "node scripts/seed-warehouse1-replenish-today.js",
     "seed:w1-replenish-today:dry-run": "node scripts/seed-warehouse1-replenish-today.js --dry-run",
     "flow:branch-parts-10pct": "node scripts/run-branch-parts-10pct-flow.js",
