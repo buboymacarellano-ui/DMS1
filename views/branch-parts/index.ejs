@@ -181,48 +181,67 @@
     <div class="dashboard-card__header admin-panel-header">Approved transfers — verify receipt</div>
     <p class="dashboard-note admin-note">Parts Manager already approved these lines. After the printed transfer arrives, verify each line. That completes the PM approved transaction and moves Warehouse 1 stock to <%= branch %>.</p>
     <div class="table-scroll" style="max-height:min(52vh, calc(100vh - 220px));">
-      <table class="list branch-parts-order-table">
-        <thead>
-          <tr>
-            <th>Part Number</th>
-            <th>Part Name</th>
-            <th>Sub-ID</th>
-            <th>Generic</th>
-            <th>Supplier</th>
-            <th>Qty</th>
-            <th>Cost Price</th>
-            <th>Markup (%)</th>
-            <th>Retail Price</th>
-            <th>Sold To (WO#)</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <% const inboundRows = Array.isArray(inboundTransfers) ? inboundTransfers : []; %>
-          <% if (!inboundRows.length) { %>
-            <tr><td colspan="11">No approved Warehouse 1 transfers waiting for receipt.</td></tr>
-          <% } %>
-          <% inboundRows.forEach((row) => { %>
-            <tr>
-              <td><%= row.part_number || '' %></td>
-              <td><%= row.part_name || '' %></td>
-              <td><%= row.sub_id || '' %></td>
-              <td><%= row.generic || '' %></td>
-              <td><%= row.supplier || '' %></td>
-              <td><%= row.qty != null ? row.qty : '' %></td>
-              <td><%= row.cost_price != null && row.cost_price !== '' ? Number(row.cost_price).toFixed(2) : '' %></td>
-              <td><%= row.markup != null && row.markup !== '' ? row.markup : '' %></td>
-              <td><%= row.retail_price != null && row.retail_price !== '' ? Number(row.retail_price).toFixed(2) : '' %></td>
-              <td><%= row.sold_to || row.work_order_number || '' %></td>
-              <td>
-                <form method="post" action="/branch-parts/receive/<%= encodeURIComponent(row.id) %>" style="margin:0;">
-                  <button type="submit" class="btn" style="background:#1f8f53;">Verified and Received</button>
-                </form>
-              </td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table>
+      <% 
+        const inboundRows = Array.isArray(inboundTransfers) ? inboundTransfers : [];
+        const byTransaction = new Map();
+        inboundRows.forEach((row) => {
+          const txnKey = String(row.transaction_number || '');
+          if (!byTransaction.has(txnKey)) {
+            byTransaction.set(txnKey, []);
+          }
+          byTransaction.get(txnKey).push(row);
+        });
+      %>
+      <% if (inboundRows.length === 0) { %>
+        <p style="padding:12px;">No approved Warehouse 1 transfers waiting for receipt.</p>
+      <% } else { %>
+        <% Array.from(byTransaction.entries()).forEach(([txnNumber, rows]) => { %>
+          <div style="margin-bottom:16px;border:1px solid #ccc;border-radius:4px;overflow:hidden;">
+            <div style="background:#f5f5f5;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;font-weight:bold;border-bottom:1px solid #ddd;">
+              <span>Transaction <%= txnNumber %> (<%= rows.length %> line<%= rows.length === 1 ? '' : 's' %>)</span>
+              <button type="button" class="btn branch-receive-all-btn" data-transaction-number="<%= txnNumber %>" style="background:#27ae60;color:#fff;font-size:11px;padding:4px 8px;">Approve All</button>
+            </div>
+            <table class="list branch-parts-order-table" style="margin:0;border:none;border-radius:0;">
+              <thead>
+                <tr>
+                  <th>Part Number</th>
+                  <th>Part Name</th>
+                  <th>Sub-ID</th>
+                  <th>Generic</th>
+                  <th>Supplier</th>
+                  <th>Qty</th>
+                  <th>Cost Price</th>
+                  <th>Markup (%)</th>
+                  <th>Retail Price</th>
+                  <th>Sold To (WO#)</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% rows.forEach((row) => { %>
+                  <tr>
+                    <td><%= row.part_number || '' %></td>
+                    <td><%= row.part_name || '' %></td>
+                    <td><%= row.sub_id || '' %></td>
+                    <td><%= row.generic || '' %></td>
+                    <td><%= row.supplier || '' %></td>
+                    <td><%= row.qty != null ? row.qty : '' %></td>
+                    <td><%= row.cost_price != null && row.cost_price !== '' ? Number(row.cost_price).toFixed(2) : '' %></td>
+                    <td><%= row.markup != null && row.markup !== '' ? row.markup : '' %></td>
+                    <td><%= row.retail_price != null && row.retail_price !== '' ? Number(row.retail_price).toFixed(2) : '' %></td>
+                    <td><%= row.sold_to || row.work_order_number || '' %></td>
+                    <td>
+                      <form method="post" action="/branch-parts/receive/<%= encodeURIComponent(row.id) %>" style="margin:0;">
+                        <button type="submit" class="btn" style="background:#1f8f53;">Verified and Received</button>
+                      </form>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% }) %>
+      <% } %>
     </div>
   </article>
 
@@ -398,6 +417,32 @@
       return parseFloat((row.querySelector('input[name="line_qty"]') || {}).value) || 0;
     }
 
+    function rowPartNumber(row) {
+      return String((row.querySelector('input[name="line_part_number"]') || {}).value || '').trim().toUpperCase();
+    }
+
+    function checkDuplicatePartNumbers() {
+      var rows = Array.prototype.slice.call(body.querySelectorAll('tr'));
+      var partNumbers = {};
+      var duplicates = [];
+      
+      rows.forEach(function (row) {
+        var partNumber = rowPartNumber(row);
+        if (!partNumber) return; // Skip empty rows
+        
+        if (partNumbers[partNumber]) {
+          duplicates.push(partNumber);
+        } else {
+          partNumbers[partNumber] = true;
+        }
+      });
+      
+      return {
+        hasDuplicates: duplicates.length > 0,
+        duplicates: duplicates
+      };
+    }
+
     function warnNoStock(text) {
       if (typeof window.showOfficeStockDialog === 'function') {
         window.showOfficeStockDialog('Warehouse 1', text || 'No Stock for this Part Number');
@@ -459,6 +504,16 @@
         fillFromCatalog(row, event.target.value);
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(function () { checkWarehouse1Stock(row, true); }, 400);
+        
+        // Check for duplicates in real-time
+        var dupCheck = checkDuplicatePartNumbers();
+        if (dupCheck.hasDuplicates) {
+          event.target.style.backgroundColor = '#ffe6e6';
+          event.target.title = 'Duplicate part number in this transaction';
+        } else {
+          event.target.style.backgroundColor = '';
+          event.target.title = '';
+        }
       }
       if (event.target.classList.contains('js-cost') || event.target.classList.contains('js-markup')) computeRetail(row);
     });
@@ -485,6 +540,15 @@
         var intent = submitter && submitter.getAttribute('name') === 'intent' ? submitter.value : '';
         if (intent !== 'send') return;
         event.preventDefault();
+        
+        // Check for duplicate part numbers
+        var dupCheck = checkDuplicatePartNumbers();
+        if (dupCheck.hasDuplicates) {
+          var dupList = dupCheck.duplicates.join(', ');
+          warnNoStock('Duplicate part numbers detected: ' + dupList + '\n\nEach part number can only appear once per transaction. Please remove duplicates and try again.');
+          return;
+        }
+        
         var rows = Array.prototype.slice.call(body.querySelectorAll('tr'));
         Promise.all(rows.map(function (row) { return checkWarehouse1Stock(row, true); }))
           .then(function (results) {
@@ -524,5 +588,7 @@
     });
   })();
 </script>
+
+<script src="/js/branch-parts.js"></script>
 
 <%- include('../partials/footer') %>

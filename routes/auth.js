@@ -361,12 +361,12 @@ router.post('/login', async (req, res) => {
     if (username !== 'GM') {
       return renderLogin(401, 'Invalid GM name or password.');
     }
-    if (!password) {
-      return renderLogin(400, 'Password is required.');
-    }
     if (isLoginAuthDisabled()) {
       const role = applyOpenLoginSession(req, ROLE_GENERAL_MANAGER, 'GM', '', portals.PORTAL_GM);
       return res.redirect(redirectForRole(role));
+    }
+    if (!password) {
+      return renderLogin(400, 'Password is required.');
     }
     const gmPassword = Buffer.from('123456');
     const givenPassword = Buffer.from(password);
@@ -399,13 +399,12 @@ router.post('/login', async (req, res) => {
   if (!selectedBranch) {
     return renderLogin(400, 'Select your assigned location to continue.');
   }
-  if (!password) {
-    return renderLogin(400, 'Password is required.');
-  }
-
   if (isLoginAuthDisabled()) {
     const role = applyOpenLoginSession(req, accessLevel, loginInputRaw, selectedBranch, department);
     return res.redirect(redirectForRole(role));
+  }
+  if (!password) {
+    return renderLogin(400, 'Password is required.');
   }
 
   const authorized = authorizeEmployeeLogin({

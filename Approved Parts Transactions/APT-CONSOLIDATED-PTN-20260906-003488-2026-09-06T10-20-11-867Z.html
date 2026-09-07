@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Approved Parts Delivery Receipt PTN-20260906-003488</title>
+  <style>
+    body { font-family: Arial, sans-serif; color: #10202f; margin: 24px; }
+    h1 { margin: 0 0 6px; font-size: 22px; }
+    .meta { margin-bottom: 18px; color: #445; font-size: 13px; }
+    .auth { font-size: 16px; font-weight: 700; color: #10202f; margin: 0 0 12px; }
+    .header-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 16px; }
+    .header-box { border: 1px solid #ccd5df; padding: 10px; }
+    .header-box strong { display: block; margin-bottom: 4px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 16px; }
+    th, td { border: 1px solid #ccd5df; padding: 6px 8px; text-align: left; vertical-align: top; }
+    th { background: #eef4fb; font-weight: bold; }
+    .totals-row { background: #f9f9f9; font-weight: bold; }
+    .signatures { margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+    .signature-line { font-size: 12px; }
+    .signature-line span { display: block; margin-bottom: 28px; border-bottom: 1px solid #10202f; }
+    .actions { margin-top: 20px; }
+    @media print { .actions { display: none; } body { margin: 12mm; } }
+  </style>
+</head>
+<body>
+  <h1>Approved Parts Delivery Receipt</h1>
+  <p class="auth">Transaction Number (Auth): PTN-20260906-003488</p>
+  <p class="meta">
+    Approved: Sep 06, 2026, 06:20 PM<br />
+    Approved By: jerome<br />
+    Total Items: 3
+  </p>
+
+  <div class="header-row">
+    <div class="header-box">
+      <strong>Delivery To (Branch):</strong>
+      Lapux2
+    </div>
+    <div class="header-box">
+      <strong>Source:</strong>
+      Warehouse 1
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Part Number</th>
+        <th>Part Name</th>
+        <th>Sub-ID</th>
+        <th>Generic</th>
+        <th>Supplier</th>
+        <th>Qty</th>
+        <th>Unit</th>
+        <th>Cost Price</th>
+        <th>Markup (%)</th>
+        <th>Retail Price</th>
+        <th>Line Total</th>
+        <th>WO#</th>
+      </tr>
+    </thead>
+    <tbody>
+      
+    <tr>
+      <td>WO26-08816-00132</td>
+      <td>Coolant Premix 4L</td>
+      <td></td>
+      <td>Fluids</td>
+      <td>Petron Corporation</td>
+      <td style="text-align:right;">3</td>
+      <td></td>
+      <td style="text-align:right;">P 420.00</td>
+      <td style="text-align:right;">36</td>
+      <td style="text-align:right;">P 571.20</td>
+      <td style="text-align:right;">P 1713.60</td>
+      <td>Branch-Request</td>
+    </tr>
+    <tr>
+      <td>WO26-04428-0K010</td>
+      <td>Clutch Disc and Cover Kit</td>
+      <td></td>
+      <td>Drivetrain</td>
+      <td>Sachs / ZF</td>
+      <td style="text-align:right;">3</td>
+      <td></td>
+      <td style="text-align:right;">P 5120.00</td>
+      <td style="text-align:right;">21</td>
+      <td style="text-align:right;">P 6195.20</td>
+      <td style="text-align:right;">P 18585.60</td>
+      <td>Branch-Request</td>
+    </tr>
+    <tr>
+      <td>WO26-13568-09071</td>
+      <td>Timing Belt Kit</td>
+      <td></td>
+      <td>Belt</td>
+      <td>Aisin Philippines</td>
+      <td style="text-align:right;">3</td>
+      <td></td>
+      <td style="text-align:right;">P 4250.00</td>
+      <td style="text-align:right;">22</td>
+      <td style="text-align:right;">P 5185.00</td>
+      <td style="text-align:right;">P 15555.00</td>
+      <td>Branch-Request</td>
+    </tr>
+      <tr class="totals-row">
+        <td colspan="5" style="text-align:right;">TOTALS:</td>
+        <td style="text-align:right;">9.00</td>
+        <td colspan="3"></td>
+        <td></td>
+        <td style="text-align:right;">P 35854.20</td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="signatures">
+    <div class="signature-line">Recieved By (Branch):<span></span></div>
+    <div class="signature-line">Delivered By (Warehouse):<span></span></div>
+  </div>
+  <div class="actions">
+    <button type="button" onclick="window.print()">Print Receipt</button>
+  </div>
+</body>
+</html>

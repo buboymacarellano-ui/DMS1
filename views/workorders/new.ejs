@@ -1,6 +1,6 @@
 <%- include('../partials/header') %>
 
-<h2>Create Work Order</h2>
+<h2 class="wo-new-title">Create Work Order</h2>
 
 <% const vehicleTypeOptions = ['small', 'medium', 'Large', 'CompactSuv', 'VanSuvPickUp', 'Truck', 'Walk-In', 'Equipment', 'Facility', 'Tools']; %>
 <% const vehicleCatalogData = (typeof vehicleCatalog !== 'undefined' && vehicleCatalog) ? vehicleCatalog : { brandOptions: [], modelsByBrand: {} }; %>
@@ -16,8 +16,8 @@
   <p class="error"><%= vehicleTypeError %></p>
 <% } %>
 
-<form method="post" action="/work-orders/new" class="form">
-  <label>Branch
+<form method="post" action="/work-orders/new" class="form wo-new-form">
+  <label class="wo-new-branch">Branch
     <select name="branch" id="branch-select">
       <option value="">-- select branch --</option>
       <% branchOptionsSafe.forEach(branchName => { %>
@@ -28,18 +28,42 @@
       <% } %>
     </select>
   </label>
-  <label>Customer
+
+  <label class="wo-new-c1 wo-new-r1">Customer Name
     <input id="customer-entry" name="customer_entry" list="customer-suggestions" placeholder="Type to search existing or enter new customer name" value="<%= formPrefill.customer_entry || '' %>" />
     <input type="hidden" id="customer-id" name="customer_id" value="<%= formPrefill.customer_id || '' %>" />
-    <small>Search by typing letters, or type a new name to auto-create.</small>
     <datalist id="customer-suggestions">
       <% customers.forEach(c => { %>
         <option value="<%= c.name %>" data-id="<%= c.id %>" data-phone="<%= c.phone || '' %>"></option>
       <% }) %>
     </datalist>
   </label>
-  <label>Telephone Number <input id="telephone-number" name="telephone_number" value="<%= formPrefill.telephone_number || '' %>"></label>
-  <label>Car Brand
+  <label class="wo-new-c1 wo-new-r2">CP#-Viber
+    <input id="telephone-number" name="telephone_number" value="<%= formPrefill.telephone_number || '' %>">
+  </label>
+  <label class="wo-new-c1 wo-new-r3">Customer Type
+    <select id="customer-type" name="customer_type">
+      <% const selectedCustomerType = String(formPrefill.customer_type || 'Walk-In').trim() === 'Service' ? 'Service' : 'Walk-In'; %>
+      <option value="Walk-In" <%= selectedCustomerType === 'Walk-In' ? 'selected' : '' %>>Walk-In</option>
+      <option value="Service" <%= selectedCustomerType === 'Service' ? 'selected' : '' %>>Service</option>
+    </select>
+  </label>
+  <label class="wo-new-c1 wo-new-r4">Technician
+    <input id="technician-input" name="technician" list="technician-suggestions" autocomplete="off" value="<%= formPrefill.technician || '' %>">
+    <datalist id="technician-suggestions">
+      <% techDirectorySafe.forEach(tech => { %>
+        <option value="<%= tech.name %>" data-branch="<%= tech.branch || '' %>"></option>
+      <% }) %>
+    </datalist>
+  </label>
+  <label class="wo-new-c1 wo-new-r5">Time-In
+    <input id="time-in-input" name="time_in" placeholder="Auto after technician is assigned" readonly>
+  </label>
+
+  <label class="wo-new-c3 wo-new-r0">Plate Number
+    <input id="plate-number" name="plate_number" list="plate-suggestions" value="<%= formPrefill.plate_number || '' %>">
+  </label>
+  <label class="wo-new-c3 wo-new-r1">Car Brand
     <select id="car-brand" name="car_brand">
       <option value="">-- select brand --</option>
       <% vehicleCatalogData.brandOptions.forEach(brand => { %>
@@ -50,7 +74,7 @@
       <% } %>
     </select>
   </label>
-  <label>Model
+  <label class="wo-new-c3 wo-new-r2">Model
     <select id="car-model" name="car_model">
       <option value="">-- select model --</option>
       <% selectedBrandModels.forEach(entry => { %>
@@ -58,7 +82,7 @@
       <% }) %>
     </select>
   </label>
-  <label>Unit Type
+  <label class="wo-new-c3 wo-new-r3">Unit Type
     <select id="vehicle-type" name="vehicle_type">
       <option value="">-- select unit type --</option>
       <% vehicleTypeOptions.forEach(type => { %>
@@ -68,28 +92,24 @@
       <% }) %>
     </select>
   </label>
-  <label>Year <input id="car-year" name="car_year" type="number" min="1900" max="9999" value="<%= formPrefill.car_year || '' %>"></label>
-  <label>Plate Number <input id="plate-number" name="plate_number" list="plate-suggestions" value="<%= formPrefill.plate_number || '' %>"></label>
-  <label>Odometer <input name="odometer" type="number" min="0" step="1"></label>
+  <label class="wo-new-c3 wo-new-r4">Odometer
+    <input id="odometer-input" name="odometer" type="number" min="0" step="1" value="<%= formPrefill.odometer || '' %>">
+  </label>
+  <label class="wo-new-c3 wo-new-r5">Time Out
+    <input id="time-out-input" name="time_out" placeholder="17:00" value="<%= formPrefill.time_out || '' %>">
+  </label>
+
+  <input type="hidden" id="car-year" name="car_year" value="<%= formPrefill.car_year || '' %>">
   <input type="hidden" id="vehicle-id" name="vehicle_id" value="<%= formPrefill.vehicle_id || '' %>" />
   <datalist id="plate-suggestions">
     <% vehicles.filter(v => v.license_plate).forEach(v => { %>
       <option value="<%= v.license_plate %>" data-id="<%= v.id %>" data-make="<%= v.make || '' %>" data-model="<%= v.model || '' %>" data-year="<%= v.year || '' %>" data-vehicle-type="<%= v.vehicle_type || '' %>"></option>
     <% }) %>
   </datalist>
-  <label>Creator <input name="service_advisor" value="<%= currentUser && currentUser.username ? currentUser.username : '' %>" readonly></label>
-  <label>Tecnician
-    <input id="technician-input" name="technician" list="technician-suggestions" autocomplete="off" value="<%= formPrefill.technician || '' %>">
-    <datalist id="technician-suggestions">
-      <% techDirectorySafe.forEach(tech => { %>
-        <option value="<%= tech.name %>" data-branch="<%= tech.branch || '' %>"></option>
-      <% }) %>
-    </datalist>
-  </label>
-  <label>TimeIn <input id="time-in-input" name="time_in" placeholder="Auto after technician is assigned" readonly></label>
-  <label>TimeOut <input name="time_out" placeholder="17:00"></label>
-  <label>Description <textarea name="description" class="description-faded"></textarea></label>
-  <label>Status
+
+  <label class="wo-new-span">Creator <input name="service_advisor" value="<%= currentUser && currentUser.username ? currentUser.username : '' %>" readonly></label>
+  <label class="wo-new-span">Description <textarea name="description" class="description-faded"><%= formPrefill.description || '' %></textarea></label>
+  <label class="wo-new-span">Status
     <select id="wo-status-select" name="status">
       <% (typeof workOrderStatusOptions !== 'undefined' ? workOrderStatusOptions : [
         { value: 'open', label: 'Open' },
@@ -418,14 +438,18 @@
       return `${hh}:${mm}`;
     }
 
+    const customerTypeInput = document.getElementById('customer-type');
+
     function syncTimeIn() {
       const hasTechnician = Boolean((technicianInput.value || '').trim());
       if (hasTechnician) {
         if (!String(timeInInput.value || '').trim()) {
           timeInInput.value = currentTimeHHMM();
         }
+        if (customerTypeInput) customerTypeInput.value = 'Service';
       } else {
         timeInInput.value = '';
+        if (customerTypeInput) customerTypeInput.value = 'Walk-In';
       }
     }
 

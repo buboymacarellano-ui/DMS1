@@ -8,11 +8,11 @@
 %>
 
 <section class="labor-charge-page">
-  <h2>Create Parts</h2>
+  <h2 class="wo-new-title">Create Parts</h2>
   <% if (typeof error !== 'undefined' && error) { %><p class="error"><%= error %></p><% } %>
   <% if (typeof success !== 'undefined' && success) { %><p class="success"><%= success %></p><% } %>
 
-  <form method="post" action="/parts/create" class="form" id="create-parts-form">
+  <form method="post" action="/parts/create" class="form create-parts-form" id="create-parts-form">
     <label>Date
       <input type="date" name="transaction_date" value="<%= form.transaction_date || new Date().toISOString().slice(0, 10) %>" required />
     </label>

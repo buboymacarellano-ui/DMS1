@@ -31,10 +31,11 @@ function requesterEmployeeId(user) {
 router.get('/', async (req, res) => {
   const user = activeUser(req);
   const approver = isApprover(req);
-  const [allRequests, employees, workOrders] = await Promise.all([
+  const [allRequests, employees, workOrders, purchaseOrders] = await Promise.all([
     store.getAll('approval_requests'),
     store.getAll('employees'),
     store.getAll('work_orders'),
+    store.getAll('parts_purchase_orders'),
   ]);
   const requests = allRequests
     .filter(request => approver || request.requested_by_user_id === user.id)
@@ -42,11 +43,25 @@ router.get('/', async (req, res) => {
   const branches = Array.from(new Set(employees.map(employee => normalize(employee.work_location_branch_id)).filter(Boolean)))
     .sort((a, b) => a.localeCompare(b));
 
+  // Get PO approvals for GM only
+  const pendingPOs = approver
+    ? (purchaseOrders || [])
+        .filter(po => String(po.status || '').trim().toLowerCase() === 'pending_approval')
+        .sort((a, b) => new Date(b.sent_for_approval_at || 0) - new Date(a.sent_for_approval_at || 0))
+    : [];
+
+  // Get approved POs for history
+  const approvedPOs = (purchaseOrders || [])
+    .filter(po => String(po.status || '').trim().toLowerCase() === 'approved')
+    .sort((a, b) => new Date(b.approved_at || 0) - new Date(a.approved_at || 0));
+
   res.render('approvals/index', {
     approver,
     requests,
     branches,
     workOrders,
+    pendingPOs,
+    approvedPOs,
     employeeId: requesterEmployeeId(user),
     success: normalize(req.query.success),
     error: normalize(req.query.error),
@@ -147,6 +162,64 @@ router.post('/:id/resolve', requireApprover, async (req, res) => {
     resolved_by_role: normalize(resolver.role),
   });
   return res.redirect(`/approvals?success=Request+${decision}.`);
+});
+
+// Purchase Order Approval Endpoints
+router.post('/purchase-order/:id/approve', requireApprover, async (req, res) => {
+  try {
+    const poId = req.params.id;
+    const po = await store.getById('parts_purchase_orders', poId);
+    
+    if (!po) {
+      return res.status(404).json({ error: 'Purchase order not found' });
+    }
+    
+    if (String(po.status || '').trim().toLowerCase() !== 'pending_approval') {
+      return res.status(400).json({ error: 'PO is not in pending approval status' });
+    }
+
+    const user = activeUser(req);
+    await store.update('parts_purchase_orders', poId, {
+      status: 'approved',
+      approved_by: normalize(user.username) || user.id,
+      approved_at: new Date().toISOString(),
+    });
+
+    return res.redirect('/approvals?success=Purchase+order+approved.');
+  } catch (err) {
+    console.error('Error approving PO:', err);
+    return res.redirect('/approvals?error=Failed+to+approve+purchase+order.');
+  }
+});
+
+router.post('/purchase-order/:id/reject', requireApprover, async (req, res) => {
+  try {
+    const poId = req.params.id;
+    const po = await store.getById('parts_purchase_orders', poId);
+    
+    if (!po) {
+      return res.status(404).json({ error: 'Purchase order not found' });
+    }
+    
+    if (String(po.status || '').trim().toLowerCase() !== 'pending_approval') {
+      return res.status(400).json({ error: 'PO is not in pending approval status' });
+    }
+
+    const user = activeUser(req);
+    const rejectionReason = normalize(req.body.reason || 'No reason provided');
+
+    await store.update('parts_purchase_orders', poId, {
+      status: 'rejected',
+      rejected_by: normalize(user.username) || user.id,
+      rejected_at: new Date().toISOString(),
+      rejection_reason: rejectionReason,
+    });
+
+    return res.redirect('/approvals?success=Purchase+order+rejected.');
+  } catch (err) {
+    console.error('Error rejecting PO:', err);
+    return res.redirect('/approvals?error=Failed+to+reject+purchase+order.');
+  }
 });
 
 module.exports = router;

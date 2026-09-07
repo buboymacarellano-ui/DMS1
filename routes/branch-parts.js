@@ -367,6 +367,94 @@ router.post('/receive/:id', async (req, res) => {
   ));
 });
 
+router.post('/api/receive-all/:transactionNumber', async (req, res) => {
+  try {
+    const data = await store.getRawData();
+    const txnNumber = String(req.params.transactionNumber || '').trim();
+    const branch = req.frontlineBranch;
+    const receiver = String(req.frontlineUser.username || '').trim();
+
+    if (!txnNumber) {
+      return res.status(400).json({ error: 'Transaction number is required.' });
+    }
+
+    console.log('🔍 Receive-all called');
+    console.log('  Transaction number:', txnNumber);
+    console.log('  Branch:', branch);
+    console.log('  Receiver:', receiver);
+
+    // Get all inbound transfers with this transaction number
+    const allInbound = listInboundApprovedTransfers(data, branch);
+    const pending = allInbound.filter((row) => String(row.transaction_number || '') === txnNumber);
+
+    console.log('  Total inbound:', allInbound.length);
+    console.log('  Matching transaction:', pending.length);
+
+    if (pending.length === 0) {
+      return res.status(400).json({ error: 'No inbound transfers found for this transaction number.' });
+    }
+
+    console.log('  ✓ Processing', pending.length, 'transfers');
+
+    // Process each one
+    const results = [];
+    const errors = [];
+    for (const item of pending) {
+      try {
+        console.log(`  Processing transfer: ${item.id}, part: ${item.part_number}`);
+        const result = receiveApprovedPartsTransfer(data, item.id, {
+          receiver,
+          branch,
+        });
+        if (result.ok) {
+          console.log(`    ✓ Success: ${result.record.part_number}`);
+          results.push({ id: item.id, ok: true, part_number: result.record.part_number });
+        } else {
+          console.error(`    ✗ Failed: ${result.error}`);
+          errors.push(result.error);
+          results.push({ id: item.id, ok: false, error: result.error });
+        }
+      } catch (err) {
+        console.error(`    ✗ Exception on ${item.id}:`, err.message);
+        errors.push(err.message);
+        results.push({ id: item.id, ok: false, error: err.message });
+      }
+    }
+
+    // Persist changes only if there were successful operations
+    const successCount = results.filter((r) => r.ok).length;
+    if (successCount > 0) {
+      await store.replaceData(data);
+      console.log('  ✓ Data persisted');
+    } else {
+      console.log('  ⚠ No successful transfers; data not persisted');
+    }
+
+    console.log('  Results:', results.map((r) => r.ok ? '✓' : '✗').join(''));
+
+    if (successCount === 0) {
+      const errorMsg = errors.length > 0 ? errors[0] : 'All transfers failed to receive';
+      return res.status(400).json({
+        ok: false,
+        error: `Failed to receive transfers: ${errorMsg}`,
+        results,
+      });
+    }
+
+    return res.json({
+      ok: true,
+      message: `Received ${successCount} of ${pending.length} transfers`,
+      transactionNumber: txnNumber,
+      transfersReceived: successCount,
+      results,
+    });
+  } catch (err) {
+    console.error('❌ Receive-all error:', err.message);
+    console.error(err.stack);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/orders', async (req, res) => {
   const intent = String(req.body.intent || 'save').trim().toLowerCase();
   const lines = parseOrderLines(req.body);
@@ -408,9 +496,11 @@ router.post('/orders', async (req, res) => {
     const editor = String(user.username || '').trim();
     const transactionDate = new Date().toISOString().slice(0, 10);
     const orderId = genId();
+    
+    // Generate ONE transaction number for the entire order (all lines grouped as ONE transaction)
+    const masterTransactionNumber = allocatePartsTransactionNumber(data);
 
     lines.forEach((line) => {
-      const transactionNumber = allocatePartsTransactionNumber(data);
       const inventoryPayload = buildPartsRequestInventoryPayload({
         partNumber: line.part_number,
         partName: line.part_name,
@@ -433,7 +523,7 @@ router.post('/orders', async (req, res) => {
       const inventoryRow = Object.assign({
         id: inventoryId,
         created_at: new Date().toISOString(),
-        transaction_number: transactionNumber,
+        transaction_number: masterTransactionNumber,
         present_location: branch,
         sent_to: WAREHOUSE_1,
         warehouse_order_id: orderId,
@@ -451,7 +541,7 @@ router.post('/orders', async (req, res) => {
         order_id: orderId,
         created_at: new Date().toISOString(),
         transaction_date: transactionDate,
-        transaction_number: transactionNumber,
+        transaction_number: masterTransactionNumber,
         transaction_type: PARTS_REQUEST_TYPE,
         status: REQUEST_TX_STATUS_OPEN,
         sent_to: WAREHOUSE_1,

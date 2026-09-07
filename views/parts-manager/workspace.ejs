@@ -23,10 +23,12 @@
 
   <nav class="pm-role-bar" aria-label="Parts Manager roles">
     <button type="button" class="btn pm-role-btn<%= panel === 'csv' ? ' pm-role-btn--active' : '' %>" data-pm-panel="csv">1. Load / Download CSV Update</button>
-    <button type="button" class="btn pm-role-btn<%= panel === 'edit' ? ' pm-role-btn--active' : '' %>" data-pm-panel="edit">2. Edit Parts</button>
+    <button type="button" class="btn pm-role-btn<%= panel === 'edit' ? ' pm-role-btn--active' : '' %>" data-pm-panel="edit">2. Parts Receiving</button>
     <button type="button" class="btn pm-role-btn<%= panel === 'vitals' ? ' pm-role-btn--active' : '' %>" data-pm-panel="vitals">3. Fast Moving / Idle / Vitals</button>
     <button type="button" class="btn pm-role-btn<%= panel === 'approvals' ? ' pm-role-btn--active' : '' %>" data-pm-panel="approvals">4. Approval Window</button>
     <button type="button" class="btn pm-role-btn" id="parts-report-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="parts-report-modal">5. Create Report</button>
+    <button type="button" class="btn pm-role-btn<%= panel === 'health' ? ' pm-role-btn--active' : '' %>" data-pm-panel="health">6. DB Health Monitor</button>
+    <button type="button" class="btn pm-role-btn<%= panel === 'ordering' ? ' pm-role-btn--active' : '' %>" data-pm-panel="ordering">7. Ordering Grid</button>
   </nav>
 
   <%- include('../partials/parts-report-modal') %>
@@ -42,9 +44,23 @@
   <section class="pm-panel-card dashboard-card gm-panel" id="pm-panel-csv" data-pm-section="csv" hidden>
     <div class="dashboard-card__header gm-panel-header">Load / Download CSV Update</div>
     <p class="dashboard-note">Download a sorted P-db report, then upload an updated CSV to <strong>integrate</strong> into the existing database or <strong>replace</strong> it entirely. A backup is taken before import.</p>
-    <div class="pm-csv-actions">
-      <a class="btn" href="/parts-manager/export.csv">Download sorted P-db CSV</a>
+    
+    <div class="pm-csv-actions" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:20px;">
+      <div>
+        <div style="font-size:12px;font-weight:bold;margin-bottom:6px;color:#555;">Current Database</div>
+        <a class="btn" href="/parts-manager/export.csv" style="width:100%;text-align:center;display:block;background:#3498db;">Download sorted P-db CSV</a>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:bold;margin-bottom:6px;color:#555;">Template / New Database</div>
+        <button type="button" id="pm-csv-download-empty" class="btn" style="width:100%;text-align:center;display:block;background:#27ae60;">Download Empty Parts-DB CSV</button>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:bold;margin-bottom:6px;color:#555;">Upload & Replace/Integrate</div>
+        <button type="button" id="pm-csv-upload-file-btn" class="btn" style="width:100%;text-align:center;display:block;background:#e74c3c;">Upload New Parts-DB CSV File</button>
+        <input type="file" id="pm-csv-upload-file-input" accept=".csv,text/csv" style="display:none;" />
+      </div>
     </div>
+
     <form method="post" action="/parts-manager/csv-import" class="form pm-csv-form" id="pm-csv-form">
       <label>Import mode
         <select name="import_mode">
@@ -63,8 +79,8 @@
   </section>
 
   <section class="pm-panel-card dashboard-card gm-panel" id="pm-panel-edit" data-pm-section="edit" hidden>
-    <div class="dashboard-card__header gm-panel-header">Edit Parts</div>
-    <p class="dashboard-note">Select a row in the General Parts Database below, or search here, then edit in landscape format. Warehouse 1 and all branch locations are writable.</p>
+    <div class="dashboard-card__header gm-panel-header">Parts Receiving</div>
+    <p class="dashboard-note">Edit incoming parts or add new receiving entries. Fill in essential fields only (Part #, Name, Qty, Location, Supplier, Receipt #). Transaction number and type are auto-generated on save.</p>
     <form method="post" action="#" class="form" id="pm-edit-form">
       <input type="hidden" name="id" id="pm-edit-id" value="" />
       <label>Transaction Date
@@ -102,6 +118,9 @@
       <label>Supplier
         <input type="text" name="supplier" id="pm-edit-supplier" />
       </label>
+      <label>Receiving Receipt #
+        <input type="text" name="receiving_receipt_number" id="pm-edit-receiving-receipt" />
+      </label>
       <label>Unit
         <input type="text" name="unit" id="pm-edit-unit" />
       </label>
@@ -122,6 +141,40 @@
       </label>
       <button type="submit">Save part</button>
     </form>
+
+    <!-- Receiving Items Entry Grid -->
+    <div style="margin-top:24px;border-top:2px solid #ccd5df;padding-top:20px;">
+      <h3 style="margin:0 0 12px 0;font-size:16px;">Quick Entry Grid (Batch Add)</h3>
+      <p class="dashboard-note" style="margin-bottom:12px;">Add multiple receiving entries at once. Each row creates a separate transaction (auto-generates date, PTN, restock status, location).</p>
+      <div id="pm-receiving-grid-container" class="table-scroll pm-table-wrap" style="border:1px solid #ddd;border-radius:4px;padding:12px;">
+        <table class="list" style="font-size:12px;min-width:max-content;width:100%;">
+          <thead style="position:sticky;top:0;z-index:5;background:#f5f5f5;">
+            <tr>
+              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;">Location</th>
+              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;">Part #</th>
+              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;">Part Name</th>
+              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;">Supplier</th>
+              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;">Receipt #</th>
+              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;">Unit</th>
+              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;">Qty</th>
+              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;">Cost Price (₱)</th>
+              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;">Markup (%)</th>
+              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;">Retail Price (₱)</th>
+              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;text-align:center;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="pm-receiving-grid-body">
+            <!-- Empty rows generated by JavaScript -->
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-start;flex-wrap:wrap;">
+        <button type="button" id="pm-receiving-add-row" class="btn" style="background:#27ae60;color:white;padding:8px 16px;">+ Add Row</button>
+        <button type="button" id="pm-receiving-save-btn" class="btn" style="background:#3498db;color:white;padding:8px 16px;" disabled>Save All Entries</button>
+        <button type="button" id="pm-receiving-cancel-btn" class="btn" style="background:#95a5a6;color:white;padding:8px 16px;" disabled>Clear Grid</button>
+        <span id="pm-receiving-status" style="align-self:center;font-size:12px;color:#666;"></span>
+      </div>
+    </div>
   </section>
 
   <section class="pm-panel-card dashboard-card gm-panel" id="pm-panel-vitals" data-pm-section="vitals" hidden>
@@ -219,58 +272,92 @@
   <section class="pm-panel-card dashboard-card gm-panel" id="pm-panel-approvals" data-pm-section="approvals" hidden>
     <div class="dashboard-card__header gm-panel-header">Approvals, purchasing, transfers, and printable footprints</div>
     <p class="dashboard-note">Pending: <%= approvalDesk.pendingRequestCount || 0 %> branch requests · <%= approvalDesk.pendingTransferCount || 0 %> transfers · <%= approvalDesk.pendingPoCount || 0 %> POs. Every transaction carries a number/serial plus date-time stamp.</p>
+    
+    <!-- Branch / Location Requests - Full Width -->
+    <article class="dashboard-card gm-panel" style="width:100%;margin-bottom:12px;">
+      <div class="dashboard-card__header gm-panel-header">
+        Branch / location requests
+        <% if ((approvalDesk.requests || []).length > 0) { %>
+          <button id="pm-approve-all-btn" type="button" class="btn" style="float:right;background:#27ae60;font-size:11px;padding:4px 8px;">Approve All</button>
+        <% } %>
+      </div>
+      <div class="table-scroll">
+        <table class="list" id="pm-requests-table">
+          <thead><tr><th>Location</th><th>Part #</th><th>Part Name</th><th>Supplier</th><th>Qty</th><th>Cost Price</th><th>Markup (%)</th><th>Retail Price</th><th>WO #</th><th>Requested By</th><th>Date</th><th></th></tr></thead>
+          <tbody>
+            <% if (!(approvalDesk.requests || []).length) { %><tr><td colspan="12">No pending requests.</td></tr><% } %>
+            <% (approvalDesk.requests || []).forEach((row) => { %>
+              <tr>
+                <td><%= row.requesting_branch || row.branch || '—' %></td>
+                <td><%= row.part_number %></td>
+                <td><%= row.part_name || '—' %></td>
+                <td><%= row.supplier || '—' %></td>
+                <td style="text-align:right;"><%= row.qty %></td>
+                <td style="text-align:right;">₱ <%= Number(row.cost_price || 0).toFixed(2) %></td>
+                <td style="text-align:right;"><%= Number(row.markup || 0).toFixed(2) %>%</td>
+                <td style="text-align:right;">₱ <%= Number(row.retail_price || 0).toFixed(2) %></td>
+                <td><%= row.work_order_number || row.sold_to || '—' %></td>
+                <td><%= row.requested_by || row.editor || '—' %></td>
+                <td style="white-space:nowrap;"><%= new Date(row.created_at).toLocaleDateString('en-PH') %></td>
+                <td style="white-space:nowrap;">
+                  <a class="btn" href="/parts-manager/requests/<%= encodeURIComponent(row.id) %>/preview" style="font-size:11px;padding:4px 8px;">Approve</a>
+                  <button type="button" class="btn" data-pm-resolve="<%= row.id %>" data-decision="rejected" style="background:#c0392b;font-size:11px;padding:4px 8px;">Reject</button>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <!-- Approved Transactions - Full Width -->
+    <article class="dashboard-card gm-panel" style="width:100%;margin-bottom:12px;">
+      <div class="dashboard-card__header gm-panel-header">Approved transactions</div>
+      <div class="table-scroll">
+        <table class="list">
+          <thead><tr><th>Date</th><th>PTN</th><th>Branch</th><th>Part #</th><th>Part Name</th><th>Supplier</th><th>Qty</th><th>Cost Price</th><th>Markup (%)</th><th>Retail Price</th><th>Approved By</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <% const approvedRows = Array.isArray(approvalDesk.approvedTransactions) ? approvalDesk.approvedTransactions : []; %>
+            <% if (!approvedRows.length) { %><tr><td colspan="13">No approved transfer transactions yet.</td></tr><% } %>
+            <% approvedRows.forEach((row) => { %>
+              <tr>
+                <td style="white-space:nowrap;"><%= new Date(row.approved_at || row.created_at).toLocaleDateString('en-PH') %></td>
+                <td style="white-space:nowrap;"><%= row.transaction_number || row.id %></td>
+                <td><%= row.requesting_branch || row.branch || '—' %></td>
+                <td><%= row.part_number || '' %></td>
+                <td><%= row.part_name || '—' %></td>
+                <td><%= row.supplier || '—' %></td>
+                <td style="text-align:right;"><%= row.qty %></td>
+                <td style="text-align:right;">₱ <%= Number(row.cost_price || 0).toFixed(2) %></td>
+                <td style="text-align:right;"><%= Number(row.markup || 0).toFixed(2) %>%</td>
+                <td style="text-align:right;">₱ <%= Number(row.retail_price || 0).toFixed(2) %></td>
+                <td><%= row.approved_by || row.editor || '—' %></td>
+                <td><%= row.fulfillment_label || 'Approved' %></td>
+                <td><a class="btn" href="/parts-manager/approved/<%= encodeURIComponent(row.id) %>" style="font-size:11px;padding:4px 8px;">Print</a></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <!-- Transit Receipt: Consolidated printing for multiple items with same transaction number -->
+    <article class="dashboard-card gm-panel" style="width:100%;margin-bottom:12px;">
+      <div class="dashboard-card__header gm-panel-header">Transit Receipt (Multi-Item Proof of Delivery)</div>
+      <p class="dashboard-note">Enter a transaction number to generate a consolidated receipt for all approved items with that number on a single page.</p>
+      <form method="get" action="/parts-manager/api/transit-receipt" class="form pm-transit-form" id="pm-transit-form" style="display:grid;grid-template-columns:1fr auto;gap:8px;">
+        <div>
+          <label style="display:block;font-size:12px;margin-bottom:4px;">Transaction Number (PTN)
+            <input type="text" name="transactionNumber" id="pm-transit-input" placeholder="e.g., PTN-20260906-003485" required style="width:100%;padding:6px;border:1px solid #ccc;border-radius:3px;" />
+          </label>
+        </div>
+        <button type="button" id="pm-transit-generate-btn" class="btn" style="background:#3498db;color:white;padding:6px 12px;align-self:flex-end;">Generate Transit Receipt</button>
+      </form>
+      <div id="pm-transit-result" style="margin-top:12px;"></div>
+    </article>
+
+    <!-- Other Panels in Split Grid -->
     <div class="pm-split-grid">
-      <article class="dashboard-card gm-panel">
-        <div class="dashboard-card__header gm-panel-header">Branch / location requests</div>
-        <div class="table-scroll">
-          <table class="list">
-            <thead><tr><th>Location</th><th>WO #</th><th>Part #</th><th>Qty</th><th>By</th><th></th></tr></thead>
-            <tbody>
-              <% if (!(approvalDesk.requests || []).length) { %><tr><td colspan="6">No pending requests.</td></tr><% } %>
-              <% (approvalDesk.requests || []).forEach((row) => { %>
-                <tr>
-                  <td><%= row.requesting_branch || row.branch || '—' %></td>
-                  <td><%= row.work_order_number || row.sold_to || '—' %></td>
-                  <td><%= row.part_number %></td>
-                  <td style="text-align:right;"><%= row.qty %></td>
-                  <td><%= row.requested_by || row.editor || '—' %></td>
-                  <td style="white-space:nowrap;">
-                    <a class="btn" href="/parts-manager/requests/<%= encodeURIComponent(row.id) %>/preview">Approve</a>
-                    <button type="button" class="btn" data-pm-resolve="<%= row.id %>" data-decision="rejected" style="background:#c0392b;">Reject</button>
-                  </td>
-                </tr>
-              <% }) %>
-            </tbody>
-          </table>
-        </div>
-      </article>
-
-      <article class="dashboard-card gm-panel">
-        <div class="dashboard-card__header gm-panel-header">Approved transactions</div>
-        <div class="table-scroll">
-          <table class="list">
-            <thead><tr><th>Stamp</th><th>Auth / PTN</th><th>Branch</th><th>Part #</th><th>Qty</th><th>Approved by</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-              <% const approvedRows = Array.isArray(approvalDesk.approvedTransactions) ? approvalDesk.approvedTransactions : []; %>
-              <% if (!approvedRows.length) { %><tr><td colspan="8">No approved transfer transactions yet.</td></tr><% } %>
-              <% approvedRows.forEach((row) => { %>
-                <tr>
-                  <td style="white-space:nowrap;"><%= row.approved_at || row.created_at || '' %></td>
-                  <td style="white-space:nowrap;"><%= row.transaction_number || row.id %></td>
-                  <td><%= row.requesting_branch || row.branch || '—' %></td>
-                  <td><%= row.part_number || '' %></td>
-                  <td style="text-align:right;"><%= row.qty %></td>
-                  <td><%= row.approved_by || row.editor || '—' %></td>
-                  <td><%= row.fulfillment_label || 'Approved' %></td>
-                  <td><a class="btn" href="/parts-manager/approved/<%= encodeURIComponent(row.id) %>" style="font-size:11px;padding:4px 8px;">View / Print</a></td>
-                </tr>
-              <% }) %>
-            </tbody>
-          </table>
-        </div>
-      </article>
-
-      <article class="dashboard-card gm-panel">
         <div class="dashboard-card__header gm-panel-header">Transaction records</div>
         <div class="table-scroll">
           <table class="list">
@@ -387,6 +474,121 @@
     </div>
   </section>
 
+  <!-- Parts DB Health Monitoring Panel -->
+  <section class="pm-panel-card dashboard-card gm-panel" id="pm-panel-health" data-pm-section="health" hidden>
+    <div class="dashboard-card__header gm-panel-header">Parts DB Health Monitoring</div>
+    <p class="dashboard-note">Monitor database integrity, inventory risk, and financial health. Identify and transfer critical items to ordering.</p>
+
+    <!-- Health Metrics Grid -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:24px;">
+      <!-- Data Integrity Card -->
+      <div style="background:#f8f9fa;border:1px solid #ddd;border-radius:4px;padding:12px;">
+        <div style="font-weight:bold;font-size:13px;color:#2c3e50;margin-bottom:8px;">📋 Data Integrity</div>
+        <div style="font-size:12px;line-height:1.8;color:#555;">
+          <div>Duplicate SKUs: <span style="font-weight:bold;color:#c0392b;"><%= (healthMetrics && healthMetrics.dataIntegrity && healthMetrics.dataIntegrity.duplicateSkus) || 0 %></span></div>
+          <div>Missing Dimensions: <span style="font-weight:bold;color:#d68910;"><%= (healthMetrics && healthMetrics.dataIntegrity && healthMetrics.dataIntegrity.missingDimensions) || 0 %></span></div>
+          <div>Orphaned Records: <span style="font-weight:bold;color:#d68910;"><%= (healthMetrics && healthMetrics.dataIntegrity && healthMetrics.dataIntegrity.orphanedRecords) || 0 %></span></div>
+        </div>
+      </div>
+
+      <!-- Inventory Risk Card -->
+      <div style="background:#f8f9fa;border:1px solid #ddd;border-radius:4px;padding:12px;">
+        <div style="font-weight:bold;font-size:13px;color:#2c3e50;margin-bottom:8px;">📦 Inventory Risk</div>
+        <div style="font-size:12px;line-height:1.8;color:#555;">
+          <div>Dead Stock (1yr+): <span style="font-weight:bold;color:#c0392b;"><%= (healthMetrics && healthMetrics.inventoryRisk && healthMetrics.inventoryRisk.deadStock) || 0 %></span></div>
+          <div>Low Stock (&lt;5 qty): <span style="font-weight:bold;color:#d68910;"><%= (healthMetrics && healthMetrics.inventoryRisk && healthMetrics.inventoryRisk.lowStock) || 0 %></span></div>
+          <div style="color:#c0392b;font-size:11px;margin-top:4px;">⚠️ Replenishment needed</div>
+        </div>
+      </div>
+
+      <!-- Financial Discrepancies Card -->
+      <div style="background:#f8f9fa;border:1px solid #ddd;border-radius:4px;padding:12px;">
+        <div style="font-weight:bold;font-size:13px;color:#2c3e50;margin-bottom:8px;">💰 Financial Issues</div>
+        <div style="font-size:12px;line-height:1.8;color:#555;">
+          <div>$0 Cost Parts: <span style="font-weight:bold;color:#c0392b;"><%= (healthMetrics && healthMetrics.financialDiscrepancies && healthMetrics.financialDiscrepancies.zeroCostParts) || 0 %></span></div>
+          <div>Outdated Pricing: <span style="font-weight:bold;color:#d68910;"><%= (healthMetrics && healthMetrics.financialDiscrepancies && healthMetrics.financialDiscrepancies.outdatedPricing) || 0 %></span></div>
+          <div style="color:#c0392b;font-size:11px;margin-top:4px;">⚡ Fix immediately</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delicate Parts Grid -->
+    <div style="border-top:2px solid #ecf0f1;padding-top:16px;">
+      <h3 style="margin:0 0 12px 0;font-size:14px;font-weight:bold;">🚨 Critical DB Health Actions & Replenishment</h3>
+      <p class="dashboard-note" style="margin-bottom:12px;">Items flagged for critical low stock, missing data, or financial issues. Select items to transfer to ordering panel.</p>
+
+      <div class="table-scroll" style="border:1px solid #ddd;border-radius:4px;overflow:hidden;">
+        <table class="list" style="font-size:12px;min-width:max-content;width:100%;">
+          <thead style="background:#ecf0f1;position:sticky;top:0;z-index:5;">
+            <tr>
+              <th style="padding:8px;text-align:center;"><input type="checkbox" id="pm-health-select-all" /></th>
+              <th style="padding:8px;white-space:nowrap;">Part #</th>
+              <th style="padding:8px;white-space:nowrap;">Part Name</th>
+              <th style="padding:8px;white-space:nowrap;">Supplier</th>
+              <th style="padding:8px;white-space:nowrap;text-align:right;">Current Stock</th>
+              <th style="padding:8px;white-space:nowrap;text-align:right;">Safety Stock</th>
+              <th style="padding:8px;white-space:nowrap;">Status Flag</th>
+            </tr>
+          </thead>
+          <tbody id="pm-health-delicate-body">
+            <% const delicate = typeof delicateParts !== 'undefined' && Array.isArray(delicateParts) ? delicateParts : []; %>
+            <% if (!delicate.length) { %>
+              <tr><td colspan="7" style="text-align:center;padding:16px;color:#666;">✓ All systems healthy. No critical items detected.</td></tr>
+            <% } %>
+            <% delicate.forEach((item) => { %>
+              <tr data-part-id="<%= item.id %>" data-part-num="<%= item.part_number %>" style="border-bottom:1px solid #e0e0e0;">
+                <td style="padding:8px;text-align:center;"><input type="checkbox" class="pm-health-row-check" data-part-id="<%= item.id %>" /></td>
+                <td style="padding:8px;"><strong><%= item.part_number %></strong></td>
+                <td style="padding:8px;"><%= item.part_name || '—' %></td>
+                <td style="padding:8px;"><%= item.supplier || '(No Supplier)' %></td>
+                <td style="padding:8px;text-align:right;"><strong style="color:<%= item.current_stock === 0 ? '#c0392b' : '#e67e22' %>;"><%= item.current_stock %></strong></td>
+                <td style="padding:8px;text-align:right;"><%= item.safety_stock %></td>
+                <td style="padding:8px;">
+                  <span style="display:inline-block;padding:2px 6px;border-radius:3px;font-size:11px;font-weight:bold;background:<%= item.status.includes('Critical Low') ? '#e74c3c' : item.status.includes('No Supplier') ? '#f39c12' : '#95a5a6' %>;color:white;">
+                    <%= item.status %>
+                  </span>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-start;flex-wrap:wrap;">
+        <button type="button" id="pm-health-transfer-btn" class="btn" style="background:#27ae60;color:white;padding:8px 16px;" disabled>
+          ➤ Transfer Selected to Ordering Panel
+        </button>
+        <span id="pm-health-count" style="align-self:center;font-size:12px;color:#666;"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Transfer to Ordering Modal/Drawer -->
+  <div id="pm-health-transfer-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:2000;overflow-y:auto;padding:20px;">
+    <div style="background:white;border-radius:4px;max-width:600px;margin:40px auto;padding:20px;box-shadow:0 4px 12px rgba(0,0,0,0.3);">
+      <div style="font-weight:bold;font-size:16px;margin-bottom:16px;border-bottom:2px solid #ecf0f1;padding-bottom:12px;">
+        ✓ Review Selected Items for Transfer
+      </div>
+
+      <div id="pm-health-transfer-list" style="max-height:300px;overflow-y:auto;margin-bottom:16px;">
+        <!-- Populated by JavaScript -->
+      </div>
+
+      <div style="background:#f8f9fa;padding:12px;border-radius:3px;margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:bold;margin-bottom:8px;color:#2c3e50;">Suggested Order Quantity Calculations:</div>
+        <div id="pm-health-transfer-calcs" style="font-size:11px;line-height:1.6;color:#555;">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button type="button" id="pm-health-cancel-transfer" class="btn" style="background:#95a5a6;color:white;padding:8px 16px;">Cancel</button>
+        <button type="button" id="pm-health-confirm-transfer" class="btn" style="background:#27ae60;color:white;padding:8px 16px;">✓ Confirm & Send to Ordering Grid</button>
+      </div>
+    </div>
+  </div>
+
   <section class="dashboard-card gm-panel pm-database" id="pm-database">
     <div class="dashboard-card__header gm-panel-header"><%= view.label || 'All branches + Warehouse 1 General Parts Database' %></div>
     <form method="get" action="/parts-manager" class="form pm-db-filter">
@@ -428,6 +630,7 @@
             <th style="white-space:nowrap;">Sub-ID</th>
             <th style="white-space:nowrap;">Generic</th>
             <th style="white-space:nowrap;">Supplier</th>
+            <th style="white-space:nowrap;">Receiving Receipt #</th>
             <th style="white-space:nowrap;">Qty</th>
             <th style="white-space:nowrap;">On-Hand</th>
             <th style="white-space:nowrap;">Cost Price</th>
@@ -439,7 +642,7 @@
         </thead>
         <tbody>
           <% if (!parts.length) { %>
-            <tr><td colspan="17" style="text-align:center;padding:20px;">No records found.</td></tr>
+            <tr><td colspan="18" style="text-align:center;padding:20px;">No records found.</td></tr>
           <% } %>
           <% parts.forEach((p, i) => { %>
             <tr class="pm-db-row" data-id="<%= p.id %>" data-part="<%= p.part_number || '' %>" data-sold="<%= typeof isSoldTransaction === 'function' && isSoldTransaction(p) ? '1' : '0' %>">
@@ -459,6 +662,7 @@
               <td style="white-space:nowrap;"><%= p.sub_id || '' %></td>
               <td style="white-space:nowrap;"><%= p.generic || '' %></td>
               <td style="white-space:nowrap;"><%= p.supplier || '' %></td>
+              <td style="white-space:nowrap;"><%= p.receiving_receipt_number || '' %></td>
               <td style="text-align:right;"><%= p.qty != null ? p.qty : '' %></td>
               <td style="text-align:right;"><%= p.on_hand != null ? p.on_hand : '' %></td>
               <td style="text-align:right;"><%= p.cost_price != null ? Number(p.cost_price).toFixed(2) : '' %></td>
@@ -482,6 +686,187 @@
       </table>
     </div>
   </section>
+
+  <!-- Ordering Grid - MAIN SECTION (Always Visible) -->
+  <section class="pm-panel-card dashboard-card gm-panel" id="pm-panel-ordering" style="margin-bottom:24px;">
+    <div class="dashboard-card__header gm-panel-header">📋 Automated Ordering Grid</div>
+    <p class="dashboard-note">Items for procurement. Semi-automated workflow: review quantities, create purchase orders, or send to suppliers. Transfer items from Health Monitoring (Panel 6). See Panel 8 for the complete Parts Database.</p>
+    
+    <div style="margin-bottom:16px;padding:12px;background:#f0f8ff;border-left:4px solid #3498db;border-radius:3px;">
+      <div style="font-weight:bold;font-size:13px;color:#1a6bbf;margin-bottom:4px;">📋 Ordering Queue Status</div>
+      <div style="font-size:12px;color:#555;">
+        Pending Items: <strong id="pm-ordering-count" style="color:#e74c3c;">0</strong>
+      </div>
+    </div>
+
+    <div id="pm-ordering-grid-container" class="table-scroll" style="border:1px solid #ddd;border-radius:4px;">
+      <table class="list" id="pm-ordering-table" style="font-size:12px;min-width:max-content;width:100%;">
+        <thead style="background:#ecf0f1;">
+          <tr>
+            <th style="padding:8px;text-align:center;">☑</th>
+            <th>Part #</th>
+            <th>Part Name</th>
+            <th>Supplier</th>
+            <th style="text-align:right;">Current Stock</th>
+            <th style="text-align:right;">Safety Stock</th>
+            <th style="text-align:right;">Suggested Qty</th>
+            <th style="text-align:right;">Order Qty (Edit)</th>
+            <th style="text-align:center;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="pm-ordering-body">
+          <!-- Populated by JavaScript from Health Monitor transfers -->
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-start;flex-wrap:wrap;align-items:center;">
+      <button type="button" id="pm-ordering-create-po" class="btn" style="background:#27ae60;color:white;padding:8px 16px;" disabled>
+        ✓ Create Purchase Order
+      </button>
+      <button type="button" id="pm-ordering-send-supplier" class="btn" style="background:#3498db;color:white;padding:8px 16px;" disabled>
+        📧 Send to Supplier
+      </button>
+      <span id="pm-ordering-selection-count" style="font-size:12px;color:#666;"></span>
+      <button type="button" id="pm-ordering-clear" class="btn" style="background:#95a5a6;color:white;padding:8px 16px;">
+        🗑 Clear All
+      </button>
+    </div>
+
+    <div id="pm-ordering-status" style="margin-top:12px;font-size:12px;color:#666;"></div>
+
+    <!-- Quick Create PO Modal -->
+    <div id="pm-ordering-po-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:2000;overflow-y:auto;padding:20px;">
+      <div style="background:white;border-radius:4px;max-width:600px;margin:40px auto;padding:20px;box-shadow:0 4px 12px rgba(0,0,0,0.3);">
+        <div style="font-weight:bold;font-size:16px;margin-bottom:16px;border-bottom:2px solid #ecf0f1;padding-bottom:12px;">
+          ✓ Create Purchase Order
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="display:block;margin-bottom:8px;font-weight:bold;font-size:13px;">Supplier Name</label>
+          <input type="text" id="pm-ordering-supplier-input" placeholder="Enter supplier name" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:3px;" />
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="display:block;margin-bottom:8px;font-weight:bold;font-size:13px;">Delivery Location</label>
+          <select id="pm-ordering-location-select" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:3px;">
+            <option value="">Select location...</option>
+            <% locations.forEach((loc) => { %>
+              <option value="<%= loc %>"><%= loc %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div id="pm-ordering-po-preview" style="background:#f8f9fa;padding:12px;border-radius:3px;margin-bottom:16px;max-height:200px;overflow-y:auto;font-size:11px;">
+          <!-- Selected items preview -->
+        </div>
+
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button type="button" id="pm-ordering-po-cancel" class="btn" style="background:#95a5a6;color:white;padding:8px 16px;">Cancel</button>
+          <button type="button" id="pm-ordering-po-confirm" class="btn" style="background:#27ae60;color:white;padding:8px 16px;">✓ Create PO</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Approved Purchase Orders - Shared View with GM -->
+  <section class="pm-panel-card dashboard-card gm-panel" style="margin-bottom:24px;">
+    <div class="dashboard-card__header gm-panel-header">✓ Approved Purchase Orders (GM Approved)</div>
+    <p class="dashboard-note">Purchase orders already reviewed and approved by GM. This is a shared read-only view for tracking approved orders.</p>
+    
+    <% if (typeof approvedPOs !== 'undefined' && approvedPOs && approvedPOs.length > 0) { %>
+      <div class="table-scroll" style="border:1px solid #ddd;border-radius:4px;">
+        <table class="list" style="font-size:11px;min-width:max-content;width:100%;">
+          <thead style="background:#ecf0f1;">
+            <tr>
+              <th style="padding:6px;">PO Number</th>
+              <th>Supplier</th>
+              <th>Location</th>
+              <th>Created By (PM)</th>
+              <th>Approved By (GM)</th>
+              <th style="text-align:right;">Item Count</th>
+              <th>Approval Date</th>
+              <th style="text-align:center;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% approvedPOs.forEach((po) => { %>
+              <tr>
+                <td style="padding:6px;font-weight:bold;"><%= po.po_number || po.id || 'N/A' %></td>
+                <td style="padding:6px;"><%= po.supplier || '-' %></td>
+                <td style="padding:6px;"><%= po.branch || '-' %></td>
+                <td style="padding:6px;font-size:10px;"><%= po.created_by || po.sent_for_approval_by || '-' %></td>
+                <td style="padding:6px;font-size:10px;"><%= po.approved_by || '-' %></td>
+                <td style="text-align:right;padding:6px;"><%= (po.lines && po.lines.length) || 0 %></td>
+                <td style="padding:6px;font-size:10px;"><%= po.approved_at ? new Date(po.approved_at).toLocaleString('en-PH') : '-' %></td>
+                <td style="text-align:center;padding:6px;">
+                  <button type="button" class="pm-approved-po-view-btn btn btn-sm" data-po-json="<%= (JSON.stringify(po)).replace(/'/g, '&apos;') %>" style="background:#2980b9;color:white;padding:4px 8px;font-size:10px;border:none;border-radius:2px;cursor:pointer;">View</button>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p class="dashboard-note" style="background:#f0f0f0;padding:12px;border-radius:3px;margin:0;">No approved purchase orders yet.</p>
+    <% } %>
+  </section>
+
+  <!-- All Branches + Warehouse 1 General Parts Database Panel -->
+  <section class="pm-panel-card dashboard-card gm-panel" id="pm-panel-database" data-pm-section="database" hidden>
+    <div class="dashboard-card__header gm-panel-header">📚 All branches + Warehouse 1 General Parts Database</div>
+    <p class="dashboard-note">Complete inventory of all parts across all branches. Search or scroll to find parts for ordering.</p>
+    
+    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+      <input type="text" id="pm-parts-db-search" placeholder="Search part # or name..." style="flex:1;padding:8px;border:1px solid #ddd;border-radius:3px;font-size:12px;" />
+      <select id="pm-parts-db-location-filter" style="padding:8px;border:1px solid #ddd;border-radius:3px;font-size:12px;">
+        <option value="">All Locations</option>
+        <% locations.forEach((loc) => { %>
+          <option value="<%= loc %>"><%= loc %></option>
+        <% }) %>
+      </select>
+      <button type="button" id="pm-parts-db-clear-filters" class="btn" style="background:#95a5a6;color:white;padding:6px 12px;font-size:12px;">Clear</button>
+    </div>
+
+    <div id="pm-parts-db-container" class="table-scroll" style="border:1px solid #ddd;border-radius:4px;overflow-x:auto;max-height:72vh;overflow-y:auto;">
+      <table class="list" id="pm-parts-db-table" style="font-size:11px;min-width:max-content;width:100%;">
+        <thead style="background:#ecf0f1;position:sticky;top:0;">
+          <tr>
+            <th style="padding:6px;">Part #</th>
+            <th>Name</th>
+            <th style="text-align:right;">On Hand</th>
+            <th style="text-align:right;">Cost</th>
+            <th style="text-align:right;">Retail</th>
+            <th>Supplier</th>
+            <th>Location</th>
+            <th style="text-align:center;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="pm-parts-db-body">
+          <% if (typeof parts !== 'undefined' && parts && parts.length > 0) { %>
+            <% parts.forEach((part) => { %>
+              <tr class="pm-parts-db-row" data-part-number="<%= part.part_number || '' %>" data-part-name="<%= part.part_name || '' %>" data-location="<%= part.present_location || '' %>">
+                <td style="padding:6px;font-weight:bold;"><%= part.part_number || '-' %></td>
+                <td style="padding:6px;max-width:150px;"><%= part.part_name || '-' %></td>
+                <td style="text-align:right;padding:6px;"><%= (part.on_hand_qty || 0) %></td>
+                <td style="text-align:right;padding:6px;"><%= fmtMoney(part.cost_price || 0) %></td>
+                <td style="text-align:right;padding:6px;"><%= fmtMoney(part.retail_price || 0) %></td>
+                <td style="padding:6px;font-size:10px;"><%= part.supplier || '-' %></td>
+                <td style="padding:6px;font-size:10px;"><%= part.present_location || '-' %></td>
+                <td style="text-align:center;padding:6px;">
+                  <button type="button" class="pm-parts-db-add-btn btn btn-sm" data-part-number="<%= part.part_number || '' %>" data-part-name="<%= part.part_name || '' %>" data-supplier="<%= part.supplier || '' %>" style="background:#2980b9;color:white;padding:4px 8px;font-size:10px;border:none;border-radius:2px;cursor:pointer;">+ Add</button>
+                </td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr><td colspan="8" style="text-align:center;padding:12px;color:#999;">No parts found</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+    <div id="pm-parts-db-count" style="font-size:11px;color:#666;margin-top:6px;">Total: <strong id="pm-parts-db-total">0</strong> parts</div>
+  </section>
+
 </section>
 
 <script src="/js/pm-workspace.js"></script>

@@ -35,12 +35,12 @@
           <span>Directory</span>
         </div>
       </a>
-      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/transactions">
-        <div class="workorder-nav-card__icon">&#128269;</div>
+      <a class="workorder-nav-card workorder-nav-card--green sa-home-card" href="/work-order-transactions">
+        <div class="workorder-nav-card__icon">📊</div>
         <div class="workorder-nav-card__body">
-          <h3>Closed WO Search</h3>
-          <p>Billing lookup</p>
-          <span>Reprint</span>
+          <h3>WO Transactions Database</h3>
+          <p>All records</p>
+          <span>Billing · History</span>
         </div>
       </a>
     </div>
@@ -97,6 +97,20 @@
           </div>
         </a>
       <% } %>
+    </div>
+  </section>
+
+  <section class="sa-home-group">
+    <h3 class="sa-home-group__title">4. Receiving</h3>
+    <div class="sa-grid sa-grid--4">
+      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card sa-home-card--kpi" href="/receiving">
+        <div class="workorder-nav-card__icon">📦</div>
+        <div class="workorder-nav-card__body">
+          <h3>Receiving Transactions</h3>
+          <p><%= receivingCount || 0 %></p>
+          <span>Approve & restock</span>
+        </div>
+      </a>
     </div>
   </section>
 </section>

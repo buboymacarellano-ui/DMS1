@@ -665,6 +665,9 @@ function mergeWorkOrderMask(body, customer, vehicle) {
     car_year: normalizeText(body.car_year) || normalizeText(vehicle.year),
     plate_number: normalizeText(body.plate_number) || normalizeText(vehicle.license_plate),
     odometer: normalizeText(body.odometer),
+    customer_type: normalizeText(body.technician)
+      ? 'Service'
+      : (normalizeText(body.customer_type) || 'Walk-In'),
   };
 }
 

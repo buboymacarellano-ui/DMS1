@@ -6,10 +6,10 @@
 %>
 
 <section class="labor-charge-page">
-  <h2>Edit Created Part</h2>
+  <h2 class="wo-new-title">Edit Created Part</h2>
   <% if (typeof error !== 'undefined' && error) { %><p class="error"><%= error %></p><% } %>
 
-  <form method="post" action="/parts/create/<%= part.id %>/edit" class="form">
+  <form method="post" action="/parts/create/<%= part.id %>/edit" class="form create-parts-form">
     <label>Date
       <input type="date" name="transaction_date" value="<%= part.transaction_date || '' %>" required />
     </label>

@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Transit Receipt PTN-20260906-003487</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { 
+      font-family: Arial, sans-serif; 
+      color: #10202f; 
+      margin: 0;
+      padding: 12mm;
+      background: #fff;
+    }
+    .container { max-width: 210mm; margin: 0 auto; }
+    .header { 
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #10202f;
+      padding-bottom: 12px;
+    }
+    .header-left h1 { 
+      margin: 0 0 8px 0; 
+      font-size: 24px; 
+      font-weight: bold;
+      color: #10202f;
+    }
+    .header-left p { 
+      margin: 4px 0; 
+      font-size: 13px; 
+      color: #445;
+    }
+    .header-right { 
+      text-align: right; 
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+    .txn-number { 
+      font-size: 16px; 
+      font-weight: bold; 
+      color: #d9534f;
+      margin-bottom: 8px;
+    }
+    .meta-info { 
+      font-size: 11px; 
+      color: #666;
+      line-height: 1.4;
+    }
+    .delivery-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 18px;
+      font-size: 12px;
+    }
+    .info-box {
+      border: 1px solid #ccd5df;
+      padding: 8px;
+      background: #f9f9f9;
+    }
+    .info-box strong { 
+      display: block; 
+      margin-bottom: 4px; 
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #445;
+    }
+    .info-box span { 
+      display: block; 
+      font-size: 13px;
+      color: #10202f;
+    }
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      font-size: 11px; 
+      margin-top: 12px;
+    }
+    th, td { 
+      border: 1px solid #ccd5df; 
+      padding: 6px 6px; 
+      text-align: left;
+      vertical-align: middle;
+    }
+    th { 
+      background: #10202f; 
+      color: white;
+      font-weight: bold;
+      height: 24px;
+    }
+    td { 
+      height: 18px; 
+    }
+    .number { text-align: center; }
+    .qty { text-align: center; }
+    .price { text-align: right; }
+    .totals-row { 
+      background: #eef4fb; 
+      font-weight: bold; 
+    }
+    .signatures { 
+      margin-top: 24px; 
+      display: grid; 
+      grid-template-columns: 1fr 1fr 1fr; 
+      gap: 20px; 
+      font-size: 11px;
+    }
+    .sig-box { 
+      display: flex;
+      flex-direction: column;
+    }
+    .sig-space { 
+      border-bottom: 1px solid #10202f; 
+      height: 40px;
+      margin-bottom: 4px;
+    }
+    .sig-label { 
+      font-size: 10px; 
+      font-weight: bold;
+      text-align: center;
+    }
+    .print-note {
+      margin-top: 16px;
+      font-size: 10px;
+      color: #999;
+      text-align: center;
+    }
+    @media print {
+      body { margin: 0; padding: 10mm; }
+      .print-note { display: none; }
+      .container { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-left">
+        <h1>TRANSIT RECEIPT</h1>
+        <p>Proof of Delivery • Parts Transfer Authorization</p>
+      </div>
+      <div class="header-right">
+        <div class="txn-number">PTN-20260906-003487</div>
+        <div class="meta-info">
+          <strong>Approved:</strong> Sep 06, 2026, 06:48 PM<br>
+          <strong>By:</strong> jerome<br>
+          <strong>Items:</strong> 3
+        </div>
+      </div>
+    </div>
+
+    <div class="delivery-info">
+      <div class="info-box">
+        <strong>Delivered To (Branch)</strong>
+        <span>Lapux2</span>
+      </div>
+      <div class="info-box">
+        <strong>Shipped From</strong>
+        <span>Warehouse 1</span>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th class="number">#</th>
+          <th>Part Number</th>
+          <th>Part Name</th>
+          <th class="qty">Qty</th>
+          <th>Unit</th>
+          <th class="price">Unit Price</th>
+          <th class="price">Line Total</th>
+          <th>WO#</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+    <tr>
+      <td>1</td>
+      <td><strong>WO26-08816-00132</strong></td>
+      <td>Coolant Premix 4L</td>
+      <td style="text-align:center;">3</td>
+      <td></td>
+      <td style="text-align:right;">P 571.20</td>
+      <td style="text-align:right;">P 1713.60</td>
+      <td>Branch-Request</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td><strong>WO26-04428-0K010</strong></td>
+      <td>Clutch Disc and Cover Kit</td>
+      <td style="text-align:center;">3</td>
+      <td></td>
+      <td style="text-align:right;">P 6195.20</td>
+      <td style="text-align:right;">P 18585.60</td>
+      <td>Branch-Request</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td><strong>WO26-13568-09071</strong></td>
+      <td>Timing Belt Kit</td>
+      <td style="text-align:center;">3</td>
+      <td></td>
+      <td style="text-align:right;">P 5185.00</td>
+      <td style="text-align:right;">P 15555.00</td>
+      <td>Branch-Request</td>
+    </tr>
+        <tr class="totals-row">
+          <td colspan="2" style="text-align:right; font-weight:bold;">TOTALS:</td>
+          <td></td>
+          <td class="qty"><strong>9.00</strong></td>
+          <td colspan="2"></td>
+          <td class="price"><strong>P 35854.20</strong></td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="signatures">
+      <div class="sig-box">
+        <div class="sig-space"></div>
+        <div class="sig-label">Received By<br>(Branch)</div>
+      </div>
+      <div class="sig-box">
+        <div class="sig-space"></div>
+        <div class="sig-label">Delivered By<br>(Warehouse)</div>
+      </div>
+      <div class="sig-box">
+        <div class="sig-space"></div>
+        <div class="sig-label">Verified By<br>(Branch Manager)</div>
+      </div>
+    </div>
+
+    <div class="print-note">
+      Use Ctrl+P or Cmd+P to print. This receipt consolidates 3 approved transfer items on a single page.
+    </div>
+  </div>
+</body>
+</html>

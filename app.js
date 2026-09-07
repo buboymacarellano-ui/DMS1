@@ -57,6 +57,7 @@ const {
   isLoginAuthDisabled,
   isOpenLoginEnabled,
   loadLoginAuthState,
+  setOpenLoginEnabled,
 } = require('./lib/login-auth');
 
 const ROLE_GENERAL_MANAGER = 'general_manager';
@@ -2154,16 +2155,121 @@ app.get('/', async (req, res) => {
 });
 
 app.get('/service', requirePortalAccess(portals.PORTAL_SERVICE), async (req, res) => {
-  const [workOrders, customers, employees] = await Promise.all([
+  const [workOrders, customers, employees, partsTransactions] = await Promise.all([
     store.getAll('work_orders'),
     store.getAll('customers'),
     store.getAll('employees'),
+    store.getAll('parts_transactions'),
   ]);
+  
+  // Count pending receiving transactions (parts awaiting branch confirmation)
+  const receivingCount = (partsTransactions || []).filter((tx) => {
+    const status = String(tx.request_status || '').trim().toLowerCase();
+    const fulfilled = String(tx.fulfillment || '').trim().toLowerCase();
+    return status === 'approved' && fulfilled !== 'complete' && !tx.received_at;
+  }).length;
+  
   return res.render('service/index', {
     openWorkOrdersCount: (workOrders || []).filter((wo) => !isWorkOrderClosed(wo)).length,
     customerCount: (customers || []).length,
     technicianCount: (employees || []).length,
+    receivingCount,
   });
+});
+
+app.get('/receiving', requireAnyRole(
+  ROLE_SERVICE_ADVISOR,
+  ROLE_SERVICE_RECEPTIONIST,
+  ROLE_SENIOR_SERVICE_RECEPTIONIST,
+  ROLE_GENERAL_MANAGER
+), async (req, res) => {
+  const [partsTransactions, parts] = await Promise.all([
+    store.getAll('parts_transactions'),
+    store.getAll('parts_inventory'),
+  ]);
+  
+  // Get pending receiving transactions (parts awaiting branch confirmation)
+  const pending = (partsTransactions || []).filter((tx) => {
+    const status = String(tx.request_status || '').trim().toLowerCase();
+    const fulfilled = String(tx.fulfillment || '').trim().toLowerCase();
+    return status === 'approved' && fulfilled !== 'complete' && !tx.received_at;
+  });
+  
+  // Enrich with part details
+  const receivingList = pending.map((tx) => {
+    const part = (parts || []).find((p) => p.part_number === tx.part_number);
+    return {
+      ...tx,
+      part_name: part ? part.part_name : tx.part_name,
+      supplier: part ? part.supplier : tx.supplier,
+    };
+  });
+  
+  return res.render('receiving/index', {
+    receivingList,
+    error: String(req.query.error || '').trim(),
+    success: String(req.query.success || '').trim(),
+  });
+});
+
+app.post('/receiving/:id/confirm', requireAnyRole(
+  ROLE_SERVICE_ADVISOR,
+  ROLE_SERVICE_RECEPTIONIST,
+  ROLE_SENIOR_SERVICE_RECEPTIONIST,
+  ROLE_GENERAL_MANAGER
+), async (req, res) => {
+  const user = req.session && req.session.user ? req.session.user : {};
+  const txId = String(req.params.id || '').trim();
+  
+  try {
+    const tx = await store.getById('parts_transactions', txId);
+    if (!tx) {
+      return res.redirect('/receiving?error=Transaction+not+found');
+    }
+    
+    // Update transaction as received
+    await store.update('parts_transactions', txId, {
+      request_status: 'received',
+      received_at: new Date().toISOString(),
+      received_by: user.username || user.id,
+      fulfillment: 'complete',
+    });
+    
+    // Get current inventory and update warehouse stock
+    const inventory = await store.getAll('parts_inventory');
+    const warehouseRecord = inventory.find((inv) => 
+      inv.part_number === tx.part_number && 
+      String(inv.present_location || '').trim().toLowerCase() === 'warehouse 1'
+    );
+    
+    if (warehouseRecord) {
+      const currentQty = Number(warehouseRecord.qty) || 0;
+      const receivedQty = Number(tx.qty) || 0;
+      await store.update('parts_inventory', warehouseRecord.id, {
+        qty: currentQty + receivedQty,
+        editor: user.username || user.id,
+      });
+    } else {
+      // Create new warehouse record if it doesn't exist
+      await store.create('parts_inventory', {
+        part_number: tx.part_number,
+        part_name: tx.part_name,
+        qty: Number(tx.qty) || 0,
+        present_location: 'Warehouse 1',
+        supplier: tx.supplier,
+        cost_price: Number(tx.cost_price) || 0,
+        markup: Number(tx.markup) || 0,
+        retail_price: Number(tx.retail_price) || 0,
+        created_by: user.username || user.id,
+        editor: user.username || user.id,
+      });
+    }
+    
+    return res.redirect('/receiving?success=Delivery+received+and+warehouse+updated');
+  } catch (err) {
+    console.error('Error confirming receiving:', err);
+    return res.redirect('/receiving?error=Error+processing+delivery');
+  }
 });
 
 app.get('/parts-portal', requirePortalAccess(portals.PORTAL_PARTS), (req, res) => {
@@ -2875,6 +2981,18 @@ app.get('/stm', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_STM), async (req, res)
   }
 });
 
+app.get('/stm/monitor', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_STM), async (req, res) => {
+  try {
+    const payload = await loadStmDashboardPage();
+    const requested = canonicalizeBranchName(String(req.query.branch || '').trim());
+    payload.initialBranch = requested || 'ALL';
+    return res.render('stm/monitor', payload);
+  } catch (error) {
+    console.error('GET /stm/monitor failed', error);
+    return res.status(500).send('Unable to load STM monitor.');
+  }
+});
+
 app.get('/stm/print-technicians', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_STM), async (req, res) => {
   try {
     const payload = await loadStmDashboardPage();
@@ -3003,6 +3121,10 @@ async function ensureEmployeeDbLogins() {
 
 ensureEmployeeDbLogins()
   .then(() => loadLoginAuthState())
+  .then(() => {
+    if (String(process.env.NODE_ENV || '').trim() === 'production') return isLoginAuthDisabled();
+    return setOpenLoginEnabled(true);
+  })
   .catch((error) => {
     console.error('Failed to provision Employee DB logins:', error);
   })

@@ -34,7 +34,7 @@
       <% const locationsByDept = (typeof locationsByDepartment !== 'undefined' && locationsByDepartment) ? locationsByDepartment : {}; %>
       <% const needsLocation = true; %>
       <% if (openAuth) { %>
-        <p class="success">Login auth is disabled, but department, role, employee ID, location, and password still must be filled.</p>
+        <p class="success">Login auth is disabled for building. Department, role, employee ID, and location still must be filled. Password is optional and not checked.</p>
       <% } %>
 
       <% if (error) { %>
@@ -80,7 +80,11 @@
         </label>
         <label>
           Password
-          <input type="password" name="password" autocomplete="current-password" required minlength="6" />
+          <% if (openAuth) { %>
+            <input type="password" name="password" autocomplete="current-password" placeholder="Optional while login auth is off" />
+          <% } else { %>
+            <input type="password" name="password" autocomplete="current-password" required minlength="6" />
+          <% } %>
         </label>
         <button type="submit">Log In</button>
       </form>

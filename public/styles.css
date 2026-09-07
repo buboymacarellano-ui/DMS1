@@ -1801,6 +1801,180 @@ body{
   gap:16px;
 }
 
+.stm-landing-back{
+  display:inline-block;
+  margin-bottom:6px;
+  font-size:13px;
+  font-weight:700;
+  color:#024e7a !important;
+  text-decoration:none;
+}
+.stm-landing{
+  display:grid;
+  gap:16px;
+}
+.stm-landing__top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.stm-landing__top-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.stm-landing__sr{
+  position:absolute;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+  clip:rect(0,0,0,0);
+}
+.stm-landing__branch select{
+  min-width:168px;
+  min-height:38px;
+  padding:6px 10px;
+  border:1px solid #64748b;
+  background:#ffffff;
+  color:#0b1220;
+  font-weight:700;
+}
+.stm-landing__bell{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:38px;
+  height:38px;
+  border:1px solid #64748b;
+  background:#ffffff;
+  color:#024e7a;
+  text-decoration:none;
+  font-size:18px;
+}
+.stm-landing__bell.is-pending{
+  border-color:#b4534a;
+}
+.stm-landing__bell-count{
+  position:absolute;
+  top:-6px;
+  right:-6px;
+  min-width:16px;
+  height:16px;
+  padding:0 4px;
+  border-radius:999px;
+  background:#c0392b;
+  color:#ffffff !important;
+  font-size:10px;
+  font-weight:800;
+  line-height:16px;
+  text-align:center;
+}
+.stm-landing__grid{
+  display:grid;
+  grid-template-columns:minmax(220px, 260px) minmax(0, 1fr);
+  gap:16px;
+  align-items:start;
+}
+.stm-landing__nav{
+  display:grid;
+  gap:14px;
+  padding:14px;
+  background:#ffffff;
+  border:1px solid #94a3b8;
+}
+.stm-landing-nav-group{
+  display:grid;
+  gap:6px;
+}
+.stm-landing-nav-group__title{
+  margin:0 0 4px;
+  color:#024e7a !important;
+  font-size:13px;
+  font-weight:800;
+  letter-spacing:0.04em;
+  text-transform:uppercase;
+}
+.stm-landing-nav-group a{
+  color:#024e7a !important;
+  font-size:14px;
+  font-weight:700;
+  text-decoration:none;
+}
+.stm-landing-nav-group a:hover{
+  text-decoration:underline;
+}
+.stm-landing-nav-btn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:38px;
+  padding:6px 10px;
+  border:1px solid #64748b;
+  background:#ffffff;
+  text-align:center;
+}
+.stm-landing-nav-btn--primary{
+  background:#024e7a;
+  border-color:#024e7a;
+  color:#ffffff !important;
+  font-weight:800;
+}
+.stm-landing-nav-btn--monitor{
+  margin-top:4px;
+  background:#0a3358;
+  border-color:#0a3358;
+  color:#ffffff !important;
+  font-weight:800;
+}
+.stm-landing__welcome{
+  margin:0 0 14px;
+  color:#024e7a !important;
+  font-size:16px;
+  font-weight:800;
+}
+.stm-landing__cards{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:14px;
+}
+.stm-landing-card{
+  min-height:168px;
+  display:grid;
+  align-content:start;
+  gap:10px;
+}
+.stm-landing-card__list{
+  margin:0;
+  padding:0;
+  list-style:none;
+  display:grid;
+  gap:8px;
+  color:#000000 !important;
+  font-weight:400;
+}
+.stm-landing-card__list strong{
+  color:#000000 !important;
+  font-weight:400;
+}
+.stm-landing-card__link{
+  margin-top:auto;
+  color:#024e7a !important;
+  font-weight:800;
+  text-decoration:none;
+}
+.stm-landing-card__link:hover{
+  text-decoration:underline;
+}
+@media (max-width: 900px){
+  .stm-landing__grid,
+  .stm-landing__cards{
+    grid-template-columns:1fr;
+  }
+}
+
 .stm-head{
   display:flex;
   align-items:flex-end;
@@ -1964,7 +2138,7 @@ body{
 }
 
 .sa-grid .sa-home-card{
-  min-height:210px;
+  min-height:126px;
   height:100%;
   box-sizing:border-box;
 }
@@ -4963,10 +5137,19 @@ body button {
   padding:6px 7px;
   border-radius:8px;
   border:1px solid #3d6fa3;
-  background:#122844;
-  color:#f3f7fc;
+  background:#ffffff;
+  color:#0b1220 !important;
   font:inherit;
   font-size:12px;
+  font-weight:700 !important;
+}
+
+.branch-parts-order-table td{
+  color:#ffffff !important;
+}
+
+.branch-parts-order-table td *{
+  color:#0b1220 !important;
 }
 
 .branch-parts-order-buttons{
@@ -8174,5 +8357,470 @@ body.role-fm .header-user-badge{
   color:var(--user-name-gold) !important;
   font-weight:800 !important;
   opacity:1;
+}
+
+/* Create Work Order: 2 fill-out columns using grid col 1 and col 3 */
+main.container > h2.wo-new-title,
+main.container:has(> form.wo-new-form) > h2,
+main.container .wo-edit-page > h2.wo-new-title,
+body.role-frontline main.container > h2.wo-new-title,
+body.role-frontline main.container:has(> form.wo-new-form) > h2,
+body.role-frontline main.container .wo-edit-page > h2.wo-new-title,
+body.role-gm main.container > h2.wo-new-title,
+body.role-gm main.container .wo-edit-page > h2.wo-new-title{
+  color:#024e7a !important;
+}
+form.form.wo-new-form,
+form.form.wo-new-form[method="post"]:not(.auth-form):not(.service-form),
+form.form.wo-new-form[method="POST"]:not(.auth-form):not(.service-form){
+  width:min(1100px, 100%) !important;
+  max-width:min(1100px, 100%) !important;
+  grid-template-columns:minmax(0, 1fr) minmax(48px, 0.28fr) minmax(0, 1fr);
+  grid-auto-flow:row;
+  align-items:start;
+  background:#0a3358 !important;
+  color:#ffffff !important;
+  border:1px solid #0a3358 !important;
+}
+form.form.wo-new-form label,
+form.form.wo-new-form > label,
+form.form.wo-new-form[method="post"]:not(.auth-form):not(.service-form) > label,
+form.form.wo-new-form[method="POST"]:not(.auth-form):not(.service-form) > label,
+body.role-frontline form.form.wo-new-form label,
+body.role-frontline .form.wo-new-form label{
+  color:#ffffff !important;
+}
+form.form.wo-new-form small,
+form.form.wo-new-form label small,
+form.form.wo-new-form[method="post"]:not(.auth-form):not(.service-form) > label small,
+form.form.wo-new-form[method="post"]:not(.auth-form):not(.service-form) > small{
+  color:#e8f1f8 !important;
+}
+form.form.wo-new-form input:not([type="hidden"]):not([type="button"]):not([type="submit"]),
+form.form.wo-new-form select,
+form.form.wo-new-form textarea{
+  background:#ffffff !important;
+  color:#0b1220 !important;
+}
+form.form.wo-new-form > .wo-new-support-hidden{
+  display:none !important;
+}
+form.form.wo-new-form > .wo-new-branch{
+  grid-column:1;
+  grid-row:1;
+}
+form.form.wo-new-form > .wo-new-c1{ grid-column:1; }
+form.form.wo-new-form > .wo-new-c3{ grid-column:3; }
+form.form.wo-new-form > .wo-new-r0{ grid-row:1; }
+form.form.wo-new-form > .wo-new-r1{ grid-row:2; }
+form.form.wo-new-form > .wo-new-r2{ grid-row:3; }
+form.form.wo-new-form > .wo-new-r3{ grid-row:4; }
+form.form.wo-new-form > .wo-new-r4{ grid-row:5; }
+form.form.wo-new-form > .wo-new-r5{ grid-row:6; }
+form.form.wo-new-form > .wo-new-span{
+  grid-column:1 / -1;
+}
+form.form.wo-new-form label small a{
+  color:#cfe8ff !important;
+}
+.wo-edit-spread > form.form.wo-new-form,
+.wo-edit-spread > form.form.wo-edit-form.wo-new-form[method="post"]:not(.auth-form):not(.service-form),
+.wo-edit-spread > form.form.wo-edit-form.wo-new-form[method="POST"]:not(.auth-form):not(.service-form){
+  width:100% !important;
+  max-width:none !important;
+}
+@media (max-width: 800px){
+  form.form.wo-new-form{
+    grid-template-columns:minmax(0, 1fr);
+  }
+  form.form.wo-new-form > .wo-new-branch,
+  form.form.wo-new-form > .wo-new-c1,
+  form.form.wo-new-form > .wo-new-c3,
+  form.form.wo-new-form > .wo-new-r0,
+  form.form.wo-new-form > .wo-new-r1,
+  form.form.wo-new-form > .wo-new-r2,
+  form.form.wo-new-form > .wo-new-r3,
+  form.form.wo-new-form > .wo-new-r4,
+  form.form.wo-new-form > .wo-new-r5{
+    grid-column:1;
+    grid-row:auto;
+  }
+}
+
+/* Create Parts: same title + navy panel as Create Work Order */
+.labor-charge-page h2.wo-new-title,
+body.role-frontline .labor-charge-page h2.wo-new-title,
+body.role-gm .labor-charge-page h2.wo-new-title{
+  color:#024e7a !important;
+  font-size:29px !important;
+  font-weight:800 !important;
+  letter-spacing:0.01em;
+  text-shadow:none !important;
+}
+form.form.create-parts-form,
+form.form.create-parts-form[method="post"]:not(.auth-form):not(.service-form),
+form.form.create-parts-form[method="POST"]:not(.auth-form):not(.service-form){
+  background:#0a3358 !important;
+  color:#ffffff !important;
+  border:1px solid #0a3358 !important;
+}
+form.form.create-parts-form label,
+form.form.create-parts-form > label,
+form.form.create-parts-form[method="post"]:not(.auth-form):not(.service-form) > label,
+form.form.create-parts-form[method="POST"]:not(.auth-form):not(.service-form) > label,
+body.role-frontline form.form.create-parts-form label,
+body.role-frontline .labor-charge-page .create-parts-form label,
+body.role-gm form.form.create-parts-form label{
+  color:#ffffff !important;
+  font-weight:800 !important;
+}
+form.form.create-parts-form small,
+form.form.create-parts-form label small,
+form.form.create-parts-form[method="post"]:not(.auth-form):not(.service-form) > small,
+form.form.create-parts-form[method="post"]:not(.auth-form):not(.service-form) > label small{
+  color:#e8f1f8 !important;
+}
+form.form.create-parts-form input:not([type="hidden"]):not([type="button"]):not([type="submit"]),
+form.form.create-parts-form select,
+form.form.create-parts-form textarea,
+.labor-charge-page .create-parts-form input,
+.labor-charge-page .create-parts-form select,
+.labor-charge-page .create-parts-form textarea{
+  background:#ffffff !important;
+  color:#0b1220 !important;
+  font-family:"Segoe UI",Calibri,Arial,Helvetica,sans-serif !important;
+  font-size:16px !important;
+  font-weight:700 !important;
+}
+form.form.create-parts-form input::placeholder,
+form.form.create-parts-form textarea::placeholder{
+  color:#334155 !important;
+  opacity:1 !important;
+  font-weight:600 !important;
+}
+
+/* Edit Parts (PM Dashboard): marine blue background + white type */
+#pm-edit-form,
+#pm-edit-form.form{
+  background:#0a3358 !important;
+  color:#ffffff !important;
+  border:1px solid #0a3358 !important;
+}
+#pm-edit-form label,
+#pm-edit-form > label{
+  color:#ffffff !important;
+  font-weight:800 !important;
+}
+#pm-edit-form small,
+#pm-edit-form label small{
+  color:#e8f1f8 !important;
+}
+#pm-edit-form input:not([type="hidden"]):not([type="button"]):not([type="submit"]),
+#pm-edit-form select,
+#pm-edit-form textarea{
+  background:#ffffff !important;
+  color:#0b1220 !important;
+  font-family:"Segoe UI",Calibri,Arial,Helvetica,sans-serif !important;
+  font-size:16px !important;
+  font-weight:700 !important;
+}
+#pm-edit-form input::placeholder,
+#pm-edit-form textarea::placeholder{
+  color:#334155 !important;
+  opacity:1 !important;
+  font-weight:600 !important;
+}
+
+/* Global: marine blue type on every title, panel, and dashboard card */
+:root{
+  --gm-marine:#024e7a;
+}
+:is(body, body.role-frontline, body.role-stm, body.role-pm, body.role-fm, body.role-gm) :is(
+  h1, h2, h3, h4, h5, h6,
+  .dashboard-title,
+  .gm-title,
+  .admin-title,
+  .sa-title,
+  .role-dashboard-title,
+  .role-dashboard-title > span,
+  .role-dashboard-title__suffix,
+  .sa-home-group__title,
+  .sa-card-title,
+  .fte-header-row .dashboard-title,
+  .gm-reporting-form label,
+  .gm-reporting-form--compact label,
+  .gm-target-form label,
+  .gm-range-pills a,
+  .gm-range-pills button,
+  .gm-range-pills span,
+  .dms-catalog,
+  .dms-catalog__title,
+  .dms-catalog__title-accent,
+  .dms-catalog__column-header,
+  .dms-catalog__brand-btn,
+  .dms-catalog__engine-btn
+){
+  color:#024e7a !important;
+}
+:is(body, body.role-frontline, body.role-stm, body.role-pm, body.role-fm, body.role-gm) :is(
+  .dashboard-card,
+  .gm-panel,
+  .gm-kpi-card,
+  .gm-matrix-panel,
+  .gm-action-panel,
+  .gm-analytics__card,
+  .gm-target-panel,
+  .gm-interprise-tool,
+  .gm-markup-card,
+  .fte-panel,
+  .fte-shell,
+  .admin-panel,
+  .pm-panel,
+  .sa-card,
+  .workorder-nav-card,
+  .employee-pane,
+  .technician-monitor__card,
+  .technician-monitor__summary article,
+  .card,
+  .dms-catalog
+){
+  color:#024e7a !important;
+}
+:is(body, body.role-frontline, body.role-stm, body.role-pm, body.role-fm, body.role-gm) :is(
+  .dashboard-card,
+  .gm-panel,
+  .gm-kpi-card,
+  .gm-matrix-panel,
+  .gm-action-panel,
+  .gm-analytics__card,
+  .gm-target-panel,
+  .gm-interprise-tool,
+  .gm-markup-card,
+  .fte-panel,
+  .fte-shell,
+  .admin-panel,
+  .pm-panel,
+  .sa-card,
+  .workorder-nav-card,
+  .employee-pane,
+  .technician-monitor__card,
+  .technician-monitor__summary article,
+  .card,
+  .dms-catalog
+) :is(h1,h2,h3,h4,h5,h6,p,span,strong,em,small,label,li,a,div,dt,dd,legend){
+  color:#024e7a !important;
+}
+:is(body, body.role-frontline, body.role-stm, body.role-pm, body.role-fm, body.role-gm) :is(
+  .dashboard-card__header,
+  .gm-panel-header,
+  .admin-panel-header,
+  .gm-kpi-label,
+  .gm-kpi-value,
+  .gm-kpi-delta,
+  .gm-kpi-card--hero .gm-kpi-value,
+  .gm-shell--dense .gm-kpi-value,
+  .fte-shell .gm-kpi-label,
+  .fte-shell .gm-kpi-value,
+  .dashboard-note,
+  .admin-note,
+  .muted,
+  .dashboard-submetric,
+  .dashboard-status,
+  .sa-line,
+  .sa-mtd-bar__label,
+  .sa-mtd-bar__value,
+  .sa-mtd-bar__meta,
+  .workorder-nav-card__body h3,
+  .workorder-nav-card__body p,
+  .workorder-nav-card__body span,
+  .gm-markup-formula,
+  .gm-markup-row__name,
+  .gm-markup-row__meta,
+  .gm-markup-row__money,
+  .gm-markup-row__value,
+  .gm-interprise-section,
+  .gm-donut__center strong,
+  .gm-donut__center span,
+  .gm-perf-col__name,
+  .gm-perf-col__value,
+  .gm-action-feed__item,
+  .gm-status-stats div,
+  .fte-feed-item,
+  .fte-feed-item strong,
+  .fte-feed-item span,
+  .fte-feed-item em,
+  .fte-feed-item small
+){
+  color:#024e7a !important;
+}
+:is(body, body.role-frontline, body.role-stm, body.role-pm, body.role-fm, body.role-gm) main a:not(.btn):not(.gm-magic-btn){
+  color:#024e7a !important;
+}
+.gm-range-pills button:not(.is-active):hover{
+  color:#024e7a !important;
+}
+
+/* Keep white type on colored chrome */
+.list th,
+.gm-table th,
+.gm-matrix-table th,
+.fte-table th,
+.fte-ledger-table th,
+.transaction-table th,
+.service-form .service-table th,
+.technician-monitor__grid th{
+  color:#ffffff !important;
+}
+.gm-range-pills .is-active{
+  color:#ffffff !important;
+}
+.gm-magic-btn,
+.btn-primary,
+button[type="submit"].btn{
+  color:#ffffff !important;
+}
+form.form.wo-new-form label,
+form.form.wo-new-form > label,
+form.form.create-parts-form label,
+form.form.create-parts-form > label,
+body.role-frontline form.form.wo-new-form label,
+body.role-frontline form.form.create-parts-form label{
+  color:#ffffff !important;
+}
+
+/* Status colors stay semantic */
+.gm-markup-row[data-health="watch"] .gm-markup-row__value{color:#c65911 !important;}
+.gm-markup-row[data-health="weak"] .gm-markup-row__value,
+.gm-markup-row[data-health="negative"] .gm-markup-row__value{color:#c0392b !important;}
+.gm-status-flag--ok,
+.gm-status-flag--pipeline,
+.gm-markup-badge--strong{color:var(--status-green-ink, #10243d) !important;}
+.gm-status-flag--watch,
+.gm-markup-badge--watch,
+.gm-markup-badge--na{color:var(--status-gray-ink, #10243d) !important;}
+.gm-status-flag--alert,
+.gm-markup-badge--weak,
+.gm-markup-badge--negative{color:var(--status-red-ink, #ffffff) !important;}
+.fte-pill--pass,
+.fte-pill--in,
+.fte-pill--returned{color:var(--status-green-ink, #10243d) !important;}
+.fte-pill--medium,
+.fte-pill--checked-out,
+.fte-pill--out{color:var(--status-gray-ink, #10243d) !important;}
+.fte-pill--critical,
+.fte-pill--fail,
+.fte-pill--high{color:var(--status-red-ink, #ffffff) !important;}
+
+/* Global warning pop-outs: black type on a light card */
+.gm-neg-popup__card,
+.office-stock-dialog__card{
+  background:#fff7f4 !important;
+  color:#111827 !important;
+  border:1px solid #b4534a !important;
+  box-shadow:0 12px 32px rgba(0,0,0,0.22) !important;
+}
+.gm-neg-popup__title,
+.gm-neg-popup__item,
+.gm-neg-popup__item b,
+.gm-neg-popup__item span,
+.gm-neg-popup__card,
+.gm-neg-popup__card :is(h1,h2,h3,h4,strong,b,span,li,ul,p,div),
+.office-stock-dialog__title,
+.office-stock-dialog__body,
+.office-stock-dialog__card,
+.office-stock-dialog__card :is(h1,h2,h3,h4,strong,b,span,li,ul,p,div),
+.pm-request-popup__list,
+.pm-request-popup__list li{
+  color:#111827 !important;
+}
+.office-stock-dialog #office-stock-dialog-ok,
+.office-stock-dialog #pm-request-popup-ok{
+  color:#ffffff !important;
+}
+
+/* A&E login panel: marine blue background + light type for contrast */
+.auth-shell .auth-card,
+.auth-shell .auth-card.auth-card{
+  background:#024e7a !important;
+  color:#ffffff !important;
+}
+.auth-shell .auth-card h1,
+.auth-shell .auth-card .brand-text,
+.auth-shell .auth-card .brand-text__name,
+.auth-shell .auth-card .brand-text__entity,
+.auth-shell .auth-card .auth-brand,
+.auth-shell .auth-card .auth-subtitle,
+.auth-shell .auth-card .auth-hint,
+.auth-shell .auth-card .auth-hint a,
+.auth-shell .auth-card label,
+.auth-shell .auth-card .auth-form > label,
+.auth-shell .auth-card .auth-form label,
+.auth-shell .auth-card #login-id-label,
+.auth-shell .auth-card p,
+.auth-shell .auth-card small{
+  color:#ffffff !important;
+  text-shadow:none !important;
+}
+.auth-shell .auth-card .auth-subtitle,
+.auth-shell .auth-card .auth-hint,
+.auth-shell .auth-card .brand-text__entity{
+  color:#d7e8f5 !important;
+}
+.auth-shell .auth-card .auth-hint a{
+  color:#cfe8ff !important;
+  text-decoration:underline;
+}
+.auth-shell .auth-card .success{
+  color:#d9f99d !important;
+}
+.auth-shell .auth-card .error{
+  color:#fecaca !important;
+}
+.auth-shell .auth-card .auth-form input,
+.auth-shell .auth-card .auth-form select,
+.auth-shell .auth-card .auth-form textarea{
+  background:#ffffff !important;
+  color:#0b1220 !important;
+}
+
+/* Readable databases: cell values are unbold black */
+html body .table-scroll table.list tbody td,
+html body .table-scroll table.list tbody td *,
+html body table.list tbody td,
+html body table.list tbody td *,
+html body table.transaction-table tbody td,
+html body table.transaction-table tbody td *,
+html body table.gm-table tbody td,
+html body table.gm-table tbody td *,
+html body table.gm-matrix-table tbody td,
+html body table.gm-matrix-table tbody td *,
+html body table.gm-action-table tbody td,
+html body table.gm-action-table tbody td *,
+html body table.fte-table tbody td,
+html body table.fte-table tbody td *,
+html body table.fte-ledger-table tbody td,
+html body table.fte-ledger-table tbody td *,
+html body .technician-monitor__grid tbody td,
+html body .technician-monitor__grid tbody td *,
+html body #parts-records table tbody td,
+html body #parts-records table tbody td *,
+html body.role-frontline table.list tbody td,
+html body.role-frontline table.list tbody td *,
+html body.role-stm table.list tbody td,
+html body.role-stm table.list tbody td *,
+html body.role-pm table.list tbody td,
+html body.role-pm table.list tbody td *,
+html body.role-fm table.list tbody td,
+html body.role-fm table.list tbody td *,
+html body.role-gm table.list tbody td,
+html body.role-gm table.list tbody td *{
+  color:#000000 !important;
+  font-weight:400 !important;
+}
+html body table.list tbody td .btn,
+html body table.list tbody td .btn *,
+html body #parts-records table tbody td .btn,
+html body #parts-records table tbody td .btn *{
+  font-weight:700 !important;
 }
 

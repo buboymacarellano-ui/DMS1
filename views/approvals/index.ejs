@@ -67,6 +67,263 @@
       </div>
     <% } %>
   </article>
+
+  <% if (approver && (pendingPOs && pendingPOs.length > 0)) { %>
+    <article class="dashboard-card admin-panel">
+      <div class="dashboard-card__header admin-panel-header">Purchase Orders Pending Approval</div>
+      <% if (!pendingPOs.length) { %>
+        <p class="dashboard-note admin-note">No pending purchase orders.</p>
+      <% } else { %>
+        <div class="table-scroll">
+          <table class="list">
+            <thead>
+              <tr>
+                <th>PO Number</th>
+                <th>Supplier</th>
+                <th>Location</th>
+                <th>Submitted By</th>
+                <th>Submitted Date</th>
+                <th>Item Count</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% pendingPOs.forEach(po => { %>
+                <tr>
+                  <td><strong><%= po.po_number || po.id || 'N/A' %></strong></td>
+                  <td><%= po.supplier || '-' %></td>
+                  <td><%= po.branch || '-' %></td>
+                  <td><%= po.sent_for_approval_by || po.created_by || '-' %></td>
+                  <td><%= po.sent_for_approval_at ? new Date(po.sent_for_approval_at).toLocaleString('en-PH') : new Date(po.created_at).toLocaleString('en-PH') %></td>
+                  <td><%= (po.lines && po.lines.length) || 0 %></td>
+                  <td><span class="badge badge-warning"><%= po.status %></span></td>
+                  <td class="action-buttons">
+                    <button class="btn btn-sm" onclick="showPODetails('<%= po.id %>', '<%= (JSON.stringify(po)).replace(/'/g, '&apos;') %>')">View</button>
+                    <form method="post" action="/approvals/purchase-order/<%= po.id %>/approve" style="display:inline">
+                      <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                    </form>
+                    <button class="btn btn-sm btn-danger" onclick="showRejectModal('<%= po.id %>', '<%= po.po_number || po.id %>')">Reject</button>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </article>
+  <% } %>
+
+  <% if (approver && (approvedPOs && approvedPOs.length > 0)) { %>
+    <article class="dashboard-card admin-panel">
+      <div class="dashboard-card__header admin-panel-header">Approved Purchase Orders Database</div>
+      <div class="table-scroll">
+        <table class="list">
+          <thead>
+            <tr>
+              <th>PO Number</th>
+              <th>Supplier</th>
+              <th>Location</th>
+              <th>Submitted By</th>
+              <th>Approved By</th>
+              <th>Approval Date</th>
+              <th>Item Count</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% approvedPOs.forEach(po => { %>
+              <tr>
+                <td><strong><%= po.po_number || po.id || 'N/A' %></strong></td>
+                <td><%= po.supplier || '-' %></td>
+                <td><%= po.branch || '-' %></td>
+                <td><%= po.sent_for_approval_by || po.created_by || '-' %></td>
+                <td><%= po.approved_by || '-' %></td>
+                <td><%= po.approved_at ? new Date(po.approved_at).toLocaleString('en-PH') : '-' %></td>
+                <td><%= (po.lines && po.lines.length) || 0 %></td>
+                <td>
+                  <button class="btn btn-sm" onclick="showPODetails('<%= po.id %>', '<%= (JSON.stringify(po)).replace(/'/g, '&apos;') %>')">View</button>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </article>
+  <% } %>
 </section>
+
+
+<style>
+  .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+  .modal.active { display: flex; justify-content: center; align-items: center; }
+  .modal-content { background-color: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+  .modal-close { cursor: pointer; font-size: 28px; font-weight: bold; }
+  .po-details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+  .detail-item { }
+  .detail-label { font-weight: bold; color: #666; font-size: 0.85em; }
+  .detail-value { font-size: 1em; }
+  .po-lines { margin-top: 20px; }
+  .po-lines table { width: 100%; border-collapse: collapse; }
+  .po-lines th, .po-lines td { padding: 8px; border: 1px solid #ddd; text-align: left; }
+  .po-lines th { background-color: #f5f5f5; }
+  .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-group button { flex: 1; }
+  .badge-warning { background-color: #ffc107; color: #000; padding: 3px 8px; border-radius: 3px; font-size: 0.85em; }
+  .action-buttons { white-space: nowrap; }
+  .action-buttons form { display: inline; margin-right: 5px; }
+  .btn-sm { padding: 4px 8px; font-size: 0.85em; margin: 2px; }
+  .btn-success { background-color: #28a745; color: white; }
+  .btn-danger { background-color: #dc3545; color: white; }
+</style>
+
+<!-- PO Details Modal -->
+<div id="poDetailsModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Purchase Order Details</h3>
+      <span class="modal-close" onclick="closePODetailsModal()">&times;</span>
+    </div>
+    <div id="poDetailsContent"></div>
+  </div>
+</div>
+
+<!-- PO Rejection Modal -->
+<div id="rejectModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Reject Purchase Order</h3>
+      <span class="modal-close" onclick="closeRejectModal()">&times;</span>
+    </div>
+    <form method="post" id="rejectForm">
+      <div class="form-group">
+        <label for="rejectReason">Reason for Rejection:</label>
+        <textarea id="rejectReason" name="reason" rows="5" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"></textarea>
+      </div>
+      <div class="btn-group">
+        <button type="submit" class="btn btn-danger">Reject PO</button>
+        <button type="button" class="btn" onclick="closeRejectModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function showPODetails(poId, poJson) {
+    try {
+      // Parse JSON and unescape HTML entities
+      const poStr = poJson.replace(/&apos;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+      const po = JSON.parse(poStr);
+      
+      let html = `
+        <div class="po-details-grid">
+          <div class="detail-item">
+            <div class="detail-label">PO Number</div>
+            <div class="detail-value"><strong>${po.po_number || po.id || 'N/A'}</strong></div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Status</div>
+            <div class="detail-value"><span class="badge badge-warning">${po.status || 'N/A'}</span></div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Supplier</div>
+            <div class="detail-value">${po.supplier || '-'}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Location</div>
+            <div class="detail-value">${po.branch || '-'}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Submitted By</div>
+            <div class="detail-value">${po.sent_for_approval_by || po.created_by || '-'}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Submitted Date</div>
+            <div class="detail-value">${po.sent_for_approval_at ? new Date(po.sent_for_approval_at).toLocaleString('en-PH') : new Date(po.created_at).toLocaleString('en-PH')}</div>
+          </div>
+      `;
+      
+      if (po.approved_by) {
+        html += `
+          <div class="detail-item">
+            <div class="detail-label">Approved By</div>
+            <div class="detail-value">${po.approved_by || '-'}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Approval Date</div>
+            <div class="detail-value">${po.approved_at ? new Date(po.approved_at).toLocaleString('en-PH') : '-'}</div>
+          </div>
+        `;
+      }
+      
+      html += `</div>`;
+      
+      // Add line items table
+      if (po.lines && po.lines.length > 0) {
+        html += `
+          <div class="po-lines">
+            <h4>Line Items</h4>
+            <table>
+              <thead>
+                <tr>
+                  <th>Part #</th>
+                  <th>Description</th>
+                  <th>Qty</th>
+                  <th>Unit</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+        
+        po.lines.forEach(line => {
+          html += `
+            <tr>
+              <td>${line.part_number || '-'}</td>
+              <td>${line.part_name || '-'}</td>
+              <td>${line.qty || 0}</td>
+              <td>${line.unit || '-'}</td>
+            </tr>
+          `;
+        });
+        
+        html += `
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+      
+      document.getElementById('poDetailsContent').innerHTML = html;
+      document.getElementById('poDetailsModal').classList.add('active');
+    } catch (err) {
+      console.error('Error parsing PO:', err);
+      alert('Error loading PO details');
+    }
+  }
+
+  function closePODetailsModal() {
+    document.getElementById('poDetailsModal').classList.remove('active');
+  }
+
+  function showRejectModal(poId, poNumber) {
+    document.getElementById('rejectForm').action = `/approvals/purchase-order/${poId}/reject`;
+    document.getElementById('rejectForm').dataset.poNumber = poNumber;
+    document.getElementById('rejectReason').value = '';
+    document.getElementById('rejectModal').classList.add('active');
+  }
+
+  function closeRejectModal() {
+    document.getElementById('rejectModal').classList.remove('active');
+  }
+
+  // Close modals when clicking outside
+  window.onclick = function(event) {
+    const detailsModal = document.getElementById('poDetailsModal');
+    const rejectModal = document.getElementById('rejectModal');
+    if (event.target === detailsModal) detailsModal.classList.remove('active');
+    if (event.target === rejectModal) rejectModal.classList.remove('active');
+  }
+</script>
 
 <%- include('../partials/footer') %>

@@ -14,11 +14,14 @@ const {
   isValidPartsTransactionType,
   normalizePartsTransactionType,
   displayPartsTransactionType,
+  isPartsActivityLog,
 } = require('../lib/parts-request');
 const {
   APPROVED_RECEIPTS_DIR,
   buildApprovedTransactionRecord,
   saveApprovedReceipt,
+  saveConsolidatedReceipt,
+  saveTransitReceipt,
 } = require('../lib/approved-parts-receipt');
 const { warehouseFulfillmentExtras } = require('../lib/parts-transfer-receive');
 const { allocatePartsTransactionNumber } = require('../lib/parts-transaction-number');
@@ -167,6 +170,117 @@ function renderWorkspace(res, locals = {}) {
   return res.render('parts-manager/workspace', locals);
 }
 
+/**
+ * Calculate health metrics for Parts Database
+ */
+function calculateHealthMetrics(data) {
+  const parts = (data.parts_inventory || []).filter(
+    (p) => !isPartsActivityLog(p)
+  );
+
+  const now = new Date();
+  const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+
+  // Data Integrity
+  const partNumbers = new Map();
+  let duplicateSkus = 0;
+  let missingDimensions = 0;
+  let orphanedRecords = 0;
+
+  parts.forEach((p) => {
+    const pn = String(p.part_number || '').trim().toUpperCase();
+    if (pn) {
+      const count = (partNumbers.get(pn) || 0) + 1;
+      if (count > 1) duplicateSkus = count;
+      partNumbers.set(pn, count);
+    }
+    if (!String(p.unit || '').trim()) missingDimensions++;
+    if (!String(p.supplier || '').trim() && toNumber(p.qty) > 0) orphanedRecords++;
+  });
+
+  // Inventory Risk
+  let deadStock = 0;
+  let lowStock = 0;
+  const safetyThreshold = 5;
+
+  parts.forEach((p) => {
+    const qty = toNumber(p.qty);
+    if (qty <= 0) return;
+    if (qty < safetyThreshold) lowStock++;
+
+    const txnDate = new Date(p.transaction_date || p.created_at || now);
+    if (txnDate < oneYearAgo && !p.sold_at) deadStock++;
+  });
+
+  // Financial Discrepancies
+  let zeroCostParts = 0;
+  let outdatedPricing = 0;
+
+  parts.forEach((p) => {
+    if (toNumber(p.cost_price) === 0 && toNumber(p.qty) > 0) zeroCostParts++;
+    if (!p.markup || toNumber(p.markup) === 0) outdatedPricing++;
+  });
+
+  return {
+    dataIntegrity: { duplicateSkus, missingDimensions, orphanedRecords },
+    inventoryRisk: { deadStock, lowStock },
+    financialDiscrepancies: { zeroCostParts, outdatedPricing },
+  };
+}
+
+/**
+ * Identify "delicate parts" - critical items needing attention
+ */
+function getDelicateParts(data) {
+  const parts = (data.parts_inventory || []).filter(
+    (p) => !isPartsActivityLog(p)
+  );
+
+  const safetyThreshold = 5;
+  const delicate = [];
+
+  parts.forEach((p) => {
+    const qty = toNumber(p.qty);
+    const partNum = String(p.part_number || '').trim();
+    const status = [];
+
+    // Critical low stock
+    if (qty > 0 && qty < safetyThreshold) {
+      status.push('Critical Low');
+    }
+
+    // No supplier
+    if (!String(p.supplier || '').trim() && qty > 0) {
+      status.push('No Supplier');
+    }
+
+    // Zero cost (pricing issue)
+    if (toNumber(p.cost_price) === 0 && qty > 0) {
+      status.push('$0 Cost');
+    }
+
+    if (status.length > 0) {
+      delicate.push({
+        id: p.id,
+        part_number: partNum,
+        part_name: String(p.part_name || '').trim(),
+        supplier: String(p.supplier || '').trim(),
+        current_stock: qty,
+        safety_stock: safetyThreshold,
+        cost_price: toNumber(p.cost_price),
+        status: status.join(' | '),
+      });
+    }
+  });
+
+  // Sort by criticality: critical low > no supplier > $0 cost
+  return delicate.sort((a, b) => {
+    const aScore = (a.current_stock === 0 ? 10 : 0) + (a.status.includes('Critical Low') ? 5 : 0);
+    const bScore = (b.current_stock === 0 ? 10 : 0) + (b.status.includes('Critical Low') ? 5 : 0);
+    return bScore - aScore;
+  });
+}
+
 async function loadWorkspaceLocals(req) {
   const data = await store.getRawData();
   inventory.ensureCollections(data);
@@ -183,6 +297,16 @@ async function loadWorkspaceLocals(req) {
   const approvals = buildPmApprovals(data);
   stockAlerts.reconcileWarehouse1Stock(data);
 
+  // Calculate health metrics
+  const healthMetrics = calculateHealthMetrics(data);
+  const delicateParts = getDelicateParts(data);
+
+  // Get approved purchase orders (read-only view for PM)
+  const allPOs = (data && data.parts_purchase_orders) || [];
+  const approvedPOs = allPOs
+    .filter(po => String(po.status || '').trim().toLowerCase() === 'approved')
+    .sort((a, b) => new Date(b.approved_at || 0) - new Date(a.approved_at || 0));
+
   return {
     parts: viewRows,
     total: viewRows.length,
@@ -197,6 +321,9 @@ async function loadWorkspaceLocals(req) {
     warehouse1: WAREHOUSE_1,
     vitals,
     approvals,
+    healthMetrics,
+    delicateParts,
+    approvedPOs,
     partsView: {
       isFrontline: false,
       scope: 'all',
@@ -479,6 +606,40 @@ router.get('/approved-receipts/:filename', async (req, res) => {
   }
 });
 
+// Transit Receipt: print all approved items with same transaction number on one page
+router.get('/api/transit-receipt/:transactionNumber', async (req, res) => {
+  try {
+    const txnNumber = String(req.params.transactionNumber || '').trim();
+    if (!txnNumber) {
+      return res.status(400).json({ error: 'Transaction number required.' });
+    }
+
+    const data = await store.getRawData();
+    // Approved items are in parts_inventory collection with an approved_at field
+    const approvedItems = (data.parts_inventory || []).filter(
+      (item) => String(item.transaction_number || '') === txnNumber && item.approved_at
+    );
+
+    if (approvedItems.length === 0) {
+      return res.status(404).json({ error: `No approved items found for transaction ${txnNumber}.` });
+    }
+
+    const approver = String(req.session?.user?.username || 'System').trim();
+    const receipt = await saveTransitReceipt(txnNumber, approvedItems, approver);
+
+    return res.json({
+      ok: true,
+      transactionNumber: txnNumber,
+      itemCount: approvedItems.length,
+      receiptUrl: receipt.receiptUrl,
+      filename: receipt.filename,
+    });
+  } catch (err) {
+    console.error('Error generating transit receipt:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/requests/:id/preview', async (req, res) => {
   const bundle = await loadPendingRequestBundle(req.params.id);
   if (!bundle) {
@@ -666,6 +827,21 @@ router.get('/export.csv', async (req, res) => {
   return res.status(200).send(file.csv);
 });
 
+/**
+ * GET /export-empty-template.csv
+ * Download an empty Parts-DB CSV template with headers only.
+ */
+router.get('/export-empty-template.csv', async (req, res) => {
+  const emptyData = {
+    parts_inventory: [],
+    parts_request_transactions: [],
+  };
+  const file = buildSortedDatabaseCsv(emptyData);
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="Parts-DB-Template-${new Date().toISOString().slice(0, 10)}.csv"`);
+  return res.status(200).send(file.csv);
+});
+
 router.post('/csv-import', async (req, res) => {
   const importMode = String(req.body.import_mode || 'integrate').toLowerCase() === 'replace' ? 'replace' : 'integrate';
   const csvPayload = String(req.body.import_csv || '');
@@ -734,6 +910,7 @@ router.post('/parts/:id/edit', async (req, res) => {
     sub_id: String(body.sub_id || '').trim(),
     generic: String(body.generic || '').trim(),
     supplier: String(body.supplier || '').trim(),
+    receiving_receipt_number: String(body.receiving_receipt_number || '').trim(),
     unit: String(body.unit || '').trim(),
     qty: toNumber(qty),
     cost_price: costPrice,
@@ -999,6 +1176,75 @@ router.get('/api/part-request-popups', async (req, res) => {
   });
 });
 
+router.get('/api/parts/find-by-number/:partNumber', async (req, res) => {
+  try {
+    const partNumber = String(req.params.partNumber || '').trim().toUpperCase();
+    if (!partNumber) {
+      return res.status(400).json({ error: 'Part number required.' });
+    }
+
+    const data = await store.getRawData();
+    const part = (data.parts_inventory || []).find(
+      (p) => String(p.part_number || '').trim().toUpperCase() === partNumber
+    );
+
+    if (!part) {
+      return res.status(404).json({ error: 'Part not found', found: false });
+    }
+
+    // Return only fields relevant for auto-fill
+    return res.json({
+      found: true,
+      part_name: part.part_name || '',
+      supplier: part.supplier || '',
+      unit: part.unit || '',
+      cost_price: part.cost_price != null ? Number(part.cost_price) : 0,
+      markup: part.markup != null ? Number(part.markup) : 0,
+      retail_price: part.retail_price != null ? Number(part.retail_price) : 0,
+      on_hand: part.on_hand || 0,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/parts/search-numbers/:prefix
+ * Search for part numbers by prefix (for autocomplete suggestions).
+ * Returns up to 15 matching part numbers sorted by frequency.
+ */
+router.get('/api/parts/search-numbers/:prefix', async (req, res) => {
+  try {
+    const prefix = String(req.params.prefix || '').trim().toUpperCase();
+    if (!prefix || prefix.length < 1) {
+      return res.json({ suggestions: [] });
+    }
+
+    const data = await store.getRawData();
+    const seen = new Map(); // Count occurrences to sort by frequency
+
+    (data.parts_inventory || []).forEach((row) => {
+      const pn = String(row.part_number || '').trim().toUpperCase();
+      if (pn.startsWith(prefix)) {
+        seen.set(pn, (seen.get(pn) || 0) + 1);
+      }
+    });
+
+    // Sort by frequency (descending) then alphabetically
+    const suggestions = Array.from(seen.entries())
+      .sort((a, b) => {
+        if (b[1] !== a[1]) return b[1] - a[1]; // by frequency desc
+        return a[0].localeCompare(b[0]); // alphabetically asc
+      })
+      .slice(0, 15)
+      .map((entry) => entry[0]);
+
+    return res.json({ suggestions });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/api/parts/:id', async (req, res) => {
   const part = await store.getById('parts_inventory', req.params.id);
   if (!part) return res.status(404).json({ error: 'Record not found.' });
@@ -1007,6 +1253,250 @@ router.get('/api/parts/:id', async (req, res) => {
     locked: !soldLock.ok,
     lockReason: soldLock.error || '',
   }));
+});
+
+/**
+ * POST /api/parts/receiving-entry
+ * Batch add receiving entries with auto-generated transaction data.
+ * Each entry becomes a new 'restock' transaction.
+ * Auto-generates: transaction_date (today), transaction_number, transaction_type='restock'
+ * Required fields per entry: part_number, part_name, qty, present_location
+ */
+router.post('/api/parts/receiving-entry', async (req, res) => {
+  try {
+    const entries = Array.isArray(req.body.entries) ? req.body.entries : [];
+    if (!entries.length) {
+      return res.status(400).json({ error: 'No entries provided.' });
+    }
+
+    const editor = String(req.session?.user?.username || 'system').trim();
+    const data = await store.getRawData();
+    const createdRecords = [];
+    const errors = [];
+
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+      const entryNum = i + 1;
+
+      // Validate required fields
+      const partNumber = String(entry.part_number || '').trim();
+      const partName = String(entry.part_name || '').trim();
+      const qtyVal = toNumber(entry.qty);
+      const location = resolvePmLocation(entry.present_location, data) || WAREHOUSE_1;
+
+      if (!partNumber) {
+        errors.push(`Row ${entryNum}: Part Number is required.`);
+        continue;
+      }
+      if (!partName) {
+        errors.push(`Row ${entryNum}: Part Name is required.`);
+        continue;
+      }
+      if (qtyVal <= 0) {
+        errors.push(`Row ${entryNum}: Qty must be greater than 0.`);
+        continue;
+      }
+
+      // Create restock transaction
+      const restock = {
+        id: genId(),
+        created_at: new Date().toISOString(),
+        transaction_date: new Date().toISOString().slice(0, 10),
+        transaction_number: allocatePartsTransactionNumber(data),
+        transaction_type: TYPE_RESTOCK,
+        present_location: location,
+        branch: location,
+        editor,
+        part_number: partNumber,
+        part_name: partName,
+        sub_id: String(entry.sub_id || '').trim(),
+        generic: String(entry.generic || '').trim(),
+        supplier: String(entry.supplier || '').trim(),
+        receiving_receipt_number: String(entry.receiving_receipt_number || '').trim(),
+        unit: String(entry.unit || '').trim(),
+        qty: qtyVal,
+        cost_price: toNumber(entry.cost_price),
+        markup: toNumber(entry.markup),
+        retail_price: toNumber(entry.retail_price),
+        sold_to: '',
+      };
+
+      // Push to data and persist
+      if (!Array.isArray(data.parts_inventory)) data.parts_inventory = [];
+      data.parts_inventory.push(restock);
+      inventory.rememberTransaction(data, restock);
+      createdRecords.push(restock);
+    }
+
+    // Save all changes
+    if (createdRecords.length > 0) {
+      await store.replaceData(data);
+      stockAlerts.reconcileWarehouse1Stock(data);
+    }
+
+    return res.json({
+      ok: true,
+      created: createdRecords.length,
+      records: createdRecords,
+      errors: errors.length > 0 ? errors : undefined,
+      message: `Successfully created ${createdRecords.length} receiving ${createdRecords.length === 1 ? 'entry' : 'entries'}.`,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/parts/csv-batch-add
+ * Parse CSV text and merge rows as restock transactions.
+ * Similar to receiving-entry but accepts raw CSV format.
+ * Each valid row becomes a new 'restock' transaction.
+ * Auto-generates: transaction_date, transaction_number, transaction_type='restock'
+ */
+router.post('/api/parts/csv-batch-add', async (req, res) => {
+  try {
+    const csvText = String(req.body.csv || '').trim();
+    if (!csvText) {
+      return res.status(400).json({ error: 'No CSV data provided.' });
+    }
+
+    const editor = String(req.session?.user?.username || 'system').trim();
+    const data = await store.getRawData();
+    const createdRecords = [];
+    const errors = [];
+    const { Readable } = require('stream');
+    const csvParser = require('csv-parser');
+
+    // Parse CSV using stream parser
+    const lines = csvText.split('\n').filter(Boolean);
+    if (lines.length < 1) {
+      return res.status(400).json({ error: 'CSV file is empty.' });
+    }
+
+    // Simple manual CSV parsing to extract headers and rows
+    const headerLine = lines[0];
+    const headers = headerLine.split(',').map((h) => String(h || '').trim().toLowerCase());
+
+    const FIELD_ALIASES = {
+      'part #': 'part_number',
+      'part number': 'part_number',
+      'partnumber': 'part_number',
+      'part name': 'part_name',
+      'partname': 'part_name',
+      'name': 'part_name',
+      'qty': 'qty',
+      'quantity': 'qty',
+      'location': 'present_location',
+      'present location': 'present_location',
+      'branch': 'present_location',
+      'supplier': 'supplier',
+      'receipt #': 'receiving_receipt_number',
+      'receipt number': 'receiving_receipt_number',
+      'receiving receipt #': 'receiving_receipt_number',
+      'receiving receipt number': 'receiving_receipt_number',
+      'unit': 'unit',
+      'cost': 'cost_price',
+      'cost price': 'cost_price',
+      'markup': 'markup',
+      'markup (%)': 'markup',
+      'retail': 'retail_price',
+      'retail price': 'retail_price',
+      'sub-id': 'sub_id',
+      'subid': 'sub_id',
+      'generic': 'generic',
+      'description': 'generic',
+    };
+
+    // Map header columns to field names
+    const fieldIndices = {};
+    headers.forEach((header, idx) => {
+      const alias = FIELD_ALIASES[header] || header;
+      fieldIndices[alias] = idx;
+    });
+
+    // Process each data row (skip header)
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue; // Skip empty lines
+
+      const rowNum = i + 1;
+      const values = line.split(',').map((v) => String(v || '').trim());
+      const entry = {};
+
+      // Build entry object from CSV values
+      Object.keys(fieldIndices).forEach((field) => {
+        const idx = fieldIndices[field];
+        if (idx >= 0 && idx < values.length) {
+          entry[field] = values[idx];
+        }
+      });
+
+      // Validate required fields
+      const partNumber = String(entry.part_number || '').trim();
+      const partName = String(entry.part_name || '').trim();
+      const qtyVal = toNumber(entry.qty);
+      const location = resolvePmLocation(entry.present_location, data) || WAREHOUSE_1;
+
+      if (!partNumber) {
+        errors.push(`Row ${rowNum}: Part Number is required.`);
+        continue;
+      }
+      if (!partName) {
+        errors.push(`Row ${rowNum}: Part Name is required.`);
+        continue;
+      }
+      if (qtyVal <= 0) {
+        errors.push(`Row ${rowNum}: Qty must be greater than 0.`);
+        continue;
+      }
+
+      // Create restock transaction
+      const restock = {
+        id: genId(),
+        created_at: new Date().toISOString(),
+        transaction_date: new Date().toISOString().slice(0, 10),
+        transaction_number: allocatePartsTransactionNumber(data),
+        transaction_type: TYPE_RESTOCK,
+        present_location: location,
+        branch: location,
+        editor,
+        part_number: partNumber,
+        part_name: partName,
+        sub_id: String(entry.sub_id || '').trim(),
+        generic: String(entry.generic || '').trim(),
+        supplier: String(entry.supplier || '').trim(),
+        receiving_receipt_number: String(entry.receiving_receipt_number || '').trim(),
+        unit: String(entry.unit || '').trim(),
+        qty: qtyVal,
+        cost_price: toNumber(entry.cost_price),
+        markup: toNumber(entry.markup),
+        retail_price: toNumber(entry.retail_price),
+        sold_to: '',
+      };
+
+      // Push to data
+      if (!Array.isArray(data.parts_inventory)) data.parts_inventory = [];
+      data.parts_inventory.push(restock);
+      inventory.rememberTransaction(data, restock);
+      createdRecords.push(restock);
+    }
+
+    // Save all changes
+    if (createdRecords.length > 0) {
+      await store.replaceData(data);
+      stockAlerts.reconcileWarehouse1Stock(data);
+    }
+
+    return res.json({
+      ok: true,
+      created: createdRecords.length,
+      records: createdRecords,
+      errors: errors.length > 0 ? errors : undefined,
+      message: `Successfully merged ${createdRecords.length} CSV ${createdRecords.length === 1 ? 'row' : 'rows'} into P-db.`,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 router.get('/api/branch-reports', async (req, res) => {
@@ -1126,6 +1616,114 @@ router.post('/api/parts-requests/:id/resolve', async (req, res) => {
   return res.json({ ok: true, decision, overview });
 });
 
+router.post('/api/requests/approve-all', async (req, res) => {
+  try {
+    const data = await store.getRawData();
+    const resolver = currentEditor(req);
+    
+    // Get all pending inventory requests using the exact same filter as displayed
+    const allInventory = (data.parts_inventory || []);
+    const pending = allInventory.filter(isPendingPartsRequest);
+    
+    console.log('🔍 Approve-all called');
+    console.log('  Total inventory:', allInventory.length);
+    console.log('  Pending requests:', pending.length);
+    
+    if (pending.length === 0) {
+      console.log('  First 3 inventory rows (to debug filter):');
+      allInventory.slice(0, 3).forEach((row, i) => {
+        console.log(`    [${i}] type=${row.transaction_type}, status=${row.request_status}, isPending=${isPendingPartsRequest(row)}`);
+      });
+      return res.status(400).json({ error: 'No pending requests to approve.' });
+    }
+    
+    console.log('  ✓ Processing', pending.length, 'requests');
+    
+    // Allocate one transaction number for all
+    const masterTransactionNumber = allocatePartsTransactionNumber(data);
+    const now = new Date().toISOString();
+    
+    // Process each one and collect items for consolidated receipt
+    const results = [];
+    const approvedItems = [];
+    for (const item of pending) {
+      try {
+        await store.update('parts_inventory', item.id, {
+          request_status: 'approved',
+          resolved_at: now,
+          resolved_by: resolver,
+          transaction_number: masterTransactionNumber,
+        });
+        
+        const mapped = mapInventoryPartsRequest(item);
+        const extras = warehouseFulfillmentExtras(mapped);
+        const payload = buildApprovedTransactionRecord(mapped, resolver, data, extras);
+        const record = await store.create('parts_inventory', payload);
+        
+        // Collect for consolidated receipt instead of saving individual receipt
+        approvedItems.push({
+          part_number: record.part_number,
+          part_name: record.part_name,
+          sub_id: record.sub_id,
+          generic: record.generic,
+          supplier: record.supplier,
+          unit: record.unit,
+          qty: record.qty,
+          cost_price: record.cost_price,
+          markup: record.markup,
+          retail_price: record.retail_price,
+          sold_to: record.sold_to,
+          work_order_number: record.work_order_number,
+          requesting_branch: record.requesting_branch,
+        });
+        
+        // Remember document for audit trail
+        rememberDocument(data, {
+          kind: 'receipt',
+          serial: record.transaction_number,
+          transaction_number: record.transaction_number,
+          related_id: record.id,
+          created_by: resolver,
+          title: 'Approved Parts Receipt',
+        });
+        
+        results.push({ id: item.id, ok: true, part_number: record.part_number });
+      } catch (err) {
+        console.error('    Error on request ' + item.id + ':', err.message);
+        results.push({ id: item.id, ok: false, error: err.message });
+      }
+    }
+    
+    console.log('  Results:', results.map((r) => r.ok ? '✓' : '✗').join(''));
+    
+    // Save ONE consolidated receipt for all items
+    let consolidatedReceipt = null;
+    const successCount = results.filter((r) => r.ok).length;
+    if (successCount > 0 && approvedItems.length > 0) {
+      consolidatedReceipt = await saveConsolidatedReceipt(masterTransactionNumber, approvedItems, resolver);
+      console.log('  ✓ Consolidated receipt:', consolidatedReceipt.filename);
+    }
+    
+    // Persist all changes
+    await store.replaceData(data);
+    
+    const overview = await buildOverview();
+    return res.json({
+      ok: true,
+      message: 'Approved ' + pending.length + ' requests',
+      transactionNumber: masterTransactionNumber,
+      requestsApproved: successCount,
+      receiptUrl: consolidatedReceipt ? consolidatedReceipt.receiptUrl : '',
+      receiptFile: consolidatedReceipt ? consolidatedReceipt.filename : '',
+      overview,
+    });
+  } catch (err) {
+    console.error('❌ Approve all error:', err.message);
+    console.error(err.stack);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/api/transfers', async (req, res) => {
   const data = await store.getRawData();
   const fromBranch = resolvePmLocation(req.body.from_branch, data);
@@ -1178,6 +1776,229 @@ router.post('/api/purchase-orders', async (req, res) => {
     stamped_label: stamp.label,
   });
   return res.status(201).json(po);
+});
+
+/**
+ * POST /api/purchase-orders-create
+ * Create a PO from ordering grid items (semi-automated workflow)
+ */
+router.post('/api/purchase-orders-create', async (req, res) => {
+  try {
+    const supplier = String(req.body.supplier || '').trim();
+    const location = String(req.body.location || '').trim();
+    const items = Array.isArray(req.body.items) ? req.body.items : [];
+
+    if (!supplier || !location || items.length === 0) {
+      return res.status(400).json({ ok: false, error: 'Supplier, location, and items are required.' });
+    }
+
+    const data = await store.getRawData();
+    const resolvedLocation = resolvePmLocation(location, data) || WAREHOUSE_1;
+    const stamp = stampNow();
+    const numbers = allocatePurchaseOrderNumbers(data);
+
+    // Format lines from ordering grid items
+    const lines = items.map((item) => ({
+      part_number: String(item.part_number || '').trim(),
+      part_name: String(item.part_name || '').trim(),
+      supplier: String(item.supplier || '').trim(),
+      qty: toNumber(item.qty),
+      unit: String(item.unit || 'pcs').trim(),
+    })).filter((line) => line.part_number && line.qty > 0);
+
+    if (!Array.isArray(data.parts_purchase_orders)) data.parts_purchase_orders = [];
+
+    const po = {
+      id: genId(),
+      created_at: stamp.iso,
+      stamped_at: stamp.iso,
+      stamped_label: stamp.label,
+      supplier: supplier,
+      branch: resolvedLocation,
+      present_location: resolvedLocation,
+      status: 'draft', // Start as draft, move to pending_approval after user approves
+      notes: '',
+      created_by: currentEditor(req),
+      transaction_number: numbers.transaction_number,
+      po_number: numbers.po_number,
+      lines: lines,
+      part_number: lines[0] ? lines[0].part_number : '',
+      part_name: lines[0] ? lines[0].part_name : '',
+      qty: lines.reduce((sum, line) => sum + (line.qty || 0), 0),
+    };
+
+    data.parts_purchase_orders.push(po);
+
+    // Remember document for audit trail
+    rememberDocument(data, {
+      kind: 'purchase_order',
+      serial: po.po_number,
+      transaction_number: po.transaction_number,
+      related_id: po.id,
+      created_by: po.created_by,
+      title: 'Purchase Order',
+    });
+
+    await store.replaceData(data);
+
+    return res.json({
+      ok: true,
+      po: po,
+      message: `PO ${po.po_number} created. Ready for approval.`,
+    });
+  } catch (err) {
+    console.error('PO creation error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/purchase-orders-send-approval
+ * Send PO to GM for approval (marks status as pending_approval)
+ */
+router.post('/api/purchase-orders-send-approval', async (req, res) => {
+  try {
+    const po_id = String(req.body.po_id || '').trim();
+    const po_number = String(req.body.po_number || '').trim();
+
+    if (!po_id || !po_number) {
+      return res.status(400).json({ ok: false, error: 'PO ID and number are required.' });
+    }
+
+    const data = await store.getRawData();
+    const po = findPurchaseOrder(data, po_id);
+
+    if (!po) {
+      return res.status(404).json({ ok: false, error: 'Purchase order not found.' });
+    }
+
+    const editor = currentEditor(req);
+    const stamp = stampNow();
+
+    // Update PO status to pending_approval
+    po.status = 'pending_approval';
+    po.sent_for_approval_at = stamp.iso;
+    po.sent_for_approval_by = editor;
+    po.approval_requested_at = stamp.iso;
+    po.approval_requested_by = editor;
+
+    // Remember document event for audit trail
+    rememberDocument(data, {
+      kind: 'purchase_order_approval_request',
+      serial: po.po_number,
+      transaction_number: po.transaction_number,
+      related_id: po.id,
+      created_by: editor,
+      title: `PO ${po.po_number} Sent for GM Approval`,
+    });
+
+    await store.replaceData(data);
+
+    // In production, you would send a notification to GM here
+    // For now, just log it
+    console.log(`✓ PO ${po_number} sent to GM for approval by ${editor}`);
+
+    return res.json({
+      ok: true,
+      po: po,
+      message: `PO ${po_number} sent to GM for approval. Awaiting review...`,
+    });
+  } catch (err) {
+    console.error('Send for approval error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/purchase-orders/:id/approve
+ * GM approves a PO (called from approval panel)
+ */
+router.post('/api/purchase-orders/:id/approve', async (req, res) => {
+  try {
+    const po_id = req.params.id;
+    const data = await store.getRawData();
+    const po = findPurchaseOrder(data, po_id);
+
+    if (!po) {
+      return res.status(404).json({ ok: false, error: 'Purchase order not found.' });
+    }
+
+    const editor = currentEditor(req);
+    const stamp = stampNow();
+
+    // Update PO status to approved
+    po.status = 'approved';
+    po.approved_at = stamp.iso;
+    po.approved_by = editor;
+
+    // Remember document event for audit trail
+    rememberDocument(data, {
+      kind: 'purchase_order_approved',
+      serial: po.po_number,
+      transaction_number: po.transaction_number,
+      related_id: po.id,
+      created_by: editor,
+      title: `PO ${po.po_number} Approved by GM`,
+    });
+
+    await store.replaceData(data);
+
+    return res.json({
+      ok: true,
+      po: po,
+      message: `PO ${po.po_number} approved! Ready to print and send to supplier.`,
+    });
+  } catch (err) {
+    console.error('Approve PO error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/purchase-orders/:id/reject
+ * GM rejects a PO (called from approval panel)
+ */
+router.post('/api/purchase-orders/:id/reject', async (req, res) => {
+  try {
+    const po_id = req.params.id;
+    const reason = String(req.body.reason || 'No reason provided').trim();
+    const data = await store.getRawData();
+    const po = findPurchaseOrder(data, po_id);
+
+    if (!po) {
+      return res.status(404).json({ ok: false, error: 'Purchase order not found.' });
+    }
+
+    const editor = currentEditor(req);
+    const stamp = stampNow();
+
+    // Update PO status to rejected
+    po.status = 'rejected';
+    po.rejected_at = stamp.iso;
+    po.rejected_by = editor;
+    po.rejection_reason = reason;
+
+    // Remember document event for audit trail
+    rememberDocument(data, {
+      kind: 'purchase_order_rejected',
+      serial: po.po_number,
+      transaction_number: po.transaction_number,
+      related_id: po.id,
+      created_by: editor,
+      title: `PO ${po.po_number} Rejected by GM`,
+    });
+
+    await store.replaceData(data);
+
+    return res.json({
+      ok: true,
+      po: po,
+      message: `PO ${po.po_number} rejected. Return to ordering grid to revise.`,
+    });
+  } catch (err) {
+    console.error('Reject PO error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
 });
 
 module.exports = router;

@@ -158,6 +158,7 @@
 
 .dms-catalog__brand-btn:hover {
   background: linear-gradient(180deg, #ffffff 0%, #c9dff2 100%);
+  color: #1a2332;
 }
 
 .dms-catalog__brand-btn.is-active {
