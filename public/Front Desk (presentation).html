@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log it Upfront - Service Advisor App Presentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: #1a1a1a;
+        }
+
+        .presentation {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .slide {
+            width: 90vw;
+            height: 90vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 60px;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide.active {
+            display: flex;
+        }
+
+        .slide h1 {
+            font-size: 4rem;
+            margin-bottom: 30px;
+            font-weight: 900;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .slide h2 {
+            font-size: 3rem;
+            margin-bottom: 40px;
+            font-weight: 800;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .slide p, .slide li {
+            font-size: 1.8rem;
+            line-height: 1.6;
+            margin: 15px 0;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .slide ul {
+            list-style: none;
+            margin: 30px 0;
+        }
+
+        .slide li {
+            margin: 20px 0;
+            padding: 15px 30px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .slide li:before {
+            content: "✓ ";
+            font-weight: bold;
+            margin-right: 15px;
+            color: #ffd700;
+        }
+
+        .slide-number {
+            position: absolute;
+            bottom: 30px;
+            left: 40px;
+            font-size: 1.2rem;
+            opacity: 0.7;
+        }
+
+        /* Gradient variations */
+        .slide.blue {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .slide.green {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .slide.orange {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .slide.teal {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .slide.warm {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .slide.cool {
+            background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+        }
+
+        .slide.crimson {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+
+        .slide.purple {
+            background: linear-gradient(135deg, #9d50bb 0%, #6e82a3 100%);
+        }
+
+        .slide.sunset {
+            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+        }
+
+        .slide.forest {
+            background: linear-gradient(135deg, #134e5e 0%, #71b280 100%);
+        }
+
+        /* Controls */
+        .controls {
+            position: absolute;
+            bottom: 40px;
+            right: 40px;
+            display: flex;
+            gap: 20px;
+            z-index: 100;
+        }
+
+        button {
+            padding: 6px 15px;
+            font-size: 0.55rem;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.3);
+            color: white;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: rgba(255,255,255,0.5);
+            transform: scale(1.05);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .fullscreen-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            background: rgba(255,255,255,0.3);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            z-index: 101;
+        }
+
+        .fullscreen-btn:hover {
+            background: rgba(255,255,255,0.5);
+        }
+
+        .icon {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+        }
+
+        .feature-box {
+            background: rgba(255,255,255,0.15);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        /* Keyboard navigation hint */
+        .hint {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 0.9rem;
+            opacity: 0.6;
+            background: rgba(0,0,0,0.3);
+            padding: 10px 15px;
+            border-radius: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .slide {
+                padding: 30px;
+            }
+
+            .slide h1 {
+                font-size: 2.5rem;
+            }
+
+            .slide h2 {
+                font-size: 2rem;
+            }
+
+            .slide p, .slide li {
+                font-size: 1.3rem;
+            }
+        }
+
+        @media print {
+            .controls, .fullscreen-btn, .hint, .slide-number {
+                display: none;
+            }
+
+            .slide {
+                page-break-after: always;
+                width: 100%;
+                height: auto;
+                min-height: 100vh;
+                border-radius: 0;
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="fullscreen-btn" onclick="toggleFullscreen()">Fullscreen (F11)</button>
+    <div class="hint">Use arrow keys ← → or buttons below to navigate</div>
+
+    <div class="presentation">
+        <!-- Slide 1: Title -->
+        <div class="slide blue active">
+            <div class="icon">📋</div>
+            <h1>LOG IT UPFRONT</h1>
+            <p style="font-size: 2.2rem; margin-top: 40px;">The Ultimate Front Desk Solution</p>
+            <p style="font-size: 1.5rem; opacity: 0.9; margin-top: 20px;">Speed • Precision • Simplicity</p>
+            <div class="slide-number">1 / 16</div>
+        </div>
+
+        <!-- Slide 2: The Challenge (Before) -->
+        <div class="slide orange">
+            <div class="icon">⏰</div>
+            <h2>The Old Way</h2>
+            <ul style="text-align: left;">
+                <li>Hunting for changes on screen</li>
+                <li>Wasting time on data entry</li>
+                <li>Inconsistent information</li>
+                <li>Confusion with multiple systems</li>
+                <li>Frustrated customers waiting</li>
+            </ul>
+            <div class="slide-number">2 / 16</div>
+        </div>
+
+        <!-- Slide 3: The Solution -->
+        <div class="slide green">
+            <div class="icon">✨</div>
+            <h2>The New Way</h2>
+            <p style="font-size: 2rem; margin: 30px 0;">Log it Upfront. Done.</p>
+            <ul>
+                <li>Fast, intuitive entry</li>
+                <li>Everything in one place</li>
+                <li>Instant clarity</li>
+                <li>No confusion</li>
+                <li>Faster service to customers</li>
+            </ul>
+            <div class="slide-number">3 / 16</div>
+        </div>
+
+        <!-- Slide 4: Huge Help for Front Desk -->
+        <div class="slide teal">
+            <div class="icon">🎯</div>
+            <h2>Built For You</h2>
+            <p style="font-size: 2rem; margin: 40px 0;">This app is a HUGE help<br>for people on the front desk</p>
+            <ul style="margin-top: 50px;">
+                <li>Designed with YOUR workflow in mind</li>
+                <li>Every click counts</li>
+                <li>Every second matters</li>
+            </ul>
+            <div class="slide-number">4 / 16</div>
+        </div>
+
+        <!-- Slide 5: No More Time Wasting -->
+        <div class="slide warm">
+            <div class="icon">⚡</div>
+            <h2>No More Time Wasting</h2>
+            <p style="font-size: 2.2rem; margin: 30px 0;">No consuming time<br>looking for changes on screen</p>
+            <div class="feature-box">
+                <p style="font-size: 1.6rem;">All the info you need is RIGHT THERE</p>
+                <p style="font-size: 1.4rem; margin-top: 15px; opacity: 0.95;">No scrolling. No searching. No confusion.</p>
+            </div>
+            <div class="slide-number">5 / 16</div>
+        </div>
+
+        <!-- Slide 6: We Use Precision -->
+        <div class="slide crimson">
+            <div class="icon">🎯</div>
+            <h2>We Use PRECISION</h2>
+            <ul>
+                <li>Every detail matters</li>
+                <li>Accurate from the start</li>
+                <li>No re-entering data</li>
+                <li>Zero mistakes</li>
+                <li>Professional service</li>
+            </ul>
+            <div class="slide-number">6 / 16</div>
+        </div>
+
+        <!-- Slide 7: Ultimate Tailored App -->
+        <div class="slide purple">
+            <div class="icon">👑</div>
+            <h2>Ultimate Tailored App</h2>
+            <p style="font-size: 2.2rem; margin: 40px 0;">This app is the ultimate<br>tailored app for the business</p>
+            <p style="font-size: 1.5rem; margin-top: 30px;">Not generic. Not bloated.<br>Built specifically for auto repair.</p>
+            <div class="slide-number">7 / 16</div>
+        </div>
+
+        <!-- Slide 8: Smart Reminders -->
+        <div class="slide sunset">
+            <div class="icon">🔔</div>
+            <h2>Pop-Out Reminders</h2>
+            <p style="font-size: 2rem; margin: 30px 0;">Never miss anything important</p>
+            <ul>
+                <li>Pending approvals alert you</li>
+                <li>Follow-ups remind you</li>
+                <li>Work orders update in real-time</li>
+                <li>You stay on top of everything</li>
+            </ul>
+            <div class="slide-number">8 / 16</div>
+        </div>
+
+        <!-- Slide 9: Uniformity of Recordings -->
+        <div class="slide forest">
+            <div class="icon">📊</div>
+            <h2>Uniformity of Recordings</h2>
+            <p style="font-size: 2rem; margin: 30px 0;">Consistent. Professional. Clean.</p>
+            <ul>
+                <li>Same format every time</li>
+                <li>No confusion between entries</li>
+                <li>Easy to audit</li>
+                <li>Easy to reference later</li>
+            </ul>
+            <div class="slide-number">9 / 16</div>
+        </div>
+
+        <!-- Slide 10: Smart Sorting & Filtering -->
+        <div class="slide blue">
+            <div class="icon">🔍</div>
+            <h2>Smart Sorting & Filtering</h2>
+            <ul>
+                <li>Find what you need in seconds</li>
+                <li>Filter by branch, status, date</li>
+                <li>Sort by priority</li>
+                <li>Quick search that actually works</li>
+                <li>No more digging through lists</li>
+            </ul>
+            <div class="slide-number">10 / 16</div>
+        </div>
+
+        <!-- Slide 11: Parts Autocomplete -->
+        <div class="slide orange">
+            <div class="icon">⚙️</div>
+            <h2>Smart Parts Autocomplete</h2>
+            <ul>
+                <li>Type part name → suggestions appear</li>
+                <li>Pick from matching part numbers</li>
+                <li>Price fills automatically</li>
+                <li>No typos. No mistakes.</li>
+                <li>20% faster data entry</li>
+            </ul>
+            <div class="slide-number">11 / 16</div>
+        </div>
+
+        <!-- Slide 12: Instant Part Info -->
+        <div class="slide green">
+            <div class="icon">💡</div>
+            <h2>Know Stock Instantly</h2>
+            <ul>
+                <li>See part availability as you type</li>
+                <li>Know exact stock levels</li>
+                <li>Request from warehouse in one click</li>
+                <li>No phone calls needed</li>
+                <li>Faster customer service</li>
+            </ul>
+            <div class="slide-number">12 / 16</div>
+        </div>
+
+        <!-- Slide 13: One-Click Workflows -->
+        <div class="slide teal">
+            <div class="icon">🚀</div>
+            <h2>One-Click Workflows</h2>
+            <ul>
+                <li>Create work order → click</li>
+                <li>Request parts → click</li>
+                <li>Check status → click</li>
+                <li>Send to manager → click</li>
+                <li>Done in seconds</li>
+            </ul>
+            <div class="slide-number">13 / 16</div>
+        </div>
+
+        <!-- Slide 14: Know Your Technicians -->
+        <div class="slide purple">
+            <div class="icon">👷</div>
+            <h2>Know Your Technicians</h2>
+            <p style="font-size: 2rem; margin: 30px 0;">See who's available & what they're doing</p>
+            <ul>
+                <li>View all technicians at a glance</li>
+                <li>See currently assigned jobs</li>
+                <li>Check skill specialties</li>
+                <li>Know who's free to take new work</li>
+                <li>Assign work efficiently</li>
+            </ul>
+            <div class="slide-number">14 / 18</div>
+        </div>
+
+        <!-- Slide 15: Technician Status Dashboard -->
+        <div class="slide sunset">
+            <div class="icon">📊</div>
+            <h2>Real-Time Technician Status</h2>
+            <p style="font-size: 2rem; margin: 30px 0;">Track every technician's status instantly</p>
+            <ul>
+                <li>🟢 BUSY - Currently working on a job</li>
+                <li>🟡 IDLE - Finished, waiting for next job</li>
+                <li>🔴 STOPPAGE - Waiting for parts/approval</li>
+                <li>⏸️ BREAK - On break or lunch</li>
+                <li>Smart assignment based on real status</li>
+            </ul>
+            <div class="slide-number">15 / 18</div>
+        </div>
+
+        <!-- Slide 16: Mobile-Ready -->
+        <div class="slide warm">
+            <div class="icon">📱</div>
+            <h2>Works Everywhere</h2>
+            <ul>
+                <li>Desktop speed. Mobile flexibility.</li>
+                <li>Use tablet at the counter</li>
+                <li>Same experience on any device</li>
+                <li>Responsive and fast</li>
+                <li>Internet-friendly</li>
+            </ul>
+            <div class="slide-number">16 / 18</div>
+        </div>
+
+        <!-- Slide 17: Business Impact -->
+        <div class="slide crimson">
+            <div class="icon">📈</div>
+            <h2>The Real Impact</h2>
+            <ul>
+                <li>30% faster customer check-in</li>
+                <li>Fewer mistakes = fewer comebacks</li>
+                <li>Better efficiency ratings</li>
+                <li>More customers per day</li>
+                <li>Higher job satisfaction</li>
+            </ul>
+            <div class="slide-number">17 / 18</div>
+        </div>
+
+        <!-- Slide 18: Ready to Go? -->
+        <div class="slide purple">
+            <div class="icon">✅</div>
+            <h1>Ready to Log It Upfront?</h1>
+            <p style="font-size: 2rem; margin-top: 50px;">Your front desk just got smarter.</p>
+            <p style="font-size: 1.5rem; margin-top: 30px; opacity: 0.9;">Let's make every day easier.</p>
+            <div class="slide-number">18 / 18</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button onclick="previousSlide()">← Back</button>
+        <button onclick="nextSlide()">Next →</button>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+
+        function showSlide(n) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (n + slides.length) % slides.length;
+            slides[currentSlide].classList.add('active');
+        }
+
+        function nextSlide() {
+            showSlide(currentSlide + 1);
+        }
+
+        function previousSlide() {
+            showSlide(currentSlide - 1);
+        }
+
+        function toggleFullscreen() {
+            const elem = document.documentElement;
+            if (!document.fullscreenElement) {
+                elem.requestFullscreen().catch(err => {
+                    alert('Cannot enter fullscreen: ' + err.message);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') nextSlide();
+            if (e.key === 'ArrowLeft') previousSlide();
+            if (e.key === 'F11') {
+                e.preventDefault();
+                toggleFullscreen();
+            }
+        });
+
+        // Track current slide
+        function updateSlideCounter() {
+            slides.forEach((slide, idx) => {
+                const counter = slide.querySelector('.slide-number');
+                if (counter) {
+                    counter.textContent = `${idx + 1} / ${slides.length}`;
+                }
+            });
+        }
+
+        updateSlideCounter();
+    </script>
+</body>
+</html>

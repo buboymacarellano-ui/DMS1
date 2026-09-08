@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DMS Auto Service Platform - GM Pitch</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #1a1a1a;
+      overflow: hidden;
+    }
+    
+    .presentation {
+      display: flex;
+      height: 100vh;
+    }
+    
+    .slide {
+      display: none;
+      width: 100%;
+      height: 100%;
+      padding: 60px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      overflow-y: auto;
+      animation: fadeIn 0.5s ease-in;
+    }
+    
+    .slide.active {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    /* Slide Types */
+    .slide.title {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    
+    .slide.section {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    
+    .slide.feature {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
+    .slide.closing {
+      background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    
+    .slide h1 {
+      font-size: 64px;
+      margin-bottom: 20px;
+      font-weight: 700;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .slide h2 {
+      font-size: 48px;
+      margin-bottom: 30px;
+      font-weight: 700;
+    }
+    
+    .slide h3 {
+      font-size: 28px;
+      margin-bottom: 30px;
+      opacity: 0.95;
+      font-weight: 600;
+    }
+    
+    .slide.title .subtitle {
+      font-size: 32px;
+      opacity: 0.9;
+      margin-top: 20px;
+    }
+    
+    .slide.closing .subtitle {
+      font-size: 28px;
+      margin-top: 20px;
+      margin-bottom: 40px;
+    }
+    
+    .slide.closing .tagline {
+      font-size: 24px;
+      margin-top: 30px;
+      opacity: 0.85;
+      font-weight: 500;
+    }
+    
+    .icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+    }
+    
+    .content-list {
+      list-style: none;
+      font-size: 24px;
+      line-height: 1.8;
+    }
+    
+    .content-list li {
+      margin-bottom: 20px;
+      padding-left: 0;
+      display: flex;
+      align-items: center;
+    }
+    
+    .content-list li:before {
+      content: "▸ ";
+      margin-right: 15px;
+      font-size: 28px;
+    }
+    
+    .points-list {
+      list-style: none;
+      font-size: 20px;
+      line-height: 1.7;
+    }
+    
+    .points-list li {
+      margin-bottom: 15px;
+      padding-left: 0;
+      display: flex;
+      align-items: flex-start;
+    }
+    
+    .points-list li:before {
+      content: "✓";
+      margin-right: 15px;
+      font-size: 24px;
+      color: rgba(255,255,255,0.9);
+      font-weight: bold;
+      min-width: 30px;
+    }
+    
+    .controls {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      display: flex;
+      gap: 10px;
+      z-index: 1000;
+    }
+    
+    button {
+      padding: 12px 24px;
+      font-size: 14px;
+      border: none;
+      border-radius: 5px;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s;
+      font-weight: 600;
+    }
+    
+    button:hover {
+      background: rgba(255,255,255,0.35);
+    }
+    
+    .slide-counter {
+      position: fixed;
+      bottom: 30px;
+      left: 30px;
+      color: white;
+      font-size: 14px;
+      background: rgba(0,0,0,0.3);
+      padding: 10px 20px;
+      border-radius: 5px;
+    }
+    
+    @media (max-width: 768px) {
+      .slide { padding: 30px; }
+      .slide h1 { font-size: 40px; }
+      .slide h2 { font-size: 32px; }
+      .slide h3 { font-size: 20px; }
+      .content-list { font-size: 18px; }
+      .points-list { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="presentation" id="presentation">
+    <div class="slide title" data-slide="0">
+      <div class="icon">📊</div>
+      <h1>DMS Auto Service Platform</h1>
+      <div class="subtitle">Real-Time Enterprise Dashboard for General Managers</div>
+    </div>
+    <div class="slide section" data-slide="1">
+      <h2>The Challenge</h2>
+      <ul class="content-list">
+        <li>❌ Multiple systems for different departments</li>
+        <li>❌ Delayed information and reporting</li>
+        <li>❌ Lack of real-time visibility across branches</li>
+        <li>❌ Manual data entry and errors</li>
+        <li>❌ Difficulty making fast, informed decisions</li>
+      </ul>
+    </div>
+    <div class="slide section" data-slide="2">
+      <h2>The Solution: DMS Platform</h2>
+      <ul class="content-list">
+        <li>✅ Unified dashboard for all operations</li>
+        <li>✅ Real-time KPI monitoring</li>
+        <li>✅ Enterprise-wide data visibility</li>
+        <li>✅ Automated workflows and approvals</li>
+        <li>✅ Data-driven decision support</li>
+      </ul>
+    </div>
+    <div class="slide feature" data-slide="3">
+      <h2>🎯 YOU'RE ON TOP</h2>
+      <h3>Complete Enterprise Visibility</h3>
+      <ul class="points-list">
+        <li>View all 7 branches on ONE dashboard</li>
+        <li>Monitor revenue, profit margins, and pacing in real-time</li>
+        <li>See pending work orders and billing backlog instantly</li>
+        <li>Track employee performance across organization</li>
+        <li>Identify issues before they become problems</li>
+        <li>Make decisions with complete data</li>
+      </ul>
+    </div>
+    <div class="slide feature" data-slide="4">
+      <h2>🔐 FULL ACCESS TO ALL DEPARTMENTS</h2>
+      <h3>Role-Based Enterprise Control</h3>
+      <ul class="points-list">
+        <li>Service Department: Work orders, technician assignments, billing</li>
+        <li>Parts Department: Inventory, approvals, transfers, purchasing</li>
+        <li>Finance: Transactions, aging receivables, cash flow analysis</li>
+        <li>HR & Performance: Employee metrics, incentives, FTE tracking</li>
+        <li>Administration: System configuration, backups, audit logs</li>
+        <li>Approve or reject high-value requests with one click</li>
+      </ul>
+    </div>
+    <div class="slide feature" data-slide="5">
+      <h2>⚙️ ERGONOMIC & EASY TO OPERATE</h2>
+      <h3>Designed for Quick Decision-Making</h3>
+      <ul class="points-list">
+        <li>Intuitive dashboard with color-coded metrics</li>
+        <li>No complex navigation - everything accessible from main screen</li>
+        <li>Mobile-friendly design works on phone, tablet, desktop</li>
+        <li>Search functionality across all departments instantly</li>
+        <li>Customizable reports and exports (CSV, PDF)</li>
+        <li>Minimal training required - built for busy GMs</li>
+      </ul>
+    </div>
+    <div class="slide feature" data-slide="6">
+      <h2>📈 KEY METRICS AT A GLANCE</h2>
+      <h3>The Information You Need to Lead</h3>
+      <ul class="points-list">
+        <li>Today's Revenue: Know your daily performance instantly</li>
+        <li>Weekly/Monthly Revenue: Track pacing against targets</li>
+        <li>Pending Billing: Monitor work completion bottlenecks</li>
+        <li>Average Ticket Value: Identify pricing trends</li>
+        <li>Branch Performance: See which locations are driving profit</li>
+        <li>Markup Health: Ensure healthy gross margins</li>
+      </ul>
+    </div>
+    <div class="slide feature" data-slide="7">
+      <h2>🚀 OPERATIONAL EXCELLENCE</h2>
+      <h3>What You Can Control & Improve</h3>
+      <ul class="points-list">
+        <li>Approve/reject branch parts requests in bulk</li>
+        <li>Manage pricing and override strategies</li>
+        <li>Configure employee roles and permissions</li>
+        <li>Set up automated approval workflows</li>
+        <li>Generate compliance and audit reports</li>
+        <li>Schedule backups and manage data retention</li>
+      </ul>
+    </div>
+    <div class="slide feature" data-slide="8">
+      <h2>💰 FINANCIAL CONTROL</h2>
+      <h3>Know Your Numbers in Real-Time</h3>
+      <ul class="points-list">
+        <li>Track revenue by branch, date, service type, payment method</li>
+        <li>Monitor customer aging and receivables risk</li>
+        <li>Analyze labor vs. parts margin contribution</li>
+        <li>Export financial data for accounting reconciliation</li>
+        <li>Spot pricing anomalies and revenue opportunities</li>
+        <li>Make data-driven decisions about staffing and inventory</li>
+      </ul>
+    </div>
+    <div class="slide feature" data-slide="9">
+      <h2>👥 TALENT MANAGEMENT</h2>
+      <h3>Manage Your Team with Confidence</h3>
+      <ul class="points-list">
+        <li>View technician productivity and revenue generated</li>
+        <li>Track employee performance metrics and attendance</li>
+        <li>Manage compensation and incentive calculations</li>
+        <li>Monitor FTE allocation across branches</li>
+        <li>Create and manage user roles and permissions</li>
+        <li>Audit employee actions for compliance</li>
+      </ul>
+    </div>
+    <div class="slide feature" data-slide="10">
+      <h2>📦 PARTS & INVENTORY OVERSIGHT</h2>
+      <h3>Never Stock Out, Never Overstock</h3>
+      <ul class="points-list">
+        <li>Monitor warehouse 1 inventory across all branches</li>
+        <li>Track pending parts requests and approvals</li>
+        <li>Analyze parts pricing and margin health</li>
+        <li>Manage branch transfers and purchasing</li>
+        <li>Generate low-stock and aging inventory alerts</li>
+        <li>Control costs through centralized approval system</li>
+      </ul>
+    </div>
+    <div class="slide feature" data-slide="11">
+      <h2>⚡ SPEED & EFFICIENCY</h2>
+      <h3>Faster Decisions = Better Results</h3>
+      <ul class="points-list">
+        <li>Eliminate email chains for approvals - approve in app</li>
+        <li>No waiting for reports - dashboards update in real-time</li>
+        <li>Search any customer/vehicle/work order in seconds</li>
+        <li>One-click exports for accounting or analysis</li>
+        <li>Customizable date ranges for flexible reporting</li>
+        <li>Automated calculations reduce human error</li>
+      </ul>
+    </div>
+    <div class="slide feature" data-slide="12">
+      <h2>🛡️ SECURITY & COMPLIANCE</h2>
+      <h3>Your Data is Protected</h3>
+      <ul class="points-list">
+        <li>Role-based access control (RBAC)</li>
+        <li>Complete audit trail of all actions and changes</li>
+        <li>Password protection on sensitive operations</li>
+        <li>Automated daily backups to secure location</li>
+        <li>Session management and timeout protection</li>
+        <li>Compliance-ready for regulatory requirements</li>
+      </ul>
+    </div>
+    <div class="slide section" data-slide="13">
+      <h2>The Business Impact</h2>
+      <ul class="content-list">
+        <li>📊 Increase Revenue: Make data-driven pricing decisions</li>
+        <li>💸 Reduce Costs: Control parts inventory and optimize staffing</li>
+        <li>⏱️ Save Time: Eliminate manual reporting and approvals</li>
+        <li>🎯 Improve Margins: Monitor markup health across departments</li>
+        <li>👥 Better Team: Empower staff with clear metrics</li>
+        <li>📈 Growth: Scale operations with better visibility</li>
+      </ul>
+    </div>
+    <div class="slide feature" data-slide="14">
+      <h2>✨ WHY THIS APP IS PERFECT FOR YOU</h2>
+      <h3>Built Specifically for Multi-Branch Auto Repair</h3>
+      <ul class="points-list">
+        <li>Designed for automotive shop operations (not generic software)</li>
+        <li>Handles all your unique workflows: service, parts, billing, payroll</li>
+        <li>Consolidates data from multiple branches into one view</li>
+        <li>Provides metrics that matter: revenue, margins, efficiency</li>
+        <li>Scales as your business grows</li>
+        <li>Customizable to your specific processes</li>
+      </ul>
+    </div>
+    <div class="slide section" data-slide="15">
+      <h2>Next Steps</h2>
+      <ul class="content-list">
+        <li>✓ Schedule a 20-minute live demo of your actual data</li>
+        <li>✓ See real dashboards with today's metrics</li>
+        <li>✓ Experience the ease of navigation firsthand</li>
+        <li>✓ Discuss customizations for your specific workflow</li>
+        <li>✓ Plan training for your team</li>
+        <li>✓ Go live and start making better decisions</li>
+      </ul>
+    </div>
+    <div class="slide closing" data-slide="16">
+      <h1>You're Always on Top</h1>
+      <div class="subtitle">Real-time visibility. Complete control. Better decisions.</div>
+      <div class="tagline">DMS Platform: Enterprise Management for Automotive</div>
+    </div>
+
+  </div>
+  
+  <div class="slide-counter">
+    <span id="current">1</span> / <span id="total">17</span>
+  </div>
+  
+  <div class="controls">
+    <button onclick="previousSlide()">← Back</button>
+    <button onclick="nextSlide()">Next →</button>
+    <button onclick="toggleFullscreen()">Fullscreen</button>
+  </div>
+  
+  <script>
+    let currentSlide = 0;
+    const totalSlides = 17;
+    
+    function showSlide(n) {
+      const slides = document.querySelectorAll('.slide');
+      if (n >= totalSlides) currentSlide = 0;
+      if (n < 0) currentSlide = totalSlides - 1;
+      
+      slides.forEach(slide => slide.classList.remove('active'));
+      slides[currentSlide].classList.add('active');
+      
+      document.getElementById('current').textContent = currentSlide + 1;
+    }
+    
+    function nextSlide() {
+      currentSlide++;
+      showSlide(currentSlide);
+    }
+    
+    function previousSlide() {
+      currentSlide--;
+      showSlide(currentSlide);
+    }
+    
+    function toggleFullscreen() {
+      const elem = document.documentElement;
+      if (!document.fullscreenElement) {
+        elem.requestFullscreen().catch(err => console.log('Fullscreen denied'));
+      } else {
+        document.exitFullscreen();
+      }
+    }
+    
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') nextSlide();
+      if (e.key === 'ArrowLeft') previousSlide();
+    });
+    
+    // Initialize
+    showSlide(currentSlide);
+  </script>
+</body>
+</html>
