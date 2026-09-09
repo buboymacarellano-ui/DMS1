@@ -25,6 +25,8 @@
     "migrate:proposed-location-branch:dry-run": "node scripts/migrate-add-proposed-location-branch.js --dry-run",
     "import:transactions": "node scripts/import-transaction-records.js",
     "import:transactions:replace": "node scripts/import-transaction-records.js --replace",
+    "import:parts-csv": "node scripts/import-parts-csv.js",
+    "import:parts-csv:dry-run": "node scripts/import-parts-csv.js --dry-run",
     "provision:employee-logins": "node scripts/provision-employee-logins.js"
   },
   "author": "",
