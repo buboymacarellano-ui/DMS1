@@ -1,12 +1,6 @@
-#!/usr/bin/env node
-/**
- * Import parts inventory from CSV/TSV format
- * Usage: node scripts/import-parts-csv.js [--dry-run] [--file=path/to/file.txt]
- */
-
 const fs = require('fs');
 const path = require('path');
-const Store = require('../data/store');
+const store = require('../data/store');
 
 const args = process.argv.slice(2);
 const isDryRun = args.includes('--dry-run');
@@ -103,9 +97,6 @@ async function importData() {
     }
 
     // Load store and import
-    const store = new Store();
-    await store.ready();
-
     console.log('\n💾 Importing to database...');
     let imported = 0;
     let errors = 0;
