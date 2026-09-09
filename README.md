@@ -56,19 +56,19 @@ Google Chrome or Microsoft Edge. Both work on Windows and Mac. Do not use very o
 
 ## 2. Logging in
 
-The login page asks for five things, in this order:
+The login page asks for these fields:
 
-| Field | What to enter |
-| --- | --- |
-| **Department** | Pick your department from the list. |
-| **Role** | Pick your job role. The choices change based on the department you picked. |
-| **Employee ID** | Your assigned ID. |
-| **Location / Branch** | Only appears for branch staff. Pick the branch you are assigned to. |
-| **Password** | Your password. Minimum 6 characters. |
+| Field | What to enter | Required for |
+| --- | --- | --- |
+| **Department** | Pick your department from the list. | Everyone |
+| **Role** | Pick your job role. The choices change based on the department you picked. | Everyone |
+| **Employee ID** | Your assigned ID from the Employee DB. | Everyone |
+| **Location / Branch** | Pick the branch you are assigned to. | Service Advisors (SA), Service Receptionists (SR), Senior Service Receptionists (SSR) only |
+| **Password** | Your password. Minimum 6 characters. | Everyone |
 
 Press **Log In**.
 
-**Important:** pick the correct branch. The system uses it to decide which work orders you are allowed to see and edit. If you pick the wrong branch, records from your real branch will be hidden from you.
+**Important for SA, SR, SSR:** Pick the correct branch. The system uses it to decide which work orders you are allowed to see and edit. If you pick the wrong branch, records from your real branch will be hidden from you.
 
 If the login fails, an error message appears in red above the form. Read it — it usually says exactly what is wrong.
 

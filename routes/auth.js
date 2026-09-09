@@ -248,6 +248,8 @@ function buildLoginPayload({
   branches = [],
 } = {}) {
   const dept = portals.normalizeDepartment(department) || portals.PORTAL_SERVICE;
+  // Only SA, SR, SSR require location selection
+  const needsLocation = isFrontlineRole(accessLevel);
   return Object.assign({
     error,
     success,
@@ -257,6 +259,7 @@ function buildLoginPayload({
     department: dept,
     branch,
     branches,
+    needsLocation,
   }, portals.loginPayloadExtras());
 }
 
@@ -396,11 +399,15 @@ router.post('/login', async (req, res) => {
   if (!loginInputRaw) {
     return renderLogin(400, missingIdError(accessLevel));
   }
-  if (!selectedBranch) {
+  
+  // Only SA, SR, SSR require location selection. Other roles skip it.
+  const isFrontlineRequired = isFrontlineRole(accessLevel);
+  if (isFrontlineRequired && !selectedBranch) {
     return renderLogin(400, 'Select your assigned location to continue.');
   }
+  
   if (isLoginAuthDisabled()) {
-    const role = applyOpenLoginSession(req, accessLevel, loginInputRaw, selectedBranch, department);
+    const role = applyOpenLoginSession(req, accessLevel, loginInputRaw, selectedBranch || '', department);
     return res.redirect(redirectForRole(role));
   }
   if (!password) {

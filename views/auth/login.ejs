@@ -17,7 +17,7 @@
         </p>
         <h1>A&amp;E LogIn</h1>
       </div>
-      <p class="auth-subtitle">Sign in with Department, Role, Employee ID, Location / Branch, and password. Employee DB authorizes every role, including GM.</p>
+<p class="auth-subtitle">Sign in with Department, Role, Employee ID, and password. Service Advisors (SA), Service Receptionists (SR), and Senior Service Receptionists (SSR) must also select their assigned Location / Branch. Employee DB authorizes every role, including GM.</p>
 
       <% const openAuth = typeof loginAuthDisabled !== 'undefined' && loginAuthDisabled; %>
       <% const deptNow = typeof department !== 'undefined' && department ? department : 'service'; %>
@@ -34,7 +34,7 @@
       <% const locationsByDept = (typeof locationsByDepartment !== 'undefined' && locationsByDepartment) ? locationsByDepartment : {}; %>
       <% const needsLocation = true; %>
       <% if (openAuth) { %>
-        <p class="success">Login auth is disabled for building. Department, role, employee ID, and location still must be filled. Password is optional and not checked.</p>
+        <p class="success">Login auth is disabled for building. Department, role, employee ID, and password still must be filled. Location is only required for SA, SR, SSR. Password is optional and not checked.</p>
       <% } %>
 
       <% if (error) { %>
@@ -68,9 +68,9 @@
           <span id="login-id-label">Employee ID</span>
           <input id="login-id-input" type="text" name="username" value="<%= username %>" autocomplete="username" required />
         </label>
-        <label id="login-location-field" <%= needsLocation ? '' : 'hidden' %>>
+        <label id="login-location-field" hidden>
           Location / Branch
-          <select name="branch" id="login-location-input" <%= needsLocation ? 'required' : '' %>>
+          <select name="branch" id="login-location-input">
             <option value="">-- Select your assigned location --</option>
             <% const initialLocations = locationsByDept[deptNow] || []; %>
             <% initialLocations.forEach((locationOption) => { %>
@@ -109,6 +109,13 @@
       const locationField = document.getElementById('login-location-field');
       const locationInput = document.getElementById('login-location-input');
       if (!form || !departmentSelect || !roleSelect || !idField || !idInput || !locationField || !locationInput) return;
+      
+      // Roles that require location (SA, SR, SSR)
+      const FRONTLINE_ROLES = new Set([
+        'service_advisor',
+        'service_receptionist',
+        'senior_service_receptionist'
+      ]);
 
       const fallbackRoles = {
         service: [
@@ -195,8 +202,11 @@
       }
 
       function syncLocation(department, keepValue) {
-        locationField.hidden = false;
-        locationInput.required = true;
+        // Only show location for frontline roles (SA, SR, SSR)
+        const selectedRole = String(roleSelect.value || '');
+        const isFrontline = FRONTLINE_ROLES.has(selectedRole);
+        locationField.hidden = !isFrontline;
+        locationInput.required = isFrontline;
         fillLocations(department, keepValue);
       }
 
