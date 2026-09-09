@@ -29,6 +29,7 @@
     <button type="button" class="btn pm-role-btn" id="parts-report-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="parts-report-modal">5. Create Report</button>
     <button type="button" class="btn pm-role-btn<%= panel === 'health' ? ' pm-role-btn--active' : '' %>" data-pm-panel="health">6. DB Health Monitor</button>
     <button type="button" class="btn pm-role-btn<%= panel === 'ordering' ? ' pm-role-btn--active' : '' %>" data-pm-panel="ordering">7. Ordering Grid</button>
+    <button type="button" class="btn pm-role-btn<%= panel === 'database' ? ' pm-role-btn--active' : '' %>" data-pm-panel="database">8. Parts-DB-All</button>
   </nav>
 
   <%- include('../partials/parts-report-modal') %>
@@ -589,7 +590,7 @@
     </div>
   </div>
 
-  <section class="dashboard-card gm-panel pm-database" id="pm-database">
+  <section class="pm-panel-card dashboard-card gm-panel" id="pm-panel-database" data-pm-section="database" hidden>
     <div class="dashboard-card__header gm-panel-header"><%= view.label || 'All branches + Warehouse 1 General Parts Database' %></div>
     <form method="get" action="/parts-manager" class="form pm-db-filter">
       <label style="margin:0;">Search
