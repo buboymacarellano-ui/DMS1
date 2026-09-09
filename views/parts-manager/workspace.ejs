@@ -626,6 +626,7 @@
             <th style="white-space:nowrap;">Transaction Type</th>
             <th style="white-space:nowrap;">Present Location</th>
             <th style="white-space:nowrap;">Editor</th>
+            <th style="white-space:nowrap;">Barcode</th>
             <th style="white-space:nowrap;">Part Number</th>
             <th style="white-space:nowrap;">Part Name</th>
             <th style="white-space:nowrap;">Sub-ID</th>
@@ -643,7 +644,7 @@
         </thead>
         <tbody>
           <% if (!parts.length) { %>
-            <tr><td colspan="18" style="text-align:center;padding:20px;">No records found.</td></tr>
+            <tr><td colspan="19" style="text-align:center;padding:20px;">No records found.</td></tr>
           <% } %>
           <% parts.forEach((p, i) => { %>
             <tr class="pm-db-row" data-id="<%= p.id %>" data-part="<%= p.part_number || '' %>" data-sold="<%= typeof isSoldTransaction === 'function' && isSoldTransaction(p) ? '1' : '0' %>">
@@ -658,6 +659,7 @@
                 <%= p.present_location || p.branch || p.requesting_branch || '—' %>
               </td>
               <td style="white-space:nowrap;"><%= p.editor || '' %></td>
+              <td style="white-space:nowrap;"><%= p.barcode || '' %></td>
               <td style="white-space:nowrap;"><%= p.part_number || '' %></td>
               <td style="white-space:nowrap;"><%= p.part_name || '' %></td>
               <td style="white-space:nowrap;"><%= p.sub_id || '' %></td>
