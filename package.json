@@ -27,6 +27,8 @@
     "import:transactions:replace": "node scripts/import-transaction-records.js --replace",
     "import:parts-csv": "node scripts/import-parts-csv.js",
     "import:parts-csv:dry-run": "node scripts/import-parts-csv.js --dry-run",
+    "export:seed": "node scripts/export-to-seed.js",
+    "sync:seed": "FORCE_SYNC=1 node scripts/sync-seed-data.js",
     "provision:employee-logins": "node scripts/provision-employee-logins.js"
   },
   "author": "",
