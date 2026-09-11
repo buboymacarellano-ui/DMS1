@@ -17,7 +17,7 @@ const path = require('path');
 const crypto = require('crypto');
 const readline = require('readline');
 
-const Store = require('../data/store');
+const store = require('../data/store');
 
 const LOG_DIR = path.join(__dirname, '../logs');
 const SYNC_LOG = path.join(LOG_DIR, 'sync.log');
@@ -60,7 +60,6 @@ function hashObject(obj) {
 
 function loadLocalData() {
   try {
-    const store = new Store();
     return store.getRawData();
   } catch (err) {
     logger.error(`Failed to load local data: ${err.message}`);
