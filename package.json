@@ -29,7 +29,14 @@
     "import:parts-csv:dry-run": "node scripts/import-parts-csv.js --dry-run",
     "export:seed": "node scripts/export-to-seed.js",
     "sync:seed": "FORCE_SYNC=1 node scripts/sync-seed-data.js",
-    "provision:employee-logins": "node scripts/provision-employee-logins.js"
+    "provision:employee-logins": "node scripts/provision-employee-logins.js",
+    "sync:render": "node scripts/sync-render.js",
+    "sync:render:status": "node scripts/sync-render.js status",
+    "sync:render:pull": "node scripts/sync-render.js pull",
+    "sync:render:push": "node scripts/sync-render.js push",
+    "sync:render:diff": "node scripts/sync-render.js diff",
+    "sync:render:export": "node scripts/sync-render.js export",
+    "sync:auto": "scripts\\sync-schedule.bat"
   },
   "author": "",
   "license": "MIT",
