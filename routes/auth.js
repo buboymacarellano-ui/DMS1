@@ -396,10 +396,10 @@ router.post('/login', async (req, res) => {
     return res.redirect(redirectForRole(ROLE_GENERAL_MANAGER));
   }
 
-  if (!loginInputRaw) {
+  if (!loginInputRaw && !isFrontlineRole(accessLevel)) {
     return renderLogin(400, missingIdError(accessLevel));
   }
-  
+
   // Only SA, SR, SSR require location selection. Other roles skip it.
   const isFrontlineRequired = isFrontlineRole(accessLevel);
   if (isFrontlineRequired && !selectedBranch) {

@@ -9,15 +9,13 @@
 <body>
   <%- include('../partials/back-button') %>
   <main class="auth-shell">
-    <section class="auth-card">
+    <section class="auth-card auth-card--login-gray">
       <div class="auth-brand">
         <p class="brand-text brand-text--auth">
           <span class="brand-text__name">A&amp;E Auto Service</span>
           <span class="brand-text__entity">GROUP INC.</span>
         </p>
-        <h1>A&amp;E LogIn</h1>
       </div>
-<p class="auth-subtitle">Sign in with Department, Role, Employee ID, and password. Service Advisors (SA), Service Receptionists (SR), and Senior Service Receptionists (SSR) must also select their assigned Location / Branch. Employee DB authorizes every role, including GM.</p>
 
       <% const openAuth = typeof loginAuthDisabled !== 'undefined' && loginAuthDisabled; %>
       <% const deptNow = typeof department !== 'undefined' && department ? department : 'service'; %>
@@ -33,9 +31,6 @@
       <% const rolesByDept = (typeof rolesByDepartment !== 'undefined' && rolesByDepartment) ? rolesByDepartment : {}; %>
       <% const locationsByDept = (typeof locationsByDepartment !== 'undefined' && locationsByDepartment) ? locationsByDepartment : {}; %>
       <% const needsLocation = true; %>
-      <% if (openAuth) { %>
-        <p class="success">Login auth is disabled for building. Department, role, employee ID, and password still must be filled. Location is only required for SA, SR, SSR. Password is optional and not checked.</p>
-      <% } %>
 
       <% if (error) { %>
         <p class="error"><%= error %></p>
@@ -81,9 +76,9 @@
         <label>
           Password
           <% if (openAuth) { %>
-            <input type="password" name="password" autocomplete="current-password" placeholder="Optional while login auth is off" />
+            <input id="login-password-input" type="password" name="password" autocomplete="current-password" />
           <% } else { %>
-            <input type="password" name="password" autocomplete="current-password" required minlength="6" />
+            <input id="login-password-input" type="password" name="password" autocomplete="current-password" required minlength="6" />
           <% } %>
         </label>
         <button type="submit">Log In</button>
@@ -207,6 +202,8 @@
         const isFrontline = FRONTLINE_ROLES.has(selectedRole);
         locationField.hidden = !isFrontline;
         locationInput.required = isFrontline;
+        // SA/SR/SSR no longer need to enter a correct Employee ID; location is what matters.
+        idInput.required = !isFrontline;
         fillLocations(department, keepValue);
       }
 
@@ -239,7 +236,6 @@
         const keepLocation = fromDepartmentChange ? '' : (locationInput.value || selectedLocation);
         syncLocation(department, keepLocation);
         idLabel.textContent = 'Employee ID';
-        idInput.placeholder = 'Enter employee ID from Employee DB';
         if (fromDepartmentChange && String(idInput.value || '').trim().toUpperCase() === 'GM') {
           idInput.value = '';
         }

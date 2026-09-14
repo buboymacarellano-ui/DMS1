@@ -602,6 +602,41 @@ router.post('/orders', async (req, res) => {
   return res.redirect('/branch-parts?success=' + encodeURIComponent('Draft saved. You can add more lines or edit before sending.'));
 });
 
+// Looks up a part number across the full Parts-DB-All (all branches + Warehouse 1),
+// used by the order grid to auto-fill a line once a Part Number is pasted/typed.
+router.get('/api/parts-db-lookup/:partNumber', async (req, res) => {
+  const partNumber = String(req.params.partNumber || '').trim().toUpperCase();
+  if (!partNumber) return res.status(400).json({ ok: false, error: 'Part number is required.' });
+
+  const data = await store.getRawData();
+  const rows = (data.parts_inventory || []).filter(
+    (row) => String(row.part_number || '').trim().toUpperCase() === partNumber
+  );
+  if (!rows.length) {
+    return res.status(404).json({ ok: false, found: false, error: 'Part number not found in Parts-DB-All.' });
+  }
+
+  // Prefer the most recently created row so latest supplier/pricing wins.
+  const latest = rows.reduce((best, row) => {
+    if (!best) return row;
+    return new Date(row.created_at || 0) > new Date(best.created_at || 0) ? row : best;
+  }, null);
+
+  return res.json({
+    ok: true,
+    found: true,
+    part_number: latest.part_number || partNumber,
+    part_name: latest.part_name || '',
+    sub_id: latest.sub_id || '',
+    generic: latest.generic || '',
+    supplier: latest.supplier || '',
+    unit: latest.unit || '',
+    cost_price: latest.cost_price != null ? Number(latest.cost_price) : 0,
+    markup: latest.markup != null ? Number(latest.markup) : 0,
+    retail_price: latest.retail_price != null ? Number(latest.retail_price) : 0,
+  });
+});
+
 router.get('/api/warehouse1-stock', async (req, res) => {
   const partNumber = String(req.query.part_number || '').trim();
   if (!partNumber) return res.json({ ok: true, part_number: '', on_hand: 0, in_stock: false });

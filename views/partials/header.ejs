@@ -144,12 +144,6 @@
           <a href="/finance">Accounting</a>
           <a href="/admin/gates/removed-records">Removed Records</a>
         <% } else if (['hr', 'hr_manager', 'hr_generalist', 'payroll', 'hr_clerk'].includes(activeRole)) { %>
-          <a href="/hr/portal">HR Portal</a>
-          <a href="/hr">HR Dashboard</a>
-          <a href="/hr/rosters">Shift Rosters</a>
-          <% if (typeof canGrant === 'function' && canGrant('hr', 'view_payroll')) { %>
-            <a href="/hr/payroll">Payroll</a>
-          <% } %>
         <% } else if (['service_receptionist', 'senior_service_receptionist', 'service_advisor'].includes(activeRole)) { %>
           <a href="/service-receptionist" class="<%= pathNow.indexOf('/service-receptionist') === 0 ? 'nav-link--active' : '' %>"><%= roleLabel %> Dashboard</a>
           <a href="/service">Service Portal</a>
@@ -158,20 +152,24 @@
         <% } else if (['operations_manager', 'store_manager', 'cashier', 'stores_clerk'].includes(activeRole)) { %>
           <a href="/stores">Stores Portal</a>
         <% } %>
-        <% if (activeRole === 'admin' || activeRole === 'hr' || activeRole === 'hr_manager' || activeRole === 'hr_generalist' || activeRole === 'hr_clerk') { %>
+        <% if (activeRole === 'admin') { %>
           <a href="/employees">Employee DB</a>
         <% } %>
-        <% if (canApproveRequests) { %>
-          <a href="/approvals" class="approval-nav <%= pendingApprovalCount > 0 ? 'approval-nav--pending' : '' %>" title="Approval requests">
-            Approvals<% if (pendingApprovalCount > 0) { %> <span class="approval-nav__count"><%= pendingApprovalCount %></span><% } %>
-          </a>
-        <% } else if (currentUser) { %>
-          <a href="/approvals" class="approval-nav" title="Submit or view approval requests">Requests</a>
+        <% if (!['hr', 'hr_manager', 'hr_generalist', 'payroll', 'hr_clerk'].includes(activeRole)) { %>
+          <% if (canApproveRequests) { %>
+            <a href="/approvals" class="approval-nav <%= pendingApprovalCount > 0 ? 'approval-nav--pending' : '' %>" title="Approval requests">
+              Approvals<% if (pendingApprovalCount > 0) { %> <span class="approval-nav__count"><%= pendingApprovalCount %></span><% } %>
+            </a>
+          <% } else if (currentUser) { %>
+            <a href="/approvals" class="approval-nav" title="Submit or view approval requests">Requests</a>
+          <% } %>
         <% } %>
         <% if (currentUser) { %>
           <span class="header-user-badge"><%= roleLabel %>: <%= currentUser.username %><%= ['service_receptionist', 'senior_service_receptionist', 'service_advisor'].includes(activeRole) && currentUser.branch ? ` | ${currentUser.branch}` : '' %></span>
         <% } %>
-        <button type="button" id="fullscreen-toggle" class="btn btn-fullscreen">Full Screen</button>
+        <% if (!['hr', 'hr_manager', 'hr_generalist', 'payroll', 'hr_clerk'].includes(activeRole)) { %>
+          <button type="button" id="fullscreen-toggle" class="btn btn-fullscreen">Full Screen</button>
+        <% } %>
         <% if (currentUser) { %>
           <form method="post" action="/auth/logout" class="header-logout-form">
             <button type="submit" class="btn btn-fullscreen">Log Out</button>

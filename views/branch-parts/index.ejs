@@ -497,6 +497,53 @@
         .catch(function () { return true; });
     }
 
+    // Auto-fills a whole line from the full Parts-DB-All database (all branches +
+    // Warehouse 1) once a Part Number is pasted/typed, regardless of whether this
+    // branch already carries that part locally.
+    var partsDbLookupTimer = null;
+    var partsDbLookupCache = {};
+
+    function fillFromPartsDbAll(row, partNumber) {
+      var key = String(partNumber || '').trim().toUpperCase();
+      if (!key || !row) return;
+
+      function applyResult(result) {
+        if (!result || !result.found) return;
+        var fields = {
+          line_part_name: result.part_name,
+          line_sub_id: result.sub_id,
+          line_generic: result.generic,
+          line_supplier: result.supplier,
+          line_cost_price: result.cost_price,
+          line_markup: result.markup,
+          line_retail_price: result.retail_price
+        };
+        Object.keys(fields).forEach(function (name) {
+          var input = row.querySelector('input[name="' + name + '"]');
+          if (input && !input.value && fields[name] != null && fields[name] !== '') {
+            input.value = fields[name];
+          }
+        });
+        computeRetail(row);
+      }
+
+      if (partsDbLookupCache[key]) {
+        applyResult(partsDbLookupCache[key]);
+        return;
+      }
+
+      fetch('/branch-parts/api/parts-db-lookup/' + encodeURIComponent(key), {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' }
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          partsDbLookupCache[key] = data;
+          applyResult(data);
+        })
+        .catch(function () { /* silent: local catalog fill already ran */ });
+    }
+
     body.addEventListener('input', function (event) {
       var row = event.target.closest('tr');
       if (!row) return;
@@ -504,7 +551,11 @@
         fillFromCatalog(row, event.target.value);
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(function () { checkWarehouse1Stock(row, true); }, 400);
-        
+
+        clearTimeout(partsDbLookupTimer);
+        var partNumberValue = event.target.value;
+        partsDbLookupTimer = setTimeout(function () { fillFromPartsDbAll(row, partNumberValue); }, 350);
+
         // Check for duplicates in real-time
         var dupCheck = checkDuplicatePartNumbers();
         if (dupCheck.hasDuplicates) {
@@ -523,6 +574,7 @@
       if (!row) return;
       if (event.target.name === 'line_part_number') {
         fillFromCatalog(row, event.target.value);
+        fillFromPartsDbAll(row, event.target.value);
         checkWarehouse1Stock(row, true);
       }
       if (event.target.name === 'line_qty') checkWarehouse1Stock(row, true);

@@ -1,6 +1,6 @@
 <%- include('partials/header') %>
 
-<section class="dashboard-shell admin-shell sa-shell">
+<section class="dashboard-shell admin-shell sa-shell" id="service-portal-home">
   <% const dashRole = String((typeof roleLabel !== 'undefined' && roleLabel) || (currentUser && currentUser.role) || '').toLowerCase(); %>
   <% const dashLabel = dashRole === 'sa' || dashRole === 'service_advisor' ? 'SA' : (dashRole === 'ssr' || dashRole === 'senior_service_receptionist' ? 'SSR' : (dashRole === 'sr' || dashRole === 'service_receptionist' ? 'SR' : (String((typeof roleLabel !== 'undefined' && roleLabel) || 'SA').toUpperCase()))); %>
   <% const openCount = typeof openWorkOrdersCount !== 'undefined' ? openWorkOrdersCount : work_orders.filter((wo) => String(wo.status || '').trim().toLowerCase() !== 'closed').length; %>

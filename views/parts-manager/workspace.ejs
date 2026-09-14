@@ -22,14 +22,15 @@
   <% if (success) { %><p class="success" style="font-weight:700;margin:0;"><%= success %></p><% } %>
 
   <nav class="pm-role-bar" aria-label="Parts Manager roles">
-    <button type="button" class="btn pm-role-btn<%= panel === 'csv' ? ' pm-role-btn--active' : '' %>" data-pm-panel="csv">1. Load / Download CSV Update</button>
-    <button type="button" class="btn pm-role-btn<%= panel === 'edit' ? ' pm-role-btn--active' : '' %>" data-pm-panel="edit">2. Parts Receiving</button>
-    <button type="button" class="btn pm-role-btn<%= panel === 'vitals' ? ' pm-role-btn--active' : '' %>" data-pm-panel="vitals">3. Fast Moving / Idle / Vitals</button>
-    <button type="button" class="btn pm-role-btn<%= panel === 'approvals' ? ' pm-role-btn--active' : '' %>" data-pm-panel="approvals">4. Approval Window</button>
-    <button type="button" class="btn pm-role-btn" id="parts-report-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="parts-report-modal">5. Create Report</button>
-    <button type="button" class="btn pm-role-btn<%= panel === 'health' ? ' pm-role-btn--active' : '' %>" data-pm-panel="health">6. DB Health Monitor</button>
-    <button type="button" class="btn pm-role-btn<%= panel === 'ordering' ? ' pm-role-btn--active' : '' %>" data-pm-panel="ordering">7. Ordering Grid</button>
-    <button type="button" class="btn pm-role-btn<%= panel === 'database' ? ' pm-role-btn--active' : '' %>" data-pm-panel="database">8. Parts-DB-All</button>
+    <button type="button" class="btn pm-role-btn<%= panel === 'csv' ? ' pm-role-btn--active' : '' %>" data-pm-panel="csv"><span class="pm-role-btn__icon">💾</span><span class="pm-role-btn__label">1. Load / Download CSV Update</span></button>
+    <button type="button" class="btn pm-role-btn<%= panel === 'edit' ? ' pm-role-btn--active' : '' %>" data-pm-panel="edit"><span class="pm-role-btn__icon">📥</span><span class="pm-role-btn__label">2. Parts Receiving</span></button>
+    <a class="btn pm-role-btn" href="/parts-manager/multiple-entry"><span class="pm-role-btn__icon">▦</span><span class="pm-role-btn__label">Multiple Entry</span></a>
+    <button type="button" class="btn pm-role-btn<%= panel === 'vitals' ? ' pm-role-btn--active' : '' %>" data-pm-panel="vitals"><span class="pm-role-btn__icon">📊</span><span class="pm-role-btn__label">3. Fast Moving / Idle / Vitals</span></button>
+    <button type="button" class="btn pm-role-btn<%= panel === 'approvals' ? ' pm-role-btn--active' : '' %>" data-pm-panel="approvals"><span class="pm-role-btn__icon">✅</span><span class="pm-role-btn__label">4. Approval Window</span></button>
+    <button type="button" class="btn pm-role-btn" id="parts-report-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="parts-report-modal"><span class="pm-role-btn__icon">🖨️</span><span class="pm-role-btn__label">5. Create Report</span></button>
+    <button type="button" class="btn pm-role-btn<%= panel === 'health' ? ' pm-role-btn--active' : '' %>" data-pm-panel="health"><span class="pm-role-btn__icon">🩺</span><span class="pm-role-btn__label">6. DB Health Monitor</span></button>
+    <button type="button" class="btn pm-role-btn<%= panel === 'ordering' ? ' pm-role-btn--active' : '' %>" data-pm-panel="ordering"><span class="pm-role-btn__icon">🛒</span><span class="pm-role-btn__label">7. Ordering Grid</span></button>
+    <button type="button" class="btn pm-role-btn<%= panel === 'database' ? ' pm-role-btn--active' : '' %>" data-pm-panel="database"><span class="pm-role-btn__icon">🗄️</span><span class="pm-role-btn__label">8. Parts-DB-All</span></button>
   </nav>
 
   <%- include('../partials/parts-report-modal') %>
@@ -143,38 +144,10 @@
       <button type="submit">Save part</button>
     </form>
 
-    <!-- Receiving Items Entry Grid -->
     <div style="margin-top:24px;border-top:2px solid #ccd5df;padding-top:20px;">
-      <h3 style="margin:0 0 12px 0;font-size:16px;">Quick Entry Grid (Batch Add)</h3>
-      <p class="dashboard-note" style="margin-bottom:12px;">Add multiple receiving entries at once. Each row creates a separate transaction (auto-generates date, PTN, restock status, location).</p>
-      <div id="pm-receiving-grid-container" class="table-scroll pm-table-wrap" style="border:1px solid #ddd;border-radius:4px;padding:12px;">
-        <table class="list" style="font-size:12px;min-width:max-content;width:100%;">
-          <thead style="position:sticky;top:0;z-index:5;background:#f5f5f5;">
-            <tr>
-              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;">Location</th>
-              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;">Part #</th>
-              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;">Part Name</th>
-              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;">Supplier</th>
-              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;">Receipt #</th>
-              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;">Unit</th>
-              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;">Qty</th>
-              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;">Cost Price (₱)</th>
-              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;">Markup (%)</th>
-              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;">Retail Price (₱)</th>
-              <th style="white-space:nowrap;background:#ecf0f1;padding:8px;font-weight:700;text-align:center;">Action</th>
-            </tr>
-          </thead>
-          <tbody id="pm-receiving-grid-body">
-            <!-- Empty rows generated by JavaScript -->
-          </tbody>
-        </table>
-      </div>
-      <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-start;flex-wrap:wrap;">
-        <button type="button" id="pm-receiving-add-row" class="btn" style="background:#27ae60;color:white;padding:8px 16px;">+ Add Row</button>
-        <button type="button" id="pm-receiving-save-btn" class="btn" style="background:#3498db;color:white;padding:8px 16px;" disabled>Save All Entries</button>
-        <button type="button" id="pm-receiving-cancel-btn" class="btn" style="background:#95a5a6;color:white;padding:8px 16px;" disabled>Clear Grid</button>
-        <span id="pm-receiving-status" style="align-self:center;font-size:12px;color:#666;"></span>
-      </div>
+      <h3 style="margin:0 0 12px 0;font-size:16px;">Multiple Entry</h3>
+      <p class="dashboard-note" style="margin-bottom:12px;">Open the grid receiving page to add several Warehouse 1 entries at once. Saved rows sync into Parts-DB-All.</p>
+      <a class="btn" href="/parts-manager/multiple-entry">Open Multiple Entry</a>
     </div>
   </section>
 
@@ -346,7 +319,7 @@
     <article class="dashboard-card gm-panel" style="width:100%;margin-bottom:12px;">
       <div class="dashboard-card__header gm-panel-header">Transit Receipt (Multi-Item Proof of Delivery)</div>
       <p class="dashboard-note">Enter a transaction number to generate a consolidated receipt for all approved items with that number on a single page.</p>
-      <form method="get" action="/parts-manager/api/transit-receipt" class="form pm-transit-form" id="pm-transit-form" style="display:grid;grid-template-columns:1fr auto;gap:8px;">
+      <form method="get" action="/parts-manager/api/transit-receipt" class="form pm-transit-form" id="pm-transit-form" style="display:grid;grid-template-columns:1fr auto;gap:8px;" data-transit-endpoint="/parts-manager/api/transit-receipt">
         <div>
           <label style="display:block;font-size:12px;margin-bottom:4px;">Transaction Number (PTN)
             <input type="text" name="transactionNumber" id="pm-transit-input" placeholder="e.g., PTN-20260906-003485" required style="width:100%;padding:6px;border:1px solid #ccc;border-radius:3px;" />
@@ -354,7 +327,7 @@
         </div>
         <button type="button" id="pm-transit-generate-btn" class="btn" style="background:#3498db;color:white;padding:6px 12px;align-self:flex-end;">Generate Transit Receipt</button>
       </form>
-      <div id="pm-transit-result" style="margin-top:12px;"></div>
+      <div id="pm-transit-result" style="margin-top:12px;" role="status" aria-live="polite"></div>
     </article>
 
     <!-- Other Panels in Split Grid -->

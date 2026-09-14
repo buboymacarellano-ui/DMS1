@@ -813,6 +813,16 @@ router.get('/', async (req, res) => {
   return renderWorkspace(res, await loadWorkspaceLocals(req));
 });
 
+router.get('/multiple-entry', async (req, res) => {
+  const data = await store.getRawData();
+  return res.render('parts-manager/multiple-entry', {
+    warehouse1: WAREHOUSE_1,
+    locationOptions: pmLocationOptions(data),
+    error: req.query.error || '',
+    success: req.query.success || '',
+  });
+});
+
 router.get('/dashboard', (req, res) => res.redirect('/parts-manager'));
 router.get('/inventory', (req, res) => res.redirect('/parts-manager?panel=edit'));
 router.get('/branch-reports', (req, res) => res.redirect('/parts-manager?panel=vitals'));

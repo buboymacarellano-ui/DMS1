@@ -1,0 +1,55 @@
+<%- include('../partials/header') %>
+<%
+  const locations = Array.isArray(locationOptions) ? locationOptions : [];
+  const defaultLocation = typeof warehouse1 !== 'undefined' && warehouse1 ? warehouse1 : 'Warehouse 1';
+%>
+
+<section class="dashboard-shell gm-shell stm-shell pm-multiple-entry" id="pm-multiple-entry" data-default-location="<%= defaultLocation %>">
+  <div class="stm-head">
+    <div class="dashboard-title gm-title role-dashboard-title"><span>PM</span> <span class="role-dashboard-title__suffix">Multiple Entry</span></div>
+    <p class="dashboard-note stm-section__note">Grid receiving entry for <%= defaultLocation %>. Saved rows sync into Parts-DB-All.</p>
+  </div>
+
+  <% if (error) { %><p class="error" style="font-weight:700;margin:0;"><%= error %></p><% } %>
+  <% if (success) { %><p class="success" style="font-weight:700;margin:0;"><%= success %></p><% } %>
+
+  <article class="dashboard-card gm-panel">
+    <div class="dashboard-card__header gm-panel-header">Warehouse 1 Receiving Grid</div>
+    <p class="dashboard-note">Fill the rows below. Save creates restock transactions inside Parts-DB-All with auto PTN, date, editor, and Warehouse 1 location.</p>
+
+    <div class="table-scroll pm-table-wrap" style="border:1px solid #ddd;border-radius:4px;overflow-x:auto;">
+      <table class="list pm-multiple-entry__table" style="font-size:12px;min-width:1180px;width:100%;">
+        <thead>
+          <tr>
+            <th>Part #</th>
+            <th>Part Name</th>
+            <th>Sub-ID</th>
+            <th>Generic / Description</th>
+            <th>Supplier</th>
+            <th>Receipt #</th>
+            <th>Unit</th>
+            <th>Qty</th>
+            <th>Cost Price</th>
+            <th>Markup %</th>
+            <th>Retail Price</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="pm-multiple-entry-body"></tbody>
+      </table>
+    </div>
+
+    <div style="display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap;margin-top:12px;">
+      <a class="btn" href="/parts-manager?panel=edit">Cancel</a>
+      <button type="button" class="btn" id="pm-multiple-add-line">Add Line</button>
+      <button type="button" class="btn" id="pm-multiple-save">Save</button>
+    </div>
+    <p id="pm-multiple-status" class="dashboard-note" role="status" aria-live="polite" style="margin-top:10px;"></p>
+  </article>
+</section>
+
+<script>
+  window.pmMultipleEntryLocations = <%- JSON.stringify(locations) %>;
+</script>
+<script src="/js/pm-multiple-entry.js"></script>
+<%- include('../partials/footer') %>

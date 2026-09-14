@@ -8,6 +8,10 @@
   const csvFile = document.getElementById('pm-csv-file');
   const csvText = document.getElementById('pm-csv-text');
   const csvForm = document.getElementById('pm-csv-form');
+  const transitForm = document.getElementById('pm-transit-form');
+  const transitInput = document.getElementById('pm-transit-input');
+  const transitButton = document.getElementById('pm-transit-generate-btn');
+  const transitResult = document.getElementById('pm-transit-result');
 
   function openPanel(name) {
     const target = String(name || '').trim();
@@ -67,6 +71,54 @@
         if (!ok) event.preventDefault();
       }
     });
+  }
+
+  async function generateTransitReceipt() {
+    if (!transitInput || !transitButton) return;
+    const transactionNumber = String(transitInput.value || '').trim();
+    if (!transactionNumber) {
+      transitInput.focus();
+      if (transitResult) transitResult.innerHTML = '<p class="error">Enter a transaction number first.</p>';
+      return;
+    }
+
+    transitButton.disabled = true;
+    const originalText = transitButton.textContent;
+    transitButton.textContent = 'Generating...';
+    if (transitResult) transitResult.innerHTML = '<p class="dashboard-note">Generating transit receipt...</p>';
+
+    try {
+      const response = await fetch('/parts-manager/api/transit-receipt/' + encodeURIComponent(transactionNumber), {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error || 'Could not generate transit receipt.');
+      }
+
+      const receiptUrl = String(payload.receiptUrl || '');
+      const itemCount = Number(payload.itemCount || 0);
+      if (transitResult) {
+        transitResult.innerHTML = '<p class="success">Transit receipt generated for ' + itemCount + ' item' + (itemCount === 1 ? '' : 's') + '. <a class="btn" href="' + receiptUrl + '" target="_blank" rel="noopener">Open Receipt</a></p>';
+      }
+      if (receiptUrl) window.open(receiptUrl, '_blank', 'noopener');
+    } catch (error) {
+      if (transitResult) transitResult.innerHTML = '<p class="error">' + String(error.message || error) + '</p>';
+    } finally {
+      transitButton.disabled = false;
+      transitButton.textContent = originalText || 'Generate Transit Receipt';
+    }
+  }
+
+  if (transitForm) {
+    transitForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      generateTransitReceipt();
+    });
+  }
+  if (transitButton) {
+    transitButton.addEventListener('click', generateTransitReceipt);
   }
 
   function fillEdit(part) {

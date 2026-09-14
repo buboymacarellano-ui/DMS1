@@ -25,7 +25,7 @@
   --excel-green: #70ad47;
   --excel-grid: #d6dce4;
   --excel-plot: #ffffff;
-  --user-name-gold: rgba(196, 122, 28, 0.5);
+  --user-name-gold: #ee2737;
 }
 
 *{box-sizing:border-box;font-family:"Segoe UI",Calibri,Arial,Helvetica,sans-serif}
@@ -264,7 +264,7 @@ body:has(.app-back-arrow--under-logo) .container{
 }
 
 .auth-shell{min-height:100vh;display:grid;place-items:center;padding:24px}
-.auth-card{width:min(520px, 96vw);background:linear-gradient(180deg, rgba(32,70,116,0.97), rgba(19,46,82,0.99));border:1px solid rgba(78,205,232,0.18);padding:18px;border-radius:20px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.08), 0 12px 28px rgba(4,12,24,0.32);color:#f3f7fc}
+.auth-card{width:min(520px, 96vw);background:linear-gradient(180deg, rgba(32,70,116,0.78), rgba(19,46,82,0.84));border:1px solid rgba(78,205,232,0.18);padding:18px;border-radius:20px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.08), 0 12px 28px rgba(4,12,24,0.32);color:#f3f7fc}
 .auth-brand{display:grid;justify-items:start;gap:8px;margin-bottom:10px}
 .auth-brand-logo{display:block;width:min(280px, 70vw);height:auto;max-height:72px}
 .auth-card h1{margin:0 0 10px;font-size:30px;line-height:1.05;color:#f3f7fc;text-shadow:none}
@@ -280,6 +280,8 @@ body:has(.app-back-arrow--under-logo) .container{
 .auth-open-form{margin:0 0 16px;padding:12px;border:1px solid rgba(78,205,232,0.28);border-radius:12px;background:rgba(8,24,44,0.35)}
 .auth-open-toggle{width:100%;min-height:44px;border:0;border-radius:10px;background:#c0392b;color:#fff;font-weight:800;cursor:pointer}
 .auth-open-toggle--on{background:#1f8f53}
+
+
 
 .login-share-shell{min-height:100vh;display:grid;place-items:center;padding:24px}
 .login-share-panel{width:min(560px,96vw);padding:28px;background:linear-gradient(180deg,var(--office-panel),var(--office-surface-soft));border:1px solid var(--office-panel-border);text-align:center;box-shadow:0 14px 34px rgba(20,30,40,.25)}
@@ -6382,11 +6384,24 @@ body.role-frontline .technician-monitor__status{
   }
 }
 
-/* ===== Global light office skin: square corners, Excel-style charts ===== */
+/* ===== Global light-blue/light-gray app palette ===== */
+:root{
+  --app-blue-50:#f7f9fb;
+  --app-blue-100:#eef3f7;
+  --app-blue-200:#e3e9ef;
+  --app-blue-300:#d6dde5;
+  --app-blue-600:#c8d1db;
+  --app-blue-700:#b8c2cc;
+  --app-blue-800:#a8b2bd;
+  --app-blue-900:#929daa;
+  --app-blue-border:#c5d0dc;
+  --app-blue-text:#111827;
+  --app-blue-muted:#475569;
+}
 html,
 body{
-  background:#c3c5c6 !important;
-  color:#111827 !important;
+  background:linear-gradient(180deg, var(--app-blue-100) 0%, var(--app-blue-50) 44%, #e2e8f0 100%) !important;
+  color:var(--app-blue-text) !important;
 }
 
 .brand-text,
@@ -6394,35 +6409,54 @@ body{
 .site-header .brand-heading,
 .site-header .brand-text,
 .site-header .brand-text__name{
-  color:#111827 !important;
+  color:var(--app-blue-text) !important;
   filter:none !important;
 }
 .brand-text__entity,
 .site-header .brand-text__entity{
-  color:#334155 !important;
+  color:var(--app-blue-muted) !important;
+}
+.site-header .brand-heading,
+.site-header .brand-text,
+.site-header .brand-text__name{
+  color:#f2f2f2 !important;
+}
+.site-header .brand-text__entity{
+  color:#c7c7c7 !important;
 }
 
 .site-header,
 .site-header--gm{
-  background:#ffffff !important;
-  border-bottom:1px solid #c5d0dc !important;
-  box-shadow:none !important;
-  color:#111827 !important;
+  position:sticky;
+  background:linear-gradient(180deg, #858585 0%, #787878 52%, #696969 100%) !important;
+  border-bottom:1px solid #a8afb6 !important;
+  box-shadow:0 2px 0 #ccd2d8, 0 6px 14px rgba(0,0,0,0.16) !important;
+  color:#ffffff !important;
 }
 .site-header::after,
 .site-header--gm::after{
-  display:none !important;
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:-1px;
+  display:block !important;
+  width:100%;
+  height:2px;
+  pointer-events:none;
+  background:linear-gradient(90deg, transparent 0%, rgba(185,194,202,0.6) 12%, #c4cbd2 48%, rgba(120,129,138,0.65) 84%, transparent 100%) !important;
+  box-shadow:none !important;
 }
 .site-header,
 .site-header a,
 .site-header nav a,
 .site-header .brand-heading,
 .site-header button{
-  color:#111827 !important;
+  color:#f2f2f2 !important;
 }
 .portal-watermark{
-  color:rgba(31,41,51,0.18) !important;
-  text-shadow:none !important;
+  color:rgba(255,255,255,0.46) !important;
+  text-shadow:0 1px 2px rgba(0,0,0,0.28) !important;
 }
 
 .site-header nav a,
@@ -6443,9 +6477,9 @@ input[type="button"],
 input[type="submit"],
 input[type="reset"]{
   color:#111827 !important;
-  background:#f3f3f3 !important;
-  border:1px solid #adadad !important;
-  box-shadow:none !important;
+  background:linear-gradient(180deg, var(--app-blue-700), var(--app-blue-900)) !important;
+  border:1px solid var(--app-blue-800) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.42), 0 2px 6px rgba(71,85,105,0.18) !important;
   text-shadow:none !important;
   border-radius:0 !important;
 }
@@ -6458,20 +6492,23 @@ input[type="reset"]:hover,
 .site-header__nav a:hover,
 .site-header .btn-fullscreen:hover{
   filter:none !important;
-  background:#e7edf3 !important;
-  border-color:#5b9bd5 !important;
+  background:linear-gradient(180deg, var(--app-blue-600), var(--app-blue-800)) !important;
+  border-color:#7b8794 !important;
   color:#111827 !important;
 }
 .site-header .header-user-badge,
 .site-header .header-user-badge--gm-lead{
   color:var(--user-name-gold) !important;
-  border-color:#c5d0dc !important;
-  background:#eef2f6 !important;
+  border-color:#151515 !important;
+  background:linear-gradient(180deg, #3a3a3a, #242424) !important;
+  font-size:16px !important;
+  font-weight:300 !important;
+  letter-spacing:0.02em !important;
 }
 .site-header nav .approval-nav--pending{
-  color:#fff !important;
-  background:#c0392b !important;
-  border-color:#a93226 !important;
+  color:#111827 !important;
+  background:linear-gradient(180deg, var(--app-blue-600), var(--app-blue-900)) !important;
+  border-color:var(--app-blue-300) !important;
 }
 
 .auth-card,
@@ -6508,10 +6545,10 @@ input[type="reset"]:hover,
 .gm-markup-row,
 .auth-open-form,
 .wo-vehicle-finder{
-  background:#ffffff !important;
-  color:#111827 !important;
-  border:1px solid #c5d0dc !important;
-  box-shadow:none !important;
+  background:linear-gradient(180deg, #ffffff 0%, var(--app-blue-50) 100%) !important;
+  color:var(--app-blue-text) !important;
+  border:1px solid var(--app-blue-border) !important;
+  box-shadow:0 8px 22px rgba(47,109,179,0.12) !important;
   border-radius:0 !important;
 }
 
@@ -7149,6 +7186,25 @@ body.role-fm{
   --accent:#2f6db3;
   color:#111827 !important;
 }
+body.role-frontline .container{
+  padding-top:6px !important;
+}
+body.role-frontline .container > :first-child:not(#service-portal-home){
+  margin-top:0 !important;
+}
+body.role-frontline .container > h1:first-child,
+body.role-frontline .container > h2:first-child,
+body.role-frontline .container > .dashboard-title:first-child,
+body.role-frontline .container > .role-dashboard-title:first-child{
+  margin-top:0 !important;
+  margin-bottom:8px !important;
+}
+body.role-frontline .wo-create-actions,
+body.role-frontline .wo-vehicle-finder,
+body.role-frontline .table-scroll,
+body.role-frontline .form:first-of-type{
+  margin-top:6px !important;
+}
 body.role-frontline h1,
 body.role-frontline h2,
 body.role-frontline h3,
@@ -7709,12 +7765,12 @@ body.role-gm .site-header a,
 body.role-gm .site-header button,
 body.role-gm .site-header .brand-text,
 body.role-gm .site-header .brand-text__name{
-  color:#0f172a !important;
+  color:#f2f2f2 !important;
   font-weight:800 !important;
   text-shadow:none !important;
 }
 body.role-gm .site-header .brand-text__entity{
-  color:#1e293b !important;
+  color:#c7c7c7 !important;
   font-weight:700 !important;
 }
 body.role-gm h1,
@@ -8345,7 +8401,7 @@ body.role-fm .site-header .app-back-arrow:hover{
   margin-top:8px;
 }
 
-/* Signed-in name: letters only, golden industrial orange faded to 50% */
+/* Signed-in name: red accent from the permanent header palette */
 body .site-header .header-user-badge,
 body .site-header .header-user-badge--gm-lead,
 body.role-gm .header-user-badge,
@@ -8355,7 +8411,11 @@ body.role-stm .header-user-badge,
 body.role-pm .header-user-badge,
 body.role-fm .header-user-badge{
   color:var(--user-name-gold) !important;
-  font-weight:800 !important;
+  background:linear-gradient(180deg, #3a3a3a, #242424) !important;
+  border-color:#151515 !important;
+  font-size:16px !important;
+  font-weight:300 !important;
+  letter-spacing:0.02em !important;
   opacity:1;
 }
 
@@ -8738,10 +8798,17 @@ body.role-frontline form.form.create-parts-form label{
   color:#ffffff !important;
 }
 
+/* Login page background image */
+.auth-shell{
+  background:
+    linear-gradient(90deg, rgba(0,0,0,0.68) 0%, rgba(0,0,0,0.34) 52%, rgba(0,0,0,0.62) 100%),
+    url("/images/login-car.avif") center / cover no-repeat fixed !important;
+}
+
 /* A&E login panel: marine blue background + light type for contrast */
 .auth-shell .auth-card,
 .auth-shell .auth-card.auth-card{
-  background:#024e7a !important;
+  background:rgba(2,78,122,0.48) !important;
   color:#ffffff !important;
 }
 .auth-shell .auth-card h1,
@@ -8822,5 +8889,341 @@ html body table.list tbody td .btn *,
 html body #parts-records table tbody td .btn,
 html body #parts-records table tbody td .btn *{
   font-weight:700 !important;
+}
+
+/* Login page: global blue palette, panel scaled down 30% */
+.auth-shell .auth-card.auth-card--login-gray{
+  width:min(364px, 96vw) !important;
+  padding:13px !important;
+  background:linear-gradient(180deg, rgba(255,255,255,0.5), rgba(238,243,247,0.5)) !important;
+  border:1px solid var(--app-blue-300) !important;
+  color:#111827 !important;
+  backdrop-filter:blur(6px);
+}
+.auth-shell .auth-card.auth-card--login-gray h1,
+.auth-shell .auth-card.auth-card--login-gray .brand-text,
+.auth-shell .auth-card.auth-card--login-gray .brand-text__name,
+.auth-shell .auth-card.auth-card--login-gray .auth-brand,
+.auth-shell .auth-card.auth-card--login-gray label,
+.auth-shell .auth-card.auth-card--login-gray .auth-form label,
+.auth-shell .auth-card.auth-card--login-gray #login-id-label,
+.auth-shell .auth-card.auth-card--login-gray p,
+.auth-shell .auth-card.auth-card--login-gray small{
+  color:#111827 !important;
+}
+.auth-shell .auth-card.auth-card--login-gray .auth-subtitle,
+.auth-shell .auth-card.auth-card--login-gray .auth-hint,
+.auth-shell .auth-card.auth-card--login-gray .brand-text__entity{
+  color:#475569 !important;
+}
+.auth-shell .auth-card.auth-card--login-gray .auth-hint a{
+  color:#334155 !important;
+}
+.auth-shell .auth-card.auth-card--login-gray h1{font-size:21px !important}
+.auth-shell .auth-card.auth-card--login-gray .auth-subtitle{font-size:11px !important}
+.auth-shell .auth-card.auth-card--login-gray .auth-form label{font-size:9px !important}
+.auth-shell .auth-card.auth-card--login-gray .auth-form input,
+.auth-shell .auth-card.auth-card--login-gray .auth-form select{
+  padding:6px 7px !important;
+  font-size:12px !important;
+  background:rgba(255,255,255,0.5) !important;
+  color:var(--app-blue-text) !important;
+  border-color:rgba(197,208,220,0.72) !important;
+}
+.auth-shell .auth-card.auth-card--login-gray .auth-form input[name="username"],
+.auth-shell .auth-card.auth-card--login-gray .auth-form input[name="password"],
+.auth-shell .auth-card.auth-card--login-gray .auth-form input[type="password"]{
+  background:rgba(255,255,255,0.5) !important;
+  background-color:rgba(255,255,255,0.5) !important;
+  color:var(--app-blue-text) !important;
+  border-color:rgba(197,208,220,0.72) !important;
+  box-shadow:inset 0 1px 2px rgba(17,24,39,0.08) !important;
+}
+.auth-shell .auth-card.auth-card--login-gray .auth-form input[name="username"]:focus,
+.auth-shell .auth-card.auth-card--login-gray .auth-form input[name="password"]:focus,
+.auth-shell .auth-card.auth-card--login-gray .auth-form input[type="password"]:focus{
+  background:rgba(255,255,255,0.5) !important;
+  background-color:rgba(255,255,255,0.5) !important;
+}
+.auth-shell .auth-card.auth-card--login-gray .auth-form input[name="username"]::placeholder,
+.auth-shell .auth-card.auth-card--login-gray .auth-form input[name="password"]::placeholder,
+.auth-shell .auth-card.auth-card--login-gray .auth-form input[type="password"]::placeholder{
+  color:rgba(17,24,39,0.58) !important;
+  opacity:1;
+}
+.auth-shell .auth-card.auth-card--login-gray .auth-form input:-webkit-autofill,
+.auth-shell .auth-card.auth-card--login-gray .auth-form input:-webkit-autofill:hover,
+.auth-shell .auth-card.auth-card--login-gray .auth-form input:-webkit-autofill:focus{
+  -webkit-text-fill-color:var(--app-blue-text) !important;
+  box-shadow:0 0 0 1000px rgba(255,255,255,0.5) inset !important;
+  transition:background-color 9999s ease-out 0s;
+}
+.auth-shell .auth-card.auth-card--login-gray .auth-form button{
+  padding:6px 10px !important;
+  font-size:12px !important;
+  background:linear-gradient(180deg, var(--app-blue-600), var(--app-blue-900)) !important;
+  color:#111827 !important;
+}
+
+/* Parts Manager landing: 8 role cards - global blue palette */
+.pm-role-bar{
+  display:grid !important;
+  grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)) !important;
+  gap:12px !important;
+}
+.pm-role-bar .pm-role-btn{
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  gap:6px !important;
+  min-height:88px !important;
+  padding:12px 10px !important;
+  background:linear-gradient(180deg, var(--app-blue-700), var(--app-blue-900)) !important;
+  border:2px solid var(--app-blue-300) !important;
+  border-radius:14px !important;
+  color:#111827 !important;
+  font-weight:800 !important;
+  text-align:center !important;
+  box-shadow:0 6px 14px rgba(71,85,105,0.18) !important;
+  transition:transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+.pm-role-bar .pm-role-btn:hover{
+  transform:translateY(-2px) !important;
+  box-shadow:0 10px 18px rgba(71,85,105,0.22), 0 0 0 2px rgba(203,213,225,0.7) !important;
+}
+.pm-role-bar .pm-role-btn__icon{
+  font-size:24px !important;
+  line-height:1 !important;
+}
+.pm-role-bar .pm-role-btn__label{
+  font-size:11px !important;
+  line-height:1.25 !important;
+}
+.pm-role-bar .pm-role-btn--active{
+  background:linear-gradient(180deg, var(--app-blue-300), var(--app-blue-600)) !important;
+  border-color:#ffffff !important;
+  color:#111827 !important;
+  box-shadow:0 0 0 3px rgba(203,213,225,0.62), 0 10px 20px rgba(71,85,105,0.2) !important;
+}
+
+/* Service portal landing: active cards follow the global blue palette */
+#service-portal-home .workorder-nav-card{
+  background:linear-gradient(180deg, var(--app-blue-700), var(--app-blue-900)) !important;
+  border:2px solid var(--app-blue-300) !important;
+  border-radius:14px !important;
+  box-shadow:0 6px 14px rgba(71,85,105,0.18) !important;
+  transition:transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+#service-portal-home .workorder-nav-card:hover{
+  transform:translateY(-2px) !important;
+  box-shadow:0 10px 18px rgba(71,85,105,0.22), 0 0 0 2px rgba(203,213,225,0.7) !important;
+}
+#service-portal-home .workorder-nav-card__icon{
+  background:linear-gradient(180deg, var(--app-blue-300), var(--app-blue-600)) !important;
+  color:#111827 !important;
+}
+#service-portal-home .workorder-nav-card__body h3{
+  color:#111827 !important;
+}
+#service-portal-home .workorder-nav-card__body p{
+  color:#475569 !important;
+}
+#service-portal-home .workorder-nav-card__body span{
+  color:#334155 !important;
+}
+
+/* GM landing: range pills + My Enterprises button follow the global blue palette */
+#gm-portal-home .gm-range-pills button{
+  background:linear-gradient(180deg, var(--app-blue-700), var(--app-blue-900)) !important;
+  border:2px solid var(--app-blue-300) !important;
+  border-radius:14px !important;
+  color:#111827 !important;
+  font-weight:800 !important;
+  box-shadow:0 6px 14px rgba(71,85,105,0.18) !important;
+  transition:transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+#gm-portal-home .gm-range-pills button:hover{
+  transform:translateY(-2px) !important;
+  box-shadow:0 10px 18px rgba(71,85,105,0.22), 0 0 0 2px rgba(203,213,225,0.7) !important;
+}
+#gm-portal-home .gm-range-pills button.is-active{
+  background:linear-gradient(180deg, var(--app-blue-300), var(--app-blue-600)) !important;
+  border-color:#ffffff !important;
+  color:#111827 !important;
+  box-shadow:0 0 0 3px rgba(203,213,225,0.62), 0 10px 20px rgba(71,85,105,0.2) !important;
+}
+#gm-portal-home .gm-magic-btn{
+  background:linear-gradient(180deg, var(--app-blue-700), var(--app-blue-900)) !important;
+  border:2px solid var(--app-blue-300) !important;
+  border-radius:14px !important;
+  color:#111827 !important;
+  font-weight:800 !important;
+  box-shadow:0 6px 14px rgba(71,85,105,0.18) !important;
+}
+#gm-portal-home .gm-magic-btn:hover{
+  transform:translateY(-2px) !important;
+  box-shadow:0 10px 18px rgba(71,85,105,0.22), 0 0 0 2px rgba(203,213,225,0.7) !important;
+}
+
+/* My Enterprises page: same blue treatment as GM landing + Parts Manager */
+#gm-enterprise-home .gm-range-pills button,
+#gm-enterprise-home .gm-dense-link{
+  background:linear-gradient(180deg, var(--app-blue-700), var(--app-blue-900)) !important;
+  border:2px solid var(--app-blue-300) !important;
+  border-radius:14px !important;
+  color:#111827 !important;
+  font-weight:800 !important;
+  box-shadow:0 6px 14px rgba(71,85,105,0.18) !important;
+  transition:transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+#gm-enterprise-home .gm-range-pills button:hover,
+#gm-enterprise-home .gm-dense-link:hover{
+  transform:translateY(-2px) !important;
+  box-shadow:0 10px 18px rgba(71,85,105,0.22), 0 0 0 2px rgba(203,213,225,0.7) !important;
+}
+#gm-enterprise-home .gm-range-pills button.is-active{
+  background:linear-gradient(180deg, var(--app-blue-300), var(--app-blue-600)) !important;
+  border-color:#ffffff !important;
+  color:#111827 !important;
+  box-shadow:0 0 0 3px rgba(203,213,225,0.62), 0 10px 20px rgba(71,85,105,0.2) !important;
+}
+#gm-enterprise-home .gm-interprise-tool{
+  background:linear-gradient(180deg, var(--app-blue-700), var(--app-blue-900)) !important;
+  border:2px solid var(--app-blue-300) !important;
+  border-radius:14px !important;
+  box-shadow:0 6px 14px rgba(71,85,105,0.18) !important;
+  transition:transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+#gm-enterprise-home .gm-interprise-tool:hover{
+  transform:translateY(-2px) !important;
+  box-shadow:0 10px 18px rgba(71,85,105,0.22), 0 0 0 2px rgba(203,213,225,0.7) !important;
+}
+#gm-enterprise-home .gm-interprise-tool .dashboard-card__header{
+  color:#111827 !important;
+}
+#gm-enterprise-home .gm-interprise-tool .dashboard-note{
+  color:#475569 !important;
+}
+#gm-enterprise-home .gm-interprise-tool .btn{
+  background:linear-gradient(180deg, var(--app-blue-300), var(--app-blue-600)) !important;
+  border:1px solid #ffffff !important;
+  color:#111827 !important;
+  font-weight:800 !important;
+}
+
+/* Final global light-gray palette enforcement for late and role-specific overrides */
+.workorder-nav-card,
+.dashboard-card,
+.gm-kpi-card,
+.sa-card,
+.card,
+.form,
+.auth-card,
+.employee-pane,
+.login-share-panel,
+.gm-panel,
+.gm-action-panel,
+.gm-analytics__card,
+.pm-modal,
+.fte-panel,
+.fte-modal,
+.technician-monitor__card,
+.delete-password-dialog,
+.wo-edit-services,
+.wo-vehicle-finder{
+  background:linear-gradient(180deg, #ffffff 0%, var(--app-blue-50) 100%) !important;
+  border-color:var(--app-blue-border) !important;
+  color:var(--app-blue-text) !important;
+}
+.btn,
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+.dashboard-button,
+.tab-button,
+.employee-toolbar__btn,
+.pm-nav__link,
+.gm-magic-btn,
+.pm-btn-primary,
+.pm-btn-approve,
+.fm-mark-paid,
+.fte-export-btn,
+.fte-log-btn,
+.auth-open-toggle,
+.app-back-arrow,
+.app-back-chip,
+.gm-ocpd-nav button,
+.gm-kpi-portal-link,
+.customer-invoice .btn,
+.customer-invoice button,
+.delete-password-dialog button,
+.delete-password-dialog .btn,
+.technician-monitor__card button,
+.technician-monitor__card .btn,
+.auth-shell .auth-form > button,
+.auth-shell .auth-form > button[type="submit"],
+.gm-workspace-nav__btn,
+form.form[method="post"]:not(.auth-form):not(.service-form) > a,
+form.form[method="POST"]:not(.auth-form):not(.service-form) > a,
+form.form[method="post"]:not(.auth-form):not(.service-form) > button[type="button"],
+form.form[method="POST"]:not(.auth-form):not(.service-form) > button[type="button"],
+form.form a.btn,
+form.form > a,
+form.form.service-form .form-actions a,
+.search-billing-form a{
+  background:linear-gradient(180deg, var(--app-blue-700), var(--app-blue-900)) !important;
+  border-color:var(--app-blue-800) !important;
+  color:#111827 !important;
+}
+.tab-button.active,
+.pm-role-btn--active,
+.pm-nav__link--active,
+.pm-steps__item--active,
+.fte-branch-tab.is-active,
+.fte-status-filter.is-active,
+.gm-range-pills .is-active,
+.gm-range-pills button.is-active,
+.parts-scope-card--active,
+.pm-db-row--active,
+.site-header nav a.nav-link--active{
+  background:linear-gradient(180deg, var(--app-blue-300), var(--app-blue-600)) !important;
+  border-color:#ffffff !important;
+  color:#111827 !important;
+  box-shadow:0 0 0 3px rgba(203,213,225,0.48), 0 8px 18px rgba(71,85,105,0.18) !important;
+}
+
+/* Final login field transparency override */
+body .auth-shell .auth-card.auth-card--login-gray form.auth-form input#login-id-input,
+body .auth-shell .auth-card.auth-card--login-gray form.auth-form input#login-password-input,
+body .auth-shell .auth-card.auth-card--login-gray form.auth-form input[name="password"],
+body .auth-shell .auth-card.auth-card--login-gray form.auth-form input[type="password"]{
+  appearance:none;
+  background:rgba(255,255,255,0.5) !important;
+  background-color:rgba(255,255,255,0.5) !important;
+  border-color:rgba(197,208,220,0.72) !important;
+  color:#111827 !important;
+  box-shadow:inset 0 1px 2px rgba(17,24,39,0.08) !important;
+}
+body .auth-shell .auth-card.auth-card--login-gray form.auth-form input#login-id-input:focus,
+body .auth-shell .auth-card.auth-card--login-gray form.auth-form input#login-password-input:focus,
+body .auth-shell .auth-card.auth-card--login-gray form.auth-form input[name="password"]:focus,
+body .auth-shell .auth-card.auth-card--login-gray form.auth-form input[type="password"]:focus{
+  background:rgba(255,255,255,0.5) !important;
+  background-color:rgba(255,255,255,0.5) !important;
+}
+body .auth-shell .auth-card.auth-card--login-gray form.auth-form input#login-id-input::placeholder,
+body .auth-shell .auth-card.auth-card--login-gray form.auth-form input#login-password-input::placeholder,
+body .auth-shell .auth-card.auth-card--login-gray form.auth-form input[name="password"]::placeholder,
+body .auth-shell .auth-card.auth-card--login-gray form.auth-form input[type="password"]::placeholder{
+  color:rgba(17,24,39,0.58) !important;
+  opacity:1 !important;
+}
+body .auth-shell .auth-card.auth-card--login-gray form.auth-form input#login-id-input:-webkit-autofill,
+body .auth-shell .auth-card.auth-card--login-gray form.auth-form input#login-password-input:-webkit-autofill,
+body .auth-shell .auth-card.auth-card--login-gray form.auth-form input[name="password"]:-webkit-autofill,
+body .auth-shell .auth-card.auth-card--login-gray form.auth-form input[type="password"]:-webkit-autofill{
+  -webkit-text-fill-color:#111827 !important;
+  box-shadow:0 0 0 1000px rgba(255,255,255,0.5) inset !important;
 }
 

@@ -41,6 +41,14 @@
           </div>
         </a>
       <% } %>
+      <a class="workorder-nav-card workorder-nav-card--green sa-home-card sa-home-card--kpi" href="/approvals">
+        <div class="workorder-nav-card__icon">&#128172;</div>
+        <div class="workorder-nav-card__body">
+          <h3><%= canApproveRequests ? 'Approvals' : 'Requests' %></h3>
+          <p><%= canApproveRequests ? (pendingApprovalCount || 0) : '-' %></p>
+          <span><%= canApproveRequests ? 'Approval requests' : 'Submit or view requests' %></span>
+        </div>
+      </a>
     </div>
   </section>
 </section>
