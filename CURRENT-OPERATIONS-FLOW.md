@@ -75,7 +75,7 @@ flowchart TD
 
 ## Portal map and portal-specific scripts
 
-Portal entry and grants are centralized in `lib/portals.js`. The path classifier maps `/work-orders`, `/work-order-transactions`, `/customers`, `/vehicles`, `/technician`, `/stm`, and `/service-receptionist` to Service; `/parts`, `/parts-manager`, `/parts-portal`, and `/branch-parts` to Parts; `/stores` to Stores; `/hr` and `/employees` to HR; `/gm` and `/api/gm` to GM; and `/finance` plus `/admin` to Finance Office. `/approvals`, `/transactions`, and `/helper` are shared routes with their own checks.
+Portal entry and grants are centralized in `lib/portals.js`. The path classifier maps `/work-orders`, `/work-order-transactions`, `/customers`, `/vehicles`, `/technician`, `/stm`, and `/service-receptionist` to Service; `/parts`, `/parts-manager`, and `/parts-portal` to Parts; `/stores` to Stores; `/hr` and `/employees` to HR; `/gm` and `/api/gm` to GM; and `/finance` plus `/admin` to Finance Office. `/approvals`, `/transactions`, and `/helper` are shared routes with their own checks.
 
 | Portal or role surface | Main server routes | Browser scripts and purpose |
 | --- | --- | --- |
@@ -83,7 +83,7 @@ Portal entry and grants are centralized in `lib/portals.js`. The path classifier
 | Technician | `/technician` | No portal-specific script; server-rendered assigned Work Orders and POST updates |
 | STM | `/stm`, `/api/stm/*`, `/kpi` | `public/js/stm-dashboard.js` for live technician/branch monitoring |
 | Parts Clerk / Parts portal | `/parts-portal`, `/parts` | `public/js/parts-report-modal.js` for report details |
-| Parts Manager | `/parts-manager`, `/branch-parts` | `pm-workspace.js`, `parts-manager-dashboard.js`, `parts-manager-nav.js`, and `parts-report-modal.js` for workspace panels, approvals, transfers, inventory, and reports |
+| Parts Manager | `/parts-manager` | `pm-workspace.js`, `parts-manager-dashboard.js`, `parts-manager-nav.js`, and `parts-report-modal.js` for workspace panels, approvals, transfers, inventory, and reports |
 | Stores | `/stores`, `/stores/pos` | No dedicated portal script; server-rendered POS, shelving, and store views |
 | HR | `/hr`, `/employees` | No dedicated portal script; server-rendered HR, roster, payroll, and employee views |
 | Finance Office | `/finance`, `/admin`, `/api/finance` | `finance-workspace.js` for finance workspace interactions |
@@ -93,15 +93,7 @@ Access is role/grant based rather than determined by the browser script. The GM 
 
 ### Recent parts cross-portal handoff
 
-The current branch-parts handoff is:
-
-1. A branch user saves a draft at `/branch-parts/orders` or sends an order to Warehouse 1.
-2. Before sending, Warehouse 1 on-hand is checked. A shortage leaves the order unsent, records a stock alert/request, and notifies Parts Manager.
-3. Parts Manager approval/print creates an in-transit fulfillment record. The transfer is not complete at approval or print alone.
-4. The requesting branch uses `/branch-parts/receive/:id` to verify receipt. The server deducts Warehouse 1 lots, creates the branch restock row, closes linked request transactions, marks the source request received, and reconciles stock alerts.
-5. `WAREHOUSE_1` is restricted to restock and transfer behavior; branch operational locations hold the received stock.
-
-This handoff is represented across `routes/branch-parts.js`, `routes/parts-manager.js`, `lib/parts-transfer-receive.js`, `lib/parts-stock-alerts.js`, and `lib/parts-location-scope.js`.
+Parts Manager Health Monitor creates stock transfers from Warehouse 1 to a needy branch. GM approval moves the transfer into transit, and Service verifies receipt from the Parts Database. Receiving deducts Warehouse 1 lots, creates the branch restock row, completes the transfer, and reconciles stock alerts through `routes/parts-manager.js`, `routes/parts.js`, `lib/parts-transfer-receive.js`, and `lib/parts-location-scope.js`.
 
 ## GM metric pipeline
 
@@ -155,7 +147,6 @@ The following recent commits explain the current portal boundaries and handoffs:
 | `dd05583` | Restore GM login as `GM` | Restored the dedicated GM login path and account behavior. |
 | `ee35800` | Keep Warehouse 1 as restock and transfer only | Restricted Warehouse 1 location semantics and aligned parts reporting/request behavior. |
 | `04e1dac` | Complete branch parts transfers after PM print and branch receipt | Added explicit in-transit fulfillment and branch receipt confirmation; approval/print no longer implies receipt. |
-| `3ee142c` | Run the 10 percent branch-parts flow | Added a reproducible flow helper/API and package scripts for the branch request, PM approval, and receipt scenario. |
 
 These are documentation anchors, not a migration checklist. The source of truth remains the route, portal, and library code named above.
 

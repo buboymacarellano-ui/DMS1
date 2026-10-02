@@ -15,12 +15,13 @@
 
   <article class="dashboard-card gm-panel">
     <div class="dashboard-card__header gm-panel-header">Warehouse 1 Receiving Grid</div>
-    <p class="dashboard-note">Fill the rows below. Save creates restock transactions inside Parts-DB-All with auto PTN, date, editor, and Warehouse 1 location.</p>
+    <p class="dashboard-note">Fill the rows below. Click inside the Barcode box and scan the parts label with the barcode reader to assign it to that row. Save creates restock transactions inside Parts-DB-All with auto PTN, date, editor, and Warehouse 1 location.</p>
 
     <div class="table-scroll pm-table-wrap" style="border:1px solid #ddd;border-radius:4px;overflow-x:auto;">
-      <table class="list pm-multiple-entry__table" style="font-size:12px;min-width:1180px;width:100%;">
+      <table class="list pm-multiple-entry__table" style="font-size:12px;min-width:1280px;width:100%;">
         <thead>
           <tr>
+            <th>Barcode</th>
             <th>Part #</th>
             <th>Part Name</th>
             <th>Sub-ID</th>
@@ -48,6 +49,10 @@
   </article>
 </section>
 
+<style>
+  .pm-multiple-entry__table .pm-barcode-input { border-color: #2980b9; background: #eef6fc; }
+  .pm-multiple-entry__table .pm-barcode-input:focus { border-color: #2980b9; box-shadow: 0 0 0 2px rgba(41,128,185,0.25); background: #fff; }
+</style>
 <script>
   window.pmMultipleEntryLocations = <%- JSON.stringify(locations) %>;
 </script>

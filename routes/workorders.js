@@ -339,10 +339,11 @@ async function getWorkOrderTechnicianUpdates(workOrderId) {
     .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
 }
 
-function buildPartsInventoryIndex(partsInventory) {
+function buildPartsInventoryIndex(partsInventory, sourceLocation) {
   const index = new Map();
 
   for (const row of partsInventory || []) {
+    if (sourceLocation && !sameLocation(row.present_location || row.branch, sourceLocation)) continue;
     const partNumberRaw = normalizePartNumber(row.part_number);
     const partNumberKey = normalizePartNumberKey(partNumberRaw);
     if (!partNumberKey) continue;
@@ -395,7 +396,7 @@ function buildPartsInventoryIndex(partsInventory) {
   return index;
 }
 
-function deductFromSourceStockRows(partsInventory, partNumberKey, qtyToDeduct, data) {
+function deductFromSourceStockRows(partsInventory, partNumberKey, qtyToDeduct, data, sourceLocation) {
   let remaining = Math.max(0, toNumber(qtyToDeduct));
   if (remaining <= 0) return true;
 
@@ -403,6 +404,7 @@ function deductFromSourceStockRows(partsInventory, partNumberKey, qtyToDeduct, d
     const rowKey = normalizePartNumberKey(row.part_number);
     const type = String(row.transaction_type || '').trim();
     if (rowKey !== partNumberKey) continue;
+    if (sourceLocation && !sameLocation(row.present_location || row.branch, sourceLocation)) continue;
     if (isPartsActivityLog(row)) continue;
     if (!isIncomingStockType(type)) continue;
 
@@ -439,10 +441,11 @@ function collectPartUsage(serviceItems) {
   return usage;
 }
 
-async function applyPartsInventoryAdjustments(existingItems, nextItems, workOrderNumber, username) {
+async function applyPartsInventoryAdjustments(existingItems, nextItems, workOrderNumber, username, workOrderBranch) {
   const data = await store.getRawData();
   const partsInventory = Array.isArray(data.parts_inventory) ? data.parts_inventory : [];
-  const index = buildPartsInventoryIndex(partsInventory);
+  const sourceLocation = String(workOrderBranch || '').trim();
+  const index = buildPartsInventoryIndex(partsInventory, sourceLocation);
 
   const existingUsage = collectPartUsage(existingItems);
   const nextUsage = collectPartUsage(nextItems);
@@ -490,13 +493,13 @@ async function applyPartsInventoryAdjustments(existingItems, nextItems, workOrde
     const isSold = change.delta > 0;
 
     if (isSold) {
-      const deducted = deductFromSourceStockRows(partsInventory, key, qty, data);
+      const deducted = deductFromSourceStockRows(partsInventory, key, qty, data, sourceLocation);
       if (!deducted) {
         return { ok: false, error: `Unable to transfer stock for ${stockInfo.part_number}. Please verify stock entries.` };
       }
     }
 
-    const physicalLocation = String(
+    const physicalLocation = sourceLocation || String(
       stockInfo.present_location || stockInfo.created_branch || stockInfo.branch || ''
     ).trim();
     const createdBranch = String(stockInfo.created_branch || physicalLocation).trim();
@@ -991,7 +994,8 @@ router.post('/:id/service', async (req, res) => {
     existingWo.service_items || [],
     normalized,
     normalizeWorkOrderNumber(existingWo.work_order_number, existingWo.id),
-    req.session && req.session.user ? req.session.user.username : ''
+    req.session && req.session.user ? req.session.user.username : '',
+    existingWo.branch
   );
 
   if (!inventoryResult.ok) {

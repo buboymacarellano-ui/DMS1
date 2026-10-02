@@ -29,6 +29,7 @@
   function addLine(seed) {
     const row = document.createElement('tr');
     row.innerHTML = `
+      <td><input data-field="barcode" class="pm-barcode-input" placeholder="Scan barcode" value="${escapeAttr(seed && seed.barcode)}" autocomplete="off" /></td>
       <td><input data-field="part_number" value="${escapeAttr(seed && seed.part_number)}" required /></td>
       <td><input data-field="part_name" value="${escapeAttr(seed && seed.part_name)}" required /></td>
       <td><input data-field="sub_id" value="${escapeAttr(seed && seed.sub_id)}" /></td>
@@ -46,7 +47,7 @@
       </td>
     `;
     body.appendChild(row);
-    row.querySelector('[data-field="part_number"]').focus();
+    row.querySelector('[data-field="barcode"]').focus();
   }
 
   function rows() {
@@ -102,6 +103,18 @@
       return;
     }
     removeButton.closest('tr').remove();
+  });
+
+  // Barcode scanners act as keyboards: they type the code then send Enter.
+  // Jump to Part # once a scan lands so the clerk can keep filling the row.
+  body.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    const input = event.target.closest('[data-field="barcode"]');
+    if (!input) return;
+    event.preventDefault();
+    const row = input.closest('tr');
+    const next = row && row.querySelector('[data-field="part_number"]');
+    if (next) next.focus();
   });
 
   addLineButton.addEventListener('click', () => addLine());

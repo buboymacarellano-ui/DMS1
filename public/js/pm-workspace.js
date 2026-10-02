@@ -5,6 +5,9 @@
   const panels = Array.from(root.querySelectorAll('[data-pm-section]'));
   const buttons = Array.from(root.querySelectorAll('[data-pm-panel]'));
   const editForm = document.getElementById('pm-edit-form');
+  const editDeleteForm = document.getElementById('pm-edit-delete-form');
+  const editCancelBtn = document.getElementById('pm-edit-cancel-btn');
+  const editRemoveBtn = document.getElementById('pm-edit-remove-btn');
   const csvFile = document.getElementById('pm-csv-file');
   const csvText = document.getElementById('pm-csv-text');
   const csvForm = document.getElementById('pm-csv-form');
@@ -12,6 +15,15 @@
   const transitInput = document.getElementById('pm-transit-input');
   const transitButton = document.getElementById('pm-transit-generate-btn');
   const transitResult = document.getElementById('pm-transit-result');
+  const transactionTable = document.getElementById('pm-transaction-records-table');
+  const transactionPrint = document.getElementById('pm-transaction-print');
+  const transactionSort = document.getElementById('pm-transaction-sort');
+  const transactionEdit = document.getElementById('pm-transaction-edit');
+  const transactionActivate = document.getElementById('pm-transaction-activate');
+  const transactionSave = document.getElementById('pm-transaction-save');
+  const transactionRemove = document.getElementById('pm-transaction-remove');
+  const transactionStatus = document.getElementById('pm-transaction-action-status');
+  let selectedTransactionRow = null;
 
   function openPanel(name) {
     const target = String(name || '').trim();
@@ -31,6 +43,12 @@
         setTimeout(() => window.updateOrderingGridDisplay(), 50);
       }
     }
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>'"]/g, (char) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;',
+    }[char]));
   }
 
   buttons.forEach((btn) => {
@@ -121,6 +139,95 @@
     transitButton.addEventListener('click', generateTransitReceipt);
   }
 
+  function selectedTransactionId() {
+    return selectedTransactionRow && selectedTransactionRow.getAttribute('data-transaction-id');
+  }
+
+  function updateTransactionActions() {
+    const active = Boolean(selectedTransactionId());
+    [transactionPrint, transactionEdit, transactionActivate, transactionSave, transactionRemove]
+      .forEach((button) => { if (button) button.disabled = !active; });
+    if (transactionStatus) transactionStatus.textContent = active
+      ? 'Selected: ' + (selectedTransactionRow.getAttribute('data-transaction-number') || selectedTransactionId())
+      : 'Select a transaction row.';
+  }
+
+  if (transactionTable) {
+    transactionTable.addEventListener('click', (event) => {
+      const row = event.target.closest('.pm-transaction-row');
+      if (!row) return;
+      if (selectedTransactionRow) selectedTransactionRow.classList.remove('pm-transaction-row--active');
+      selectedTransactionRow = row;
+      row.classList.add('pm-transaction-row--active');
+      updateTransactionActions();
+    });
+  }
+
+  if (transactionSort && transactionTable) {
+    transactionSort.addEventListener('change', () => {
+      const body = transactionTable.tBodies[0];
+      const rows = Array.from(body.querySelectorAll('.pm-transaction-row'));
+      const mode = transactionSort.value;
+      const text = (row, key) => String(row.dataset[key] || '').trim().toLowerCase();
+      const number = (row, key) => Number(row.dataset[key] || 0) || 0;
+      const date = (row) => {
+        const stamp = Date.parse(row.dataset.transactionDate || '');
+        return Number.isNaN(stamp) ? 0 : stamp;
+      };
+      rows.sort((left, right) => {
+        if (mode === 'date-asc') return date(left) - date(right);
+        if (mode === 'username-asc') return text(left, 'transactionUsername').localeCompare(text(right, 'transactionUsername'));
+        if (mode === 'qty-desc') return number(right, 'transactionQty') - number(left, 'transactionQty');
+        if (mode === 'price-desc') return number(right, 'transactionPrice') - number(left, 'transactionPrice');
+        return date(right) - date(left);
+      });
+      rows.forEach((row) => body.appendChild(row));
+      if (transactionStatus) transactionStatus.textContent = transactionSort.options[transactionSort.selectedIndex].text + '.';
+    });
+  }
+
+  if (transactionPrint) transactionPrint.addEventListener('click', () => {
+    const id = selectedTransactionId();
+    if (id) window.open('/parts-manager/print/transaction/' + encodeURIComponent(id), '_blank', 'noopener');
+  });
+
+  if (transactionEdit) transactionEdit.addEventListener('click', () => {
+    const id = selectedTransactionId();
+    if (id) loadPart(id);
+  });
+
+  if (transactionSave) transactionSave.addEventListener('click', async () => {
+    if (editForm && selectedTransactionId()) {
+      await loadPart(selectedTransactionId());
+      if (document.getElementById('pm-edit-id').value === selectedTransactionId()) editForm.requestSubmit();
+    }
+  });
+
+  if (transactionRemove) transactionRemove.addEventListener('click', () => {
+    if (!editDeleteForm || !selectedTransactionId()) return;
+    if (window.confirm('Remove all information for this transaction number?')) {
+      editDeleteForm.action = '/parts-manager/transactions/' + encodeURIComponent(selectedTransactionId()) + '/delete';
+      editDeleteForm.submit();
+    }
+  });
+
+  if (transactionActivate) transactionActivate.addEventListener('click', async () => {
+    const id = selectedTransactionId();
+    if (!id) return;
+    transactionActivate.disabled = true;
+    try {
+      const response = await fetch('/parts-manager/transactions/' + encodeURIComponent(id) + '/activate-number', { method: 'POST', headers: { Accept: 'application/json' } });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.ok) throw new Error(payload.error || 'Could not activate transaction number.');
+      selectedTransactionRow.setAttribute('data-transaction-number', payload.transaction_number);
+      selectedTransactionRow.cells[1].textContent = payload.transaction_number;
+      updateTransactionActions();
+    } catch (error) {
+      window.alert(error.message || error);
+      transactionActivate.disabled = false;
+    }
+  });
+
   function fillEdit(part) {
     if (!editForm || !part) return;
     document.getElementById('pm-edit-id').value = part.id || '';
@@ -151,6 +258,8 @@
     document.getElementById('pm-edit-retail').value = part.retail_price != null ? part.retail_price : '';
     document.getElementById('pm-edit-sold-to').value = part.sold_to || '';
     editForm.action = '/parts-manager/parts/' + encodeURIComponent(part.id) + '/edit';
+    if (editDeleteForm) editDeleteForm.action = '/parts-manager/parts/' + encodeURIComponent(part.id) + '/delete';
+    if (editRemoveBtn) editRemoveBtn.disabled = false;
     openPanel('edit');
     editForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -206,6 +315,24 @@
       if (!id) {
         event.preventDefault();
         window.alert('Select a parts row from the database below first.');
+      }
+    });
+  }
+
+  if (editCancelBtn) {
+    editCancelBtn.addEventListener('click', () => {
+      openPanel('health');
+    });
+  }
+
+  if (editDeleteForm) {
+    editDeleteForm.addEventListener('submit', (event) => {
+      if (!document.getElementById('pm-edit-id').value) {
+        event.preventDefault();
+        return;
+      }
+      if (!window.confirm('Remove this part from the Parts Database? Audit history will be kept.')) {
+        event.preventDefault();
       }
     });
   }
@@ -321,6 +448,8 @@
     const selectAllCheckbox = document.getElementById('pm-health-select-all');
     const rowCheckboxes = Array.from(document.querySelectorAll('.pm-health-row-check'));
     const transferBtn = document.getElementById('pm-health-transfer-btn');
+    const stockTransferBtn = document.getElementById('pm-health-stock-transfer-btn');
+    const editSelectedBtn = document.getElementById('pm-health-edit-btn');
     const countDisplay = document.getElementById('pm-health-count');
     const modal = document.getElementById('pm-health-transfer-modal');
     const cancelTransferBtn = document.getElementById('pm-health-cancel-transfer');
@@ -328,7 +457,7 @@
     const transferList = document.getElementById('pm-health-transfer-list');
     const transferCalcs = document.getElementById('pm-health-transfer-calcs');
 
-    if (!selectAllCheckbox || !transferBtn || !modal) return;
+    if (!selectAllCheckbox || !transferBtn || !stockTransferBtn || !editSelectedBtn || !modal) return;
 
     function updateCheckboxState() {
       const checked = rowCheckboxes.filter((cb) => cb.checked).length;
@@ -338,6 +467,8 @@
       selectAllCheckbox.indeterminate = checked > 0 && checked < total;
 
       transferBtn.disabled = checked === 0;
+      stockTransferBtn.disabled = checked === 0;
+      editSelectedBtn.disabled = checked !== 1;
       countDisplay.textContent = checked > 0 ? `${checked} item${checked !== 1 ? 's' : ''} selected` : '';
     }
 
@@ -352,6 +483,34 @@
       cb.addEventListener('change', updateCheckboxState);
     });
 
+    editSelectedBtn.addEventListener('click', () => {
+      const selected = rowCheckboxes.filter((cb) => cb.checked);
+      if (selected.length !== 1) return;
+      loadPart(selected[0].dataset.partId);
+    });
+
+    stockTransferBtn.addEventListener('click', () => {
+      const selected = rowCheckboxes.filter((cb) => cb.checked);
+      if (!selected.length || typeof window.stageHealthRowsForStockTransfer !== 'function') return;
+      const items = selected.map((cb) => {
+        const row = cb.closest('tr');
+        const cells = row ? row.querySelectorAll('td') : [];
+        return {
+          id: cb.dataset.partId,
+          part_number: row ? row.getAttribute('data-part-num') : '',
+          part_name: cells[2] ? cells[2].textContent.trim() : '',
+          location: cells[3] ? cells[3].textContent.trim() : 'Unassigned',
+          source_location: row ? (row.getAttribute('data-source-location') || 'Warehouse 1') : 'Warehouse 1',
+          current_stock: cells[5] ? Number.parseInt(cells[5].textContent, 10) || 0 : 0,
+          safety_stock: cells[6] ? Number.parseInt(cells[6].textContent, 10) || 5 : 5,
+          suggested_qty: cells[6] && cells[5]
+            ? Math.max(1, (Number.parseInt(cells[6].textContent, 10) || 5) - (Number.parseInt(cells[5].textContent, 10) || 0))
+            : 1,
+        };
+      });
+      window.stageHealthRowsForStockTransfer(items);
+    });
+
     transferBtn.addEventListener('click', () => {
       const selected = rowCheckboxes.filter((cb) => cb.checked);
       if (selected.length === 0) return;
@@ -360,13 +519,15 @@
         const row = cb.closest('tr');
         const partNum = row.getAttribute('data-part-num');
         const partName = row.querySelector('td:nth-child(3)').textContent;
-        const currentStock = parseInt(row.querySelector('td:nth-child(5)').textContent) || 0;
-        const safetyStock = parseInt(row.querySelector('td:nth-child(6)').textContent) || 5;
+        const location = row.querySelector('td:nth-child(4)').textContent.trim();
+        const currentStock = parseInt(row.querySelector('td:nth-child(6)').textContent) || 0;
+        const safetyStock = parseInt(row.querySelector('td:nth-child(7)').textContent) || 5;
 
         return {
           id: cb.dataset.partId,
           part_number: partNum,
           part_name: partName,
+          location,
           current_stock: currentStock,
           safety_stock: safetyStock,
           suggested_qty: Math.max(0, safetyStock - currentStock),
@@ -378,6 +539,7 @@
         <div style="background:#f8f9fa;padding:8px;margin-bottom:8px;border-radius:3px;">
           <div style="font-weight:bold;font-size:12px;">${item.part_number}</div>
           <div style="font-size:11px;color:#555;margin:4px 0;">
+            <div>Location: <strong>${item.location || 'Unassigned'}</strong></div>
             <div>Current Stock: <strong>${item.current_stock}</strong></div>
             <div>Safety Stock: <strong>${item.safety_stock}</strong></div>
           </div>
@@ -414,11 +576,12 @@
           const partNum = row.getAttribute('data-part-num');
           const cells = Array.from(row.querySelectorAll('td'));
           
-          // Extract from cells: 0=checkbox, 1=Part#, 2=Name, 3=Supplier, 4=Stock, 5=Safety, 6=Status
+          // Extract from cells: 0=checkbox, 1=Part#, 2=Name, 3=Location, 4=Supplier, 5=Stock, 6=Safety, 7=Status
           const partName = (cells[2] || {}).textContent?.trim() || '—';
-          const supplier = (cells[3] || {}).textContent?.trim() || '—';
-          const currentStockText = (cells[4] || {}).textContent?.trim() || '0';
-          const safetyStockText = (cells[5] || {}).textContent?.trim() || '5';
+          const location = (cells[3] || {}).textContent?.trim() || 'Unassigned';
+          const supplier = (cells[4] || {}).textContent?.trim() || '—';
+          const currentStockText = (cells[5] || {}).textContent?.trim() || '0';
+          const safetyStockText = (cells[6] || {}).textContent?.trim() || '5';
           
           const currentStock = parseInt(currentStockText.replace(/[^\d-]/g, '')) || 0;
           const safetyStock = parseInt(safetyStockText.replace(/[^\d-]/g, '')) || 5;
@@ -427,6 +590,7 @@
             id: partId,
             part_number: partNum,
             part_name: partName,
+            location: location,
             supplier: supplier,
             current_stock: currentStock,
             safety_stock: safetyStock,
@@ -492,6 +656,90 @@
     updateCheckboxState();
   })();
 
+  // Stage selected health rows in the existing pending stock-transfer workflow.
+  (function () {
+    const transferGridBody = document.getElementById('pm-health-stock-transfer-body');
+    const transferGridSubmit = document.getElementById('pm-health-stock-transfer-submit');
+    const transferGridCancel = document.getElementById('pm-health-stock-transfer-cancel');
+    const transferGridStatus = document.getElementById('pm-health-stock-transfer-status');
+    const locations = JSON.parse(decodeURIComponent(root.getAttribute('data-transfer-locations') || '%5B%5D'));
+    let stagedRows = [];
+
+    if (!transferGridBody || !transferGridSubmit || !transferGridCancel) return;
+
+    function renderTransferGrid() {
+      transferGridSubmit.disabled = stagedRows.length === 0;
+      if (!stagedRows.length) {
+        transferGridBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:16px;color:#666;">Select critical rows in Health Monitoring first.</td></tr>';
+        return;
+      }
+      transferGridBody.innerHTML = stagedRows.map((item, index) => `
+        <tr data-transfer-index="${index}">
+          <td>${escapeHtml(item.source)}</td>
+          <td><select class="pm-health-transfer-destination" data-index="${index}">
+            <option value="">Select destination</option>
+            ${locations.filter((location) => location !== item.source).map((location) => `<option value="${escapeHtml(location)}"${location === item.destination ? ' selected' : ''}>${escapeHtml(location)}</option>`).join('')}
+          </select></td>
+          <td>${escapeHtml(item.part_number)}</td>
+          <td>${escapeHtml(item.part_name || '—')}</td>
+          <td><input type="number" class="pm-health-transfer-qty" data-index="${index}" value="${item.qty}" min="1" step="1" style="width:70px;" /></td>
+          <td><button type="button" class="btn pm-health-transfer-remove" data-index="${index}">Remove</button></td>
+        </tr>`).join('');
+    }
+
+    transferGridBody.addEventListener('change', (event) => {
+      const index = Number(event.target.dataset.index);
+      if (!Number.isInteger(index) || !stagedRows[index]) return;
+      if (event.target.classList.contains('pm-health-transfer-destination')) stagedRows[index].destination = event.target.value;
+      if (event.target.classList.contains('pm-health-transfer-qty')) stagedRows[index].qty = Math.max(1, Number(event.target.value) || 1);
+    });
+
+    transferGridBody.addEventListener('click', (event) => {
+      const button = event.target.closest('.pm-health-transfer-remove');
+      if (!button) return;
+      stagedRows.splice(Number(button.dataset.index), 1);
+      renderTransferGrid();
+    });
+
+    transferGridCancel.addEventListener('click', () => {
+      stagedRows = [];
+      renderTransferGrid();
+      openPanel('health');
+    });
+
+    transferGridSubmit.addEventListener('click', async () => {
+      if (stagedRows.some((item) => !item.destination || item.destination === item.source || item.qty < 1)) {
+        transferGridStatus.textContent = 'Choose a different destination and valid quantity for every row.';
+        return;
+      }
+      transferGridSubmit.disabled = true;
+      transferGridStatus.textContent = 'Filing pending transfer requests...';
+      try {
+        const groups = new Map();
+        stagedRows.forEach((item) => {
+          const key = item.source + '|' + item.destination;
+          if (!groups.has(key)) groups.set(key, { from_branch: item.source, to_branch: item.destination, lines: [] });
+          groups.get(key).lines.push({ part_number: item.part_number, part_name: item.part_name, sub_id: item.sub_id, qty: item.qty, unit: item.unit || '' });
+        });
+        for (const group of groups.values()) {
+          const body = new URLSearchParams({ from_branch: group.from_branch, to_branch: group.to_branch, lines: JSON.stringify(group.lines) });
+          const response = await fetch('/parts-manager/transfer', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body, credentials: 'same-origin' });
+          if (!response.ok) throw new Error('A transfer request could not be filed.');
+        }
+        window.location.href = '/parts-manager?panel=approvals#pending-transfers';
+      } catch (error) {
+        transferGridStatus.textContent = error.message || 'Transfer filing failed.';
+        transferGridSubmit.disabled = false;
+      }
+    });
+
+    window.stageHealthRowsForStockTransfer = function (items) {
+      stagedRows = (items || []).map((item) => ({ source: item.source_location || 'Warehouse 1', part_number: item.part_number, part_name: item.part_name, sub_id: item.sub_id || '', qty: Math.max(1, Number(item.suggested_qty || 1)), unit: item.unit || '', destination: item.location || '' }));
+      renderTransferGrid();
+      openPanel('health-transfer');
+    };
+  })();
+
   // Ordering Grid Panel
   function updateOrderingGridDisplay() {
     const items = window.orderingGridItems || [];
@@ -506,7 +754,7 @@
     countDisplay.textContent = items.length;
 
     if (items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:#999;">No items in ordering queue. Transfer items from Health Monitor panel.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px;color:#999;">No items in ordering queue. Transfer items from Health Monitor panel.</td></tr>';
       createPoBtn.disabled = true;
       sendSupplierBtn.disabled = true;
       return;
@@ -517,6 +765,7 @@
         <td style="text-align:center;"><input type="checkbox" class="pm-ordering-check" data-order-id="${item.id}" /></td>
         <td><strong>${item.part_number || '—'}</strong></td>
         <td>${item.part_name || '—'}</td>
+        <td>${item.location || 'Unassigned'}</td>
         <td>${item.supplier || '—'}</td>
         <td style="text-align:right;">${item.current_stock || 0}</td>
         <td style="text-align:right;">${item.safety_stock || 5}</td>
@@ -610,7 +859,7 @@
       poPreview.innerHTML = selectedItems.map((item) => `
         <div style="margin-bottom:6px;padding:6px;background:white;border-radius:2px;">
           <div><strong>${item.part_number}</strong> - ${item.part_name}</div>
-          <div style="color:#666;">Supplier: ${item.supplier || '(No supplier)'} | Qty: ${item.order_qty || 0}</div>
+          <div style="color:#666;">Location: ${item.location || 'Unassigned'} | Supplier: ${item.supplier || '(No supplier)'} | Qty: ${item.order_qty || 0}</div>
         </div>
       `).join('');
 

@@ -1,7 +1,6 @@
 const express = require('express');
 const store = require('../data/store');
 const {
-  PARTS_REQUEST_TYPE,
   TYPE_TRANSFER_REQUEST,
   TYPE_RESTOCK,
   TYPE_STOCK,
@@ -9,11 +8,7 @@ const {
   TYPE_SOLD,
   VALID_PARTS_TRANSACTION_TYPES,
   WAREHOUSE_DESTINATIONS,
-  REQUEST_TX_STATUS_OPEN,
-  REQUEST_TX_STATUS_CLOSED,
-  isValidWarehouse,
   isPartsRequestType,
-  buildPartsRequestInventoryPayload,
   normalizePartsTransactionType,
   displayPartsTransactionType,
   isValidPartsTransactionType,
@@ -40,6 +35,8 @@ const {
   resolveFrontlinePartsView,
   filterDataToLocation,
 } = require('../lib/parts-location-scope');
+const { listInboundApprovedTransfers } = require('../lib/parts-transfer-receive');
+const { receiveApprovedPartsTransfer } = require('../lib/parts-transfer-receive');
 
 const router = express.Router();
 
@@ -422,67 +419,6 @@ function partsReportCell(part, column) {
   return value == null ? '' : value;
 }
 
-function asArray(value) {
-  if (Array.isArray(value)) return value;
-  if (value === undefined || value === null || value === '') return [];
-  return [value];
-}
-
-function parseRequestOrderLines(body) {
-  const partNumbers = asArray(body.line_part_number);
-  const partNames = asArray(body.line_part_name);
-  const subIds = asArray(body.line_sub_id);
-  const generics = asArray(body.line_generic);
-  const suppliers = asArray(body.line_supplier);
-  const units = asArray(body.line_unit);
-  const qtys = asArray(body.line_qty);
-  const costPrices = asArray(body.line_cost_price);
-  const markups = asArray(body.line_markup);
-  const retailPrices = asArray(body.line_retail_price);
-  const soldTos = asArray(body.line_sold_to);
-  const count = Math.max(
-    partNumbers.length,
-    partNames.length,
-    subIds.length,
-    generics.length,
-    suppliers.length,
-    units.length,
-    qtys.length,
-    costPrices.length,
-    markups.length,
-    retailPrices.length,
-    soldTos.length
-  );
-
-  const lines = [];
-  for (let i = 0; i < count; i += 1) {
-    const part_number = String(partNumbers[i] || '').trim();
-    const part_name = String(partNames[i] || '').trim();
-    const qtyRaw = String(qtys[i] || '').trim();
-    if (!part_number && !part_name && qtyRaw === '') continue;
-
-    const cost_price = toNumber(costPrices[i]);
-    const markup = toNumber(markups[i]);
-    const retailRaw = String(retailPrices[i] || '').trim();
-    const retail_price = retailRaw !== '' ? toNumber(retailRaw) : computeRetailPrice(cost_price, markup);
-
-    lines.push({
-      part_number,
-      part_name,
-      sub_id: String(subIds[i] || '').trim(),
-      generic: String(generics[i] || '').trim(),
-      supplier: String(suppliers[i] || '').trim(),
-      unit: String(units[i] || '').trim(),
-      qty: toNumber(qtyRaw),
-      cost_price,
-      markup,
-      retail_price,
-      sold_to: String(soldTos[i] || '').trim(),
-    });
-  }
-  return lines;
-}
-
 router.get('/', async (req, res) => {
   const data = await store.getRawData();
   let dirty = Boolean(backfillMissingTransactionNumbers(data));
@@ -493,8 +429,6 @@ router.get('/', async (req, res) => {
   const view = resolveScopedPartsView(req, data);
   const scopedData = view.isFrontline ? filterDataToLocation(data, view.location) : data;
   const dashboardLogs = inventory.getDashboardLogs(scopedData);
-  const requestTransactions = (data.parts_request_transactions || [])
-    .filter((row) => !view.location || belongsToLocation(row, view.location));
   const q = String(req.query.q || '').trim().toLowerCase();
   const filterType = req.query.type || '';
   const { filtered } = filterPartsInventory(dashboardLogs, req.query);
@@ -504,19 +438,15 @@ router.get('/', async (req, res) => {
     view.location || ''
   );
 
-  const partsRequests = inventory.allAuditRows(scopedData).filter(p => isPartsRequestType(p.transaction_type));
-  const sortedRequestTransactions = [...requestTransactions].sort((a, b) =>
-    String(b.created_at || '').localeCompare(String(a.created_at || ''))
-  );
+  const inboundTransfers = view.isFrontline
+    ? listInboundApprovedTransfers(data, view.location)
+    : [];
 
   return res.render('parts/index', {
     parts: viewRows,
-    partsRequests,
-    requestTransactions: sortedRequestTransactions,
     warehouses: WAREHOUSE_DESTINATIONS,
     locationOptions: buildPresentLocationOptions(data.branches),
     actorBranch: resolveActorBranch(req.session && req.session.user, data.employees),
-    openPartsRequestPanel: String(req.query.panel || '') === 'request',
     total: viewRows.length,
     q,
     filterType,
@@ -528,136 +458,54 @@ router.get('/', async (req, res) => {
     error: req.query.error || '',
     success: req.query.success || '',
     partsView: view,
+    inboundTransfers,
   });
 });
 
-router.post('/request-orders/send', async (req, res) => {
-  const warehouse = String(req.body.sent_to || '').trim();
-  const lines = parseRequestOrderLines(req.body);
-  const data = await store.getRawData();
+router.post('/receive/:id', async (req, res) => {
   const user = req.session && req.session.user ? req.session.user : {};
-  const editor = String(user.username || '').trim();
-  const requestingBranch = resolveActorBranch(user, data.employees) || String(user.branch || '').trim();
-
-  if (!isValidWarehouse(warehouse)) {
-    return res.redirect('/parts?panel=request&error=' + encodeURIComponent('Select Warehouse 1, Warehouse 2, or Warehouse 3.'));
-  }
-  if (!lines.length) {
-    return res.redirect('/parts?panel=request&error=' + encodeURIComponent('Add at least one line order before sending.'));
-  }
-
-  const invalid = lines.find(line => !line.part_number || !line.part_name || !Number.isFinite(line.qty));
-  if (invalid) {
-    return res.redirect('/parts?panel=request&error=' + encodeURIComponent('Each line needs Part Number, Part Name, and Qty.'));
-  }
-
-  const transactionDate = new Date().toISOString().slice(0, 10);
-  const orderId = genId();
-  if (!Array.isArray(data.parts_request_transactions)) data.parts_request_transactions = [];
-  if (!Array.isArray(data.parts_inventory)) data.parts_inventory = [];
-
-  lines.forEach((line) => {
-    const transactionNumber = allocatePartsTransactionNumber(data);
-    const inventoryPayload = buildPartsRequestInventoryPayload({
-      partNumber: line.part_number,
-      partName: line.part_name,
-      subId: line.sub_id,
-      unit: line.unit,
-      qty: line.qty,
-      supplier: line.supplier,
-      generic: line.generic,
-      costPrice: line.cost_price,
-      markup: line.markup,
-      retailPrice: line.retail_price,
-      editor,
-      requestingBranch,
-      branch: warehouse,
-      workOrderNumber: line.sold_to,
-      workOrderId: '',
-      transactionDate,
-    });
-    const inventoryId = genId();
-    const inventoryRow = Object.assign({
-      id: inventoryId,
-      created_at: new Date().toISOString(),
-      transaction_number: transactionNumber,
-      present_location: requestingBranch,
-    }, inventoryPayload, {
-      present_location: requestingBranch,
-    });
-    data.parts_inventory.push(inventoryRow);
-    inventory.rememberTransaction(data, inventoryRow);
-
-    data.parts_request_transactions.push({
-      id: genId(),
-      order_id: orderId,
-      created_at: new Date().toISOString(),
-      transaction_date: transactionDate,
-      transaction_number: transactionNumber,
-      transaction_type: PARTS_REQUEST_TYPE,
-      status: REQUEST_TX_STATUS_OPEN,
-      sent_to: warehouse,
-      editor,
-      requesting_branch: requestingBranch,
-      part_number: line.part_number,
-      part_name: line.part_name,
-      sub_id: line.sub_id,
-      generic: line.generic,
-      supplier: line.supplier,
-      unit: line.unit,
-      qty: line.qty,
-      cost_price: line.cost_price,
-      markup: line.markup,
-      retail_price: line.retail_price,
-      sold_to: line.sold_to,
-      inventory_request_id: inventoryId,
-      received_at: '',
-      received_by: '',
-    });
-  });
-
-  await store.replaceData(data);
-  return res.redirect('/parts?panel=request&success=' + encodeURIComponent(`Parts request sent to ${warehouse}.`));
-});
-
-router.post('/request-orders/:id/receive', async (req, res) => {
+  if (!isFrontlineRole(user.role)) return res.status(403).send('Frontline Service access only.');
   const data = await store.getRawData();
-  if (!Array.isArray(data.parts_request_transactions)) data.parts_request_transactions = [];
-  const idx = data.parts_request_transactions.findIndex(row => row.id === req.params.id);
-  if (idx === -1) {
-    return res.redirect('/parts?panel=request&error=' + encodeURIComponent('Parts request transaction not found.'));
-  }
-
-  const row = data.parts_request_transactions[idx];
-  if (String(row.status || '') === REQUEST_TX_STATUS_CLOSED) {
-    return res.redirect('/parts?panel=request&success=' + encodeURIComponent('Request already marked Closed.'));
-  }
-
-  const user = req.session && req.session.user ? req.session.user : {};
-  const receivedBy = String(user.username || '').trim();
-  const receivedAt = new Date().toISOString();
-
-  data.parts_request_transactions[idx] = Object.assign({}, row, {
-    status: REQUEST_TX_STATUS_CLOSED,
-    received_at: receivedAt,
-    received_by: receivedBy,
+  const branch = resolveActorBranch(user, data.employees);
+  if (!branch) return res.status(403).send('Assigned branch is required. Please log in again.');
+  const result = receiveApprovedPartsTransfer(data, req.params.id, {
+    receiver: String(user.username || '').trim(),
+    branch,
   });
-
-  const inventoryId = String(row.inventory_request_id || '').trim();
-  if (inventoryId && Array.isArray(data.parts_inventory)) {
-    const invIdx = data.parts_inventory.findIndex(p => p.id === inventoryId);
-    if (invIdx !== -1) {
-      data.parts_inventory[invIdx] = Object.assign({}, data.parts_inventory[invIdx], {
-        request_status: 'received',
-        received_at: receivedAt,
-        received_by: receivedBy,
-      });
-    }
-  }
-
+  if (!result.ok) return res.redirect('/parts?error=' + encodeURIComponent(result.error));
   await store.replaceData(data);
-  return res.redirect('/parts?panel=request&success=' + encodeURIComponent('Part received. Transaction marked Closed.'));
+  return res.redirect('/parts?success=' + encodeURIComponent(
+    `Verified and received ${result.record.part_number}. Location is now ${branch}.`
+  ));
 });
+
+router.post('/api/receive-all/:transactionNumber', async (req, res) => {
+  const user = req.session && req.session.user ? req.session.user : {};
+  if (!isFrontlineRole(user.role)) return res.status(403).json({ error: 'Frontline Service access only.' });
+  const data = await store.getRawData();
+  const branch = resolveActorBranch(user, data.employees);
+  if (!branch) return res.status(403).json({ error: 'Assigned branch is required. Please log in again.' });
+  const txnNumber = String(req.params.transactionNumber || '').trim();
+  if (!txnNumber) return res.status(400).json({ error: 'Transaction number is required.' });
+  const pending = listInboundApprovedTransfers(data, branch)
+    .filter((row) => String(row.transaction_number || '') === txnNumber);
+  if (!pending.length) return res.status(400).json({ error: 'No inbound transfers found for this transaction number.' });
+
+  const results = pending.map((item) => receiveApprovedPartsTransfer(data, item.id, {
+    receiver: String(user.username || '').trim(),
+    branch,
+  }));
+  const successful = results.filter((result) => result.ok);
+  if (!successful.length) return res.status(400).json({ ok: false, error: results[0].error || 'All transfers failed to receive.' });
+  await store.replaceData(data);
+  return res.json({
+    ok: true,
+    message: `Received ${successful.length} of ${pending.length} transfers`,
+    transactionNumber: txnNumber,
+    transfersReceived: successful.length,
+  });
+});
+
 
 router.get('/export.csv', async (req, res) => {
   const data = await store.getRawData();

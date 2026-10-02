@@ -6065,6 +6065,25 @@ body.role-frontline .technician-monitor__status{
   gap:12px;
 }
 
+.pm-transaction-records-full{
+  grid-column:1 / -1;
+  width:calc(100% + 24px);
+  margin-left:-12px;
+  margin-right:-12px;
+}
+
+.pm-transaction-records-full .table-scroll{
+  width:100%;
+}
+
+.pm-transfer-records-full,
+.pm-purchasing-full{
+  grid-column:1 / -1;
+  width:calc(100% + 24px);
+  margin-left:-12px;
+  margin-right:-12px;
+}
+
 .pm-approve-print{
   max-width:860px;
   margin:0 auto 24px;
@@ -8808,7 +8827,8 @@ body.role-frontline form.form.create-parts-form label{
 /* A&E login panel: marine blue background + light type for contrast */
 .auth-shell .auth-card,
 .auth-shell .auth-card.auth-card{
-  background:rgba(2,78,122,0.48) !important;
+  padding:10px !important;
+  background:rgba(0,0,0,0.78) !important;
   color:#ffffff !important;
 }
 .auth-shell .auth-card h1,
@@ -9225,5 +9245,29 @@ body .auth-shell .auth-card.auth-card--login-gray form.auth-form input[name="pas
 body .auth-shell .auth-card.auth-card--login-gray form.auth-form input[type="password"]:-webkit-autofill{
   -webkit-text-fill-color:#111827 !important;
   box-shadow:0 0 0 1000px rgba(255,255,255,0.5) inset !important;
+}
+
+body:has(.auth-shell) .app-back-arrow{
+  background:#f2c94c !important;
+  border-color:#c49a16 !important;
+  color:#111827 !important;
+}
+
+body:has(.auth-shell) .app-back-arrow:hover{
+  background:#d9ad2b !important;
+  border-color:#a57f0f !important;
+  color:#111827 !important;
+}
+
+body:has(.auth-shell) .auth-card--login-gray .auth-form > button{
+  background:#f2c94c !important;
+  border-color:#c49a16 !important;
+  color:#111827 !important;
+}
+
+body:has(.auth-shell) .auth-card--login-gray .auth-form > button:hover{
+  background:#d9ad2b !important;
+  border-color:#a57f0f !important;
+  color:#111827 !important;
 }
 

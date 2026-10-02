@@ -103,6 +103,16 @@
   <section class="sa-home-group">
     <h3 class="sa-home-group__title">4. Receiving</h3>
     <div class="sa-grid sa-grid--4">
+      <% if (canGrant('parts', 'request')) { %>
+        <a class="workorder-nav-card workorder-nav-card--orange sa-home-card" href="/parts#approved-transfers">
+          <div class="workorder-nav-card__icon">&#128230;</div>
+          <div class="workorder-nav-card__body">
+            <h3>Parts Receiving</h3>
+            <p>Verify approved transfers</p>
+            <span>Update branch stock</span>
+          </div>
+        </a>
+      <% } %>
       <a class="workorder-nav-card workorder-nav-card--blue sa-home-card sa-home-card--kpi" href="/receiving">
         <div class="workorder-nav-card__icon">📦</div>
         <div class="workorder-nav-card__body">

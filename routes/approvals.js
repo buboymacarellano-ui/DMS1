@@ -2,6 +2,7 @@ const express = require('express');
 const store = require('../data/store');
 const workOrdersRouter = require('./workorders');
 const { isFrontlineRole } = require('../lib/frontline-roles');
+const { recordGmApproval, TYPES: GM_TXN_TYPES } = require('../lib/gm-transaction-log');
 
 const router = express.Router();
 const APPROVER_ROLES = new Set(['admin', 'hr', 'general_manager', 'service_technical_manager']);
@@ -31,11 +32,13 @@ function requesterEmployeeId(user) {
 router.get('/', async (req, res) => {
   const user = activeUser(req);
   const approver = isApprover(req);
-  const [allRequests, employees, workOrders, purchaseOrders] = await Promise.all([
+  const [allRequests, employees, workOrders, purchaseOrders, partsTransfers, gmTransactionRecords] = await Promise.all([
     store.getAll('approval_requests'),
     store.getAll('employees'),
     store.getAll('work_orders'),
     store.getAll('parts_purchase_orders'),
+    store.getAll('parts_transfers'),
+    store.getAll('gm_transaction_records'),
   ]);
   const requests = allRequests
     .filter(request => approver || request.requested_by_user_id === user.id)
@@ -55,6 +58,17 @@ router.get('/', async (req, res) => {
     .filter(po => String(po.status || '').trim().toLowerCase() === 'approved')
     .sort((a, b) => new Date(b.approved_at || 0) - new Date(a.approved_at || 0));
 
+  const pendingStockTransfers = approver
+    ? (partsTransfers || [])
+      .filter((transfer) => String(transfer.status || '').trim().toLowerCase() === 'pending')
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+    : [];
+
+  // My Transactions Records: footprint of GM-approved PO / Stock Transfer / FTE Request
+  const myTransactionRecords = approver
+    ? [...(gmTransactionRecords || [])].sort((a, b) => new Date(b.approved_at || 0) - new Date(a.approved_at || 0))
+    : [];
+
   res.render('approvals/index', {
     approver,
     requests,
@@ -62,6 +76,8 @@ router.get('/', async (req, res) => {
     workOrders,
     pendingPOs,
     approvedPOs,
+    pendingStockTransfers,
+    myTransactionRecords,
     employeeId: requesterEmployeeId(user),
     success: normalize(req.query.success),
     error: normalize(req.query.error),
@@ -179,10 +195,22 @@ router.post('/purchase-order/:id/approve', requireApprover, async (req, res) => 
     }
 
     const user = activeUser(req);
+    const approvedAt = new Date().toISOString();
     await store.update('parts_purchase_orders', poId, {
       status: 'approved',
       approved_by: normalize(user.username) || user.id,
-      approved_at: new Date().toISOString(),
+      approved_at: approvedAt,
+    });
+
+    const lineTotal = (po.lines || []).reduce((sum, line) => sum + (Number(line.qty) || 0) * (Number(line.cost_price) || 0), 0);
+    await store.create('gm_transaction_records', {
+      transaction_number: po.transaction_number || po.po_number || poId,
+      type: GM_TXN_TYPES.PO,
+      requester_name: po.created_by || po.sent_for_approval_by || '',
+      requested_at: po.sent_for_approval_at || po.created_at || '',
+      amount: lineTotal,
+      approved_at: approvedAt,
+      approved_by: normalize(user.username) || user.id,
     });
 
     return res.redirect('/approvals?success=Purchase+order+approved.');

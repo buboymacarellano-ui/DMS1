@@ -66,42 +66,6 @@
       </div>
     </article>
 
-    <article class="dashboard-card admin-panel pm-panel pm-panel--wide" data-pm-section="mechanic-requests">
-      <div class="dashboard-card__header admin-panel-header pm-panel-header">
-        <span>Branch Parts Requests</span>
-        <span id="pm-requests-count" class="pm-badge pm-badge--alert"><%= overview.pendingPartsRequests.length %></span>
-      </div>
-      <div class="table-scroll pm-table-wrap">
-        <table class="list pm-data-table" id="pm-requests-table">
-          <thead><tr><th>Requesting Branch</th><th>WO #</th><th>Part #</th><th>Part Name</th><th>Sub-ID</th><th>Supplier</th><th>Qty</th><th>Fulfilling Branch</th><th>Requested By</th><th>Actions</th></tr></thead>
-          <tbody id="pm-requests-body">
-            <% if (!overview.pendingPartsRequests.length) { %>
-              <tr class="pm-empty-row"><td colspan="10">No pending branch requests.</td></tr>
-            <% } %>
-            <% overview.pendingPartsRequests.forEach((req) => { %>
-              <% const woRaw = String(req.work_order_number || req.work_order_id || '').trim(); %>
-              <tr class="pm-data-row pm-request-row" data-request-id="<%= req.id %>" data-part="<%= req.part_number || '' %>" data-supplier="<%= req.supplier || '' %>">
-                <td><%= req.requesting_branch || req.branch || '-' %></td>
-                <td class="pm-wo-cell<%= woRaw ? '' : ' pm-wo-cell--empty' %>"><%= woRaw || '—' %></td>
-                <td><%= req.part_number || '-' %></td>
-                <td><%= req.part_name || '-' %></td>
-                <td><%= req.sub_id || '-' %></td>
-                <td><%= req.supplier || '-' %></td>
-                <td><%= req.qty != null ? req.qty : '-' %></td>
-                <td><%= req.branch || '-' %></td>
-                <td><%= req.requested_by || req.editor || '-' %></td>
-                <td class="pm-action-cell">
-                  <button type="button" class="btn pm-btn-review" data-id="<%= req.id %>">Review</button>
-                  <button type="button" class="btn pm-btn-approve" data-id="<%= req.id %>">Approve</button>
-                  <button type="button" class="btn pm-btn-reject" data-id="<%= req.id %>">Reject</button>
-                </td>
-              </tr>
-            <% }) %>
-          </tbody>
-        </table>
-      </div>
-    </article>
-
     <article class="dashboard-card admin-panel pm-panel pm-panel--wide" data-pm-section="recent-movements">
       <div class="dashboard-card__header admin-panel-header pm-panel-header">
         <span>Recent Movements</span>
@@ -135,8 +99,6 @@
 </section>
 
 <%- include('./_stock-modal') %>
-<%- include('./_review-modal') %>
-
 <script>
   window.__PM_OVERVIEW__ = <%- JSON.stringify(overview) %>;
 </script>

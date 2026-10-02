@@ -68,6 +68,39 @@
     <% } %>
   </article>
 
+  <% if (approver) { %>
+    <article class="dashboard-card admin-panel" id="pending-stock-transfers">
+      <div class="dashboard-card__header admin-panel-header">Pending Stock Transfers for GM Approval <span class="pm-badge pm-badge--alert"><%= (pendingStockTransfers || []).length %></span></div>
+      <% if (!(pendingStockTransfers || []).length) { %>
+        <p class="dashboard-note admin-note">No pending stock transfers.</p>
+      <% } else { %>
+        <div class="table-scroll">
+          <table class="list">
+            <thead><tr><th>PTN</th><th>Route</th><th>Lines</th><th>Created</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <% pendingStockTransfers.forEach((transfer) => { %>
+                <tr>
+                  <td><strong><%= transfer.transaction_number || transfer.id %></strong></td>
+                  <td><%= transfer.from_branch || '-' %> → <%= transfer.to_branch || '-' %></td>
+                  <td><%= Array.isArray(transfer.lines) ? transfer.lines.length : 1 %></td>
+                  <td><%= transfer.created_at ? new Date(transfer.created_at).toLocaleString('en-PH') : '-' %></td>
+                  <td><span class="badge badge-warning"><%= transfer.status %></span></td>
+                  <td class="action-buttons">
+                    <a class="btn btn-sm" href="/parts-manager/transfers/<%= encodeURIComponent(transfer.id) %>/preview">Review</a>
+                    <a class="btn btn-sm btn-success" href="/parts-manager/transfers/<%= encodeURIComponent(transfer.id) %>/preview">Approve</a>
+                    <form method="post" action="/parts-manager/transfers/<%= encodeURIComponent(transfer.id) %>/remove" style="display:inline" onsubmit="return confirm('Remove this pending stock transfer?');">
+                      <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </article>
+  <% } %>
+
   <% if (approver && (pendingPOs && pendingPOs.length > 0)) { %>
     <article class="dashboard-card admin-panel">
       <div class="dashboard-card__header admin-panel-header">Purchase Orders Pending Approval</div>
@@ -149,6 +182,43 @@
           </tbody>
         </table>
       </div>
+    </article>
+  <% } %>
+
+  <% if (approver) { %>
+    <article class="dashboard-card admin-panel" id="my-transactions-records">
+      <div class="dashboard-card__header admin-panel-header">My Transactions Records</div>
+      <p class="dashboard-note admin-note">Footprint of GM-approved PO, Stock Transfer, and FTE Request transactions.</p>
+      <% if (!(myTransactionRecords || []).length) { %>
+        <p class="dashboard-note admin-note">No approved transactions yet.</p>
+      <% } else { %>
+        <div class="table-scroll">
+          <table class="list">
+            <thead>
+              <tr>
+                <th>Transaction Number</th>
+                <th>Requested Date</th>
+                <th>Type</th>
+                <th>Requester Name</th>
+                <th>Amount</th>
+                <th>Approved Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% myTransactionRecords.forEach(row => { %>
+                <tr>
+                  <td><strong><%= row.transaction_number || row.id %></strong></td>
+                  <td><%= row.requested_at ? new Date(row.requested_at).toLocaleString('en-PH') : '-' %></td>
+                  <td><span class="badge badge-warning"><%= row.type %></span></td>
+                  <td><%= row.requester_name || '-' %></td>
+                  <td><%= '₱' + Number(row.amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
+                  <td><%= row.approved_at ? new Date(row.approved_at).toLocaleString('en-PH') : '-' %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
     </article>
   <% } %>
 </section>

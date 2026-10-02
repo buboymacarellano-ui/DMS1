@@ -25,7 +25,6 @@ Data scripts (all in `scripts/`, most take `--dry-run`; see `package.json` for t
 ```bash
 npm run migrate:sqlite                 # JSON -> SQLite
 npm run import:transactions            # add --replace to wipe first
-npm run flow:branch-parts-10pct        # request -> PM approve -> receive simulation
 npm run seed:wo-txdb-1000              # seed 1000 work-order transactions
 npm run provision:employee-logins
 ```

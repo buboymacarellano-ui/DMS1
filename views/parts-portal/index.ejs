@@ -54,6 +54,15 @@
             <span>Multi-branch</span>
           </div>
         </a>
+      <% } else if (canGrant('parts', 'request')) { %>
+        <a class="workorder-nav-card workorder-nav-card--orange sa-home-card" href="/parts-manager?panel=health">
+          <div class="workorder-nav-card__icon">&#128269;</div>
+          <div class="workorder-nav-card__body">
+            <h3>Parts Health &amp; Transfers</h3>
+            <p>Critical flags</p>
+            <span>File for GM approval</span>
+          </div>
+        </a>
       <% } else if (canGrant('parts', 'receive_stock') || canGrant('parts', 'filloutform')) { %>
         <a class="workorder-nav-card workorder-nav-card--yellow sa-home-card" href="/parts">
           <div class="workorder-nav-card__icon">&#128230;</div>
@@ -95,22 +104,12 @@
   <section class="sa-home-group">
     <h3 class="sa-home-group__title">4. Branch Procurement</h3>
     <div class="sa-grid sa-grid--4">
-      <% if (canGrant('parts', 'request')) { %>
-        <a class="workorder-nav-card workorder-nav-card--orange sa-home-card" href="/branch-parts">
-          <div class="workorder-nav-card__icon">&#128203;</div>
-          <div class="workorder-nav-card__body">
-            <h3>Branch Parts Orders</h3>
-            <p>Request to warehouse</p>
-            <span>Procurement</span>
-          </div>
-        </a>
-      <% } %>
-      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="<%= (typeof canGrant === 'function' && canGrant('parts', 'adjust_inventory')) ? '/parts-manager/dashboard' : '/parts' %>">
+      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/parts-manager?panel=approvals">
         <div class="workorder-nav-card__icon">&#128233;</div>
         <div class="workorder-nav-card__body">
-          <h3>Branch Requests</h3>
-          <p>Pending fulfillment</p>
-          <span>PM queue</span>
+          <h3>Transfer Approvals</h3>
+          <p>Pending and approved</p>
+          <span>GM workflow</span>
         </div>
       </a>
     </div>

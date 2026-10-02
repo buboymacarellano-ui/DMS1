@@ -21,7 +21,6 @@ const { isFinanceManagerRole, ROLE_FINANCE_MANAGER, computeInvoiceEconomics, bui
 // paymentMethod, partsCostPrice, partsSellingPrice, laborCost, taxAmount, paymentStatus.
 const employeesRouter = require('./routes/employees');
 const helperRouter = require('./routes/helper');
-const branchPartsRouter = require('./routes/branch-parts');
 const technicianRouter = require('./routes/technician');
 const adminRouter = require('./routes/admin');
 const hrRouter = require('./routes/hr');
@@ -218,13 +217,17 @@ app.use(async (req, res, next) => {
   res.locals.currentQuery = req.query || {};
   const activeRole = String(req.session.user && req.session.user.role || '').trim().toLowerCase();
   const activePortal = portals.portalForPath(req.path) || portals.departmentForRole(activeRole);
+  const activeGroup = portals.groupForPortal(activePortal);
   res.locals.canApproveRequests = APPROVER_ROLES.has(activeRole) || portals.hasGrant(activeRole, activePortal, portals.GRANT.approval);
   res.locals.isPartsManager = isPartsManagerRole(activeRole);
   res.locals.isFinanceManager = isFinanceManagerRole(activeRole);
   res.locals.isGmSupervisor = activeRole === ROLE_GENERAL_MANAGER;
   res.locals.currentPortal = activePortal;
   res.locals.portalLabel = portals.portalLabel(activePortal);
+  res.locals.currentGroup = activeGroup;
+  res.locals.groupLabel = portals.groupLabel(activeGroup);
   res.locals.accessiblePortals = activeRole ? portals.accessiblePortals(activeRole) : [];
+  res.locals.accessibleGroups = activeRole ? portals.accessibleGroups(activeRole) : [];
   res.locals.canGrant = (portalKey, grantKey) => portals.hasGrant(activeRole, portalKey, grantKey);
   res.locals.pendingApprovalCount = res.locals.canApproveRequests
     ? (await store.getAll('approval_requests')).filter(request => request.status === 'pending').length
@@ -438,9 +441,9 @@ function requireFinanceManager(req, res, next) {
 function requirePartsManager(req, res, next) {
   if (isLoginAuthDisabled()) return next();
   const activeRole = String(req.session.user && req.session.user.role || '').trim().toLowerCase();
-  // GM has full supervisory read/write access to PM workspace
-  if (isPartsManagerRole(activeRole) || activeRole === ROLE_GENERAL_MANAGER) return next();
-  return res.status(403).send('Parts Manager access only.');
+  // Parts staff can monitor/file transfers; GM remains the approval authority.
+  if (isPartsManagerRole(activeRole) || activeRole === ROLE_PARTS_CLERK || activeRole === ROLE_GENERAL_MANAGER) return next();
+  return res.status(403).send('Parts department access only.');
 }
 
 async function ensureSeedHrAccount() {
@@ -2380,23 +2383,6 @@ app.get('/api/gm/ocpd', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
   }
 });
 
-app.post('/api/gm/branch-parts-10pct-flow', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
-  try {
-    const force = String((req.body && req.body.force) || req.query.force || '').trim() === '1';
-    const dryRun = String((req.body && req.body.dryRun) || req.query.dryRun || '').trim() === '1';
-    const { runBranchParts10pctFlow } = require('./lib/branch-parts-10pct-flow');
-    const result = await runBranchParts10pctFlow({
-      force,
-      dryRun,
-      pmName: req.session && req.session.user && req.session.user.username,
-    });
-    return res.status(result.ok ? 200 : 400).json(result);
-  } catch (error) {
-    console.error('POST /api/gm/branch-parts-10pct-flow failed', error);
-    return res.status(500).json({ ok: false, error: error.message || 'Unable to run branch parts flow' });
-  }
-});
-
 app.post('/gm/branch-targets', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
   const current = await store.getPricingSettings();
   const resolved = resolveGmBranchSalesTargets(current);
@@ -3091,18 +3077,6 @@ app.use('/parts', requireAnyRole(
   ROLE_STORES_CLERK
 ), partsRouter);
 app.use('/helper', helperRouter);
-app.use('/branch-parts', requireAnyRole(
-  ROLE_SERVICE_ADVISOR,
-  ROLE_SERVICE_RECEPTIONIST,
-  ROLE_SENIOR_SERVICE_RECEPTIONIST,
-  ROLE_STM,
-  ROLE_PARTS_MANAGER,
-  ROLE_PARTS_CLERK,
-  ROLE_OPERATIONS_MANAGER,
-  ROLE_STORE_MANAGER,
-  ROLE_STORES_CLERK,
-  ROLE_GENERAL_MANAGER
-), branchPartsRouter);
 app.use('/approvals', approvalsRouter);
 app.use('/api/kpi', kpiRouter);
 app.use('/kpi', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_ADMIN, ROLE_STM), kpiRouter);

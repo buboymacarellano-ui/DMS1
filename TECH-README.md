@@ -131,7 +131,6 @@ If a kiosk terminal stops opening fullscreen after a deployment change, the usua
 ```bash
 npm run migrate:sqlite                 # JSON -> SQLite
 npm run import:transactions            # add --replace to wipe first
-npm run flow:branch-parts-10pct        # request -> PM approve -> receive simulation
 npm run seed:wo-txdb-1000              # seed 1000 work-order transactions
 npm run provision:employee-logins
 npm run backup                         # honors BACKUP_RETENTION_DAYS

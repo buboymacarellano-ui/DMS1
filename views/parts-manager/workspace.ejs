@@ -12,7 +12,7 @@
   const panel = typeof openPanel !== 'undefined' ? String(openPanel || '') : '';
 %>
 
-<section class="dashboard-shell gm-shell stm-shell pm-workspace" id="pm-workspace" data-open-panel="<%= panel %>" data-pending-requests="<%= encodeURIComponent(JSON.stringify(typeof pendingPartRequests !== 'undefined' && Array.isArray(pendingPartRequests) ? pendingPartRequests : [])) %>">
+<section class="dashboard-shell gm-shell stm-shell pm-workspace" id="pm-workspace" data-open-panel="<%= panel %>" data-pending-requests="<%= encodeURIComponent(JSON.stringify(typeof pendingPartRequests !== 'undefined' && Array.isArray(pendingPartRequests) ? pendingPartRequests : [])) %>" data-transfer-locations="<%= encodeURIComponent(JSON.stringify(locations)) %>">
   <div class="stm-head">
     <div class="dashboard-title gm-title role-dashboard-title"><span>PM</span> <span class="role-dashboard-title__suffix">Parts Monitor</span></div>
     <p class="dashboard-note stm-section__note">Sole owner of <%= warehouseLabel %> · view / edit / check every branch P-db</p>
@@ -24,12 +24,10 @@
   <nav class="pm-role-bar" aria-label="Parts Manager roles">
     <button type="button" class="btn pm-role-btn<%= panel === 'csv' ? ' pm-role-btn--active' : '' %>" data-pm-panel="csv"><span class="pm-role-btn__icon">💾</span><span class="pm-role-btn__label">1. Load / Download CSV Update</span></button>
     <button type="button" class="btn pm-role-btn<%= panel === 'edit' ? ' pm-role-btn--active' : '' %>" data-pm-panel="edit"><span class="pm-role-btn__icon">📥</span><span class="pm-role-btn__label">2. Parts Receiving</span></button>
-    <a class="btn pm-role-btn" href="/parts-manager/multiple-entry"><span class="pm-role-btn__icon">▦</span><span class="pm-role-btn__label">Multiple Entry</span></a>
     <button type="button" class="btn pm-role-btn<%= panel === 'vitals' ? ' pm-role-btn--active' : '' %>" data-pm-panel="vitals"><span class="pm-role-btn__icon">📊</span><span class="pm-role-btn__label">3. Fast Moving / Idle / Vitals</span></button>
-    <button type="button" class="btn pm-role-btn<%= panel === 'approvals' ? ' pm-role-btn--active' : '' %>" data-pm-panel="approvals"><span class="pm-role-btn__icon">✅</span><span class="pm-role-btn__label">4. Approval Window</span></button>
+    <button type="button" class="btn pm-role-btn<%= panel === 'approvals' ? ' pm-role-btn--active' : '' %>" data-pm-panel="approvals"><span class="pm-role-btn__icon">✅</span><span class="pm-role-btn__label">4. Processes</span></button>
     <button type="button" class="btn pm-role-btn" id="parts-report-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="parts-report-modal"><span class="pm-role-btn__icon">🖨️</span><span class="pm-role-btn__label">5. Create Report</span></button>
     <button type="button" class="btn pm-role-btn<%= panel === 'health' ? ' pm-role-btn--active' : '' %>" data-pm-panel="health"><span class="pm-role-btn__icon">🩺</span><span class="pm-role-btn__label">6. DB Health Monitor</span></button>
-    <button type="button" class="btn pm-role-btn<%= panel === 'ordering' ? ' pm-role-btn--active' : '' %>" data-pm-panel="ordering"><span class="pm-role-btn__icon">🛒</span><span class="pm-role-btn__label">7. Ordering Grid</span></button>
     <button type="button" class="btn pm-role-btn<%= panel === 'database' ? ' pm-role-btn--active' : '' %>" data-pm-panel="database"><span class="pm-role-btn__icon">🗄️</span><span class="pm-role-btn__label">8. Parts-DB-All</span></button>
   </nav>
 
@@ -141,7 +139,13 @@
       <label>Sold To — Work Order #
         <input type="text" name="sold_to" id="pm-edit-sold-to" />
       </label>
-      <button type="submit">Save part</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <button type="submit" id="pm-edit-save-btn">Save part</button>
+        <button type="button" id="pm-edit-cancel-btn" class="btn" style="background:#95a5a6;color:white;">Cancel</button>
+      </div>
+    </form>
+    <form method="post" action="#" id="pm-edit-delete-form" style="margin-top:8px;">
+      <button type="submit" id="pm-edit-remove-btn" class="btn" style="background:#c0392b;color:white;" disabled>Remove this part from DB</button>
     </form>
 
     <div style="margin-top:24px;border-top:2px solid #ccd5df;padding-top:20px;">
@@ -245,7 +249,30 @@
 
   <section class="pm-panel-card dashboard-card gm-panel" id="pm-panel-approvals" data-pm-section="approvals" hidden>
     <div class="dashboard-card__header gm-panel-header">Approvals, purchasing, transfers, and printable footprints</div>
-    <p class="dashboard-note">Pending: <%= approvalDesk.pendingRequestCount || 0 %> branch requests · <%= approvalDesk.pendingTransferCount || 0 %> transfers · <%= approvalDesk.pendingPoCount || 0 %> POs. Every transaction carries a number/serial plus date-time stamp.</p>
+    <p class="dashboard-note">Pending: <%= approvalDesk.pendingRequestCount || 0 %> stock requests · <%= approvalDesk.pendingTransferCount || 0 %> stock transfers · <%= approvalDesk.pendingPoCount || 0 %> POs. Every transaction carries a number/serial plus date-time stamp.</p>
+
+    <article class="dashboard-card gm-panel" id="pending-transfers" style="width:100%;margin-bottom:12px;border:2px solid #8e44ad;">
+      <div class="dashboard-card__header gm-panel-header">Pending Stock Transfers for GM Approval <span class="pm-badge pm-badge--alert"><%= approvalDesk.pendingTransferCount || 0 %></span></div>
+      <p class="dashboard-note">Health Monitor submissions are listed below. Review the transfer details here; GM approval is handled on the GM Approvals page.</p>
+      <div class="table-scroll">
+        <table class="list">
+          <thead><tr><th>PTN</th><th>Route</th><th>Lines</th><th>Created</th><th>Status</th></tr></thead>
+          <tbody>
+            <% const pendingTransfers = (approvalDesk.transfers || []).filter((row) => String(row.status || '').toLowerCase() === 'pending'); %>
+            <% if (!pendingTransfers.length) { %><tr><td colspan="5">No pending stock transfers.</td></tr><% } %>
+            <% pendingTransfers.forEach((row) => { %>
+              <tr>
+                <td><%= row.transaction_number || '—' %></td>
+                <td><%= row.from_branch %> → <%= row.to_branch %></td>
+                <td><%= Array.isArray(row.lines) ? row.lines.length : 1 %></td>
+                <td><%= row.stamped_label || row.created_at || '' %></td>
+                <td><%= row.status %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </article>
     
     <!-- Branch / Location Requests - Full Width -->
     <article class="dashboard-card gm-panel" style="width:100%;margin-bottom:12px;">
@@ -332,18 +359,42 @@
 
     <!-- Other Panels in Split Grid -->
     <div class="pm-split-grid">
+        <article class="pm-transaction-records-full dashboard-card gm-panel">
         <div class="dashboard-card__header gm-panel-header">Transaction records</div>
+        <style>
+          #pm-transaction-records-table .pm-transaction-row--active { background: #dbeafe; outline: 2px solid #2563eb; outline-offset: -2px; }
+          #pm-transaction-records-table .pm-transaction-row { cursor: pointer; }
+        </style>
+          <div id="pm-transaction-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 0;">
+            <button type="button" class="btn" id="pm-transaction-print" disabled>Print Report</button>
+            <label for="pm-transaction-sort" style="display:flex;gap:6px;align-items:center;">
+              <span>Sort File</span>
+              <select id="pm-transaction-sort" class="btn" aria-label="Sort transaction records">
+                <option value="date-desc">By date (newest)</option>
+                <option value="date-asc">By date (oldest)</option>
+                <option value="username-asc">By username (A-Z)</option>
+                <option value="qty-desc">By Qty (highest)</option>
+                <option value="price-desc">By Price (highest)</option>
+              </select>
+            </label>
+            <button type="button" class="btn" id="pm-transaction-edit" disabled>Edit Transaction</button>
+            <button type="button" class="btn" id="pm-transaction-activate" disabled>Activate Transaction Number</button>
+            <button type="button" class="btn" id="pm-transaction-save" disabled>Save</button>
+            <button type="button" class="btn" id="pm-transaction-remove" style="background:#c0392b;color:white;" disabled>Remove</button>
+            <span id="pm-transaction-action-status" class="dashboard-note" role="status" aria-live="polite">Select a transaction row.</span>
+          </div>
         <div class="table-scroll">
-          <table class="list">
-            <thead><tr><th>Stamp</th><th>Serial / PTN</th><th>Type</th><th>Location</th><th>Part #</th><th>Qty</th></tr></thead>
+            <table class="list" id="pm-transaction-records-table">
+            <thead><tr><th>Stamp</th><th>Serial / PTN</th><th>Type</th><th>From Location</th><th>To Location</th><th>Part #</th><th>Qty</th></tr></thead>
             <tbody>
-              <% if (!(approvalDesk.transactions || []).length) { %><tr><td colspan="6">No transactions yet.</td></tr><% } %>
+              <% if (!(approvalDesk.transactions || []).length) { %><tr><td colspan="7">No transactions yet.</td></tr><% } %>
               <% (approvalDesk.transactions || []).forEach((row) => { %>
-                <tr>
+                  <tr class="pm-transaction-row" data-transaction-id="<%= row.id || '' %>" data-transaction-number="<%= row.transaction_number || '' %>" data-transaction-date="<%= row.created_at || row.transaction_date || '' %>" data-transaction-username="<%= row.editor || '' %>" data-transaction-qty="<%= row.qty || 0 %>" data-transaction-price="<%= row.retail_price || row.cost_price || 0 %>">
                   <td style="white-space:nowrap;"><%= row.created_at || row.transaction_date || '' %></td>
                   <td style="white-space:nowrap;"><%= row.transaction_number || row.id %></td>
                   <td><%= row.transaction_type_label || row.transaction_type %></td>
                   <td><%= row.present_location || '—' %></td>
+                  <td><%= row.to_branch || row.to_location || row.requesting_branch || row.sent_to || '—' %></td>
                   <td><%= row.part_number %></td>
                   <td style="text-align:right;"><%= row.qty %></td>
                 </tr>
@@ -351,9 +402,9 @@
             </tbody>
           </table>
         </div>
-      </article>
+        </article>
 
-      <article class="dashboard-card gm-panel">
+      <article class="pm-transfer-records-full dashboard-card gm-panel">
         <div class="dashboard-card__header gm-panel-header">Transfers + printable lists</div>
         <form method="post" action="/parts-manager/transfer" class="form pm-mini-form">
           <label>From
@@ -378,9 +429,9 @@
         </form>
         <div class="table-scroll">
           <table class="list">
-            <thead><tr><th>PTN</th><th>Packing / Transmittal</th><th>Route</th><th>Stamp</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>PTN</th><th>Packing / Transmittal</th><th>Route</th><th>Stamp</th><th>Status</th></tr></thead>
             <tbody>
-              <% if (!(approvalDesk.transfers || []).length) { %><tr><td colspan="6">No transfers.</td></tr><% } %>
+              <% if (!(approvalDesk.transfers || []).length) { %><tr><td colspan="5">No transfers.</td></tr><% } %>
               <% (approvalDesk.transfers || []).forEach((row) => { %>
                 <tr>
                   <td><%= row.transaction_number || '—' %></td>
@@ -392,11 +443,6 @@
                   <td><%= row.from_branch %> → <%= row.to_branch %></td>
                   <td style="white-space:nowrap;"><%= row.stamped_label || row.stamped_at || row.created_at || '' %></td>
                   <td><%= row.status || '' %></td>
-                  <td>
-                    <% if (String(row.status || '').toLowerCase() !== 'completed') { %>
-                      <a class="btn" href="/parts-manager/transfers/<%= encodeURIComponent(row.id) %>/preview">Approve</a>
-                    <% } %>
-                  </td>
                 </tr>
               <% }) %>
             </tbody>
@@ -404,7 +450,7 @@
         </div>
       </article>
 
-      <article class="dashboard-card gm-panel">
+      <article class="pm-purchasing-full dashboard-card gm-panel">
         <div class="dashboard-card__header gm-panel-header">Purchasing</div>
         <form method="post" action="/parts-manager/purchase-orders" class="form pm-mini-form">
           <label>Supplier <input name="supplier" required /></label>
@@ -498,6 +544,7 @@
               <th style="padding:8px;text-align:center;"><input type="checkbox" id="pm-health-select-all" /></th>
               <th style="padding:8px;white-space:nowrap;">Part #</th>
               <th style="padding:8px;white-space:nowrap;">Part Name</th>
+              <th style="padding:8px;white-space:nowrap;">Location</th>
               <th style="padding:8px;white-space:nowrap;">Supplier</th>
               <th style="padding:8px;white-space:nowrap;text-align:right;">Current Stock</th>
               <th style="padding:8px;white-space:nowrap;text-align:right;">Safety Stock</th>
@@ -507,13 +554,14 @@
           <tbody id="pm-health-delicate-body">
             <% const delicate = typeof delicateParts !== 'undefined' && Array.isArray(delicateParts) ? delicateParts : []; %>
             <% if (!delicate.length) { %>
-              <tr><td colspan="7" style="text-align:center;padding:16px;color:#666;">✓ All systems healthy. No critical items detected.</td></tr>
+              <tr><td colspan="8" style="text-align:center;padding:16px;color:#666;">✓ All systems healthy. No critical items detected.</td></tr>
             <% } %>
             <% delicate.forEach((item) => { %>
-              <tr data-part-id="<%= item.id %>" data-part-num="<%= item.part_number %>" style="border-bottom:1px solid #e0e0e0;">
+              <tr data-part-id="<%= item.id %>" data-part-num="<%= item.part_number %>" data-source-location="<%= item.source_location || warehouseLabel %>" style="border-bottom:1px solid #e0e0e0;">
                 <td style="padding:8px;text-align:center;"><input type="checkbox" class="pm-health-row-check" data-part-id="<%= item.id %>" /></td>
                 <td style="padding:8px;"><strong><%= item.part_number %></strong></td>
                 <td style="padding:8px;"><%= item.part_name || '—' %></td>
+                <td style="padding:8px;white-space:nowrap;"><%= item.location || 'Unassigned' %></td>
                 <td style="padding:8px;"><%= item.supplier || '(No Supplier)' %></td>
                 <td style="padding:8px;text-align:right;"><strong style="color:<%= item.current_stock === 0 ? '#c0392b' : '#e67e22' %>;"><%= item.current_stock %></strong></td>
                 <td style="padding:8px;text-align:right;"><%= item.safety_stock %></td>
@@ -533,8 +581,34 @@
         <button type="button" id="pm-health-transfer-btn" class="btn" style="background:#27ae60;color:white;padding:8px 16px;" disabled>
           ➤ Transfer Selected to Ordering Panel
         </button>
+        <button type="button" id="pm-health-stock-transfer-btn" class="btn" style="background:#8e44ad;color:white;padding:8px 16px;" disabled>
+          ⇄ Transfer Selected To Stock Transfer Grid
+        </button>
+        <button type="button" id="pm-health-edit-btn" class="btn" style="background:#3498db;color:white;padding:8px 16px;" disabled>
+          ✎ Edit Selected
+        </button>
         <span id="pm-health-count" style="align-self:center;font-size:12px;color:#666;"></span>
       </div>
+    </div>
+  </section>
+
+  <section class="pm-panel-card dashboard-card gm-panel" id="pm-panel-health-transfer" data-pm-section="health-transfer" hidden>
+    <div class="dashboard-card__header gm-panel-header">Stock Transfer Grid</div>
+    <p class="dashboard-note">Selected critical stock is staged by source location. Filing creates pending transfer requests for the existing approval workflow. GM approval is required before completion.</p>
+    <div class="table-scroll">
+      <table class="list" style="font-size:12px;min-width:max-content;width:100%;">
+        <thead>
+          <tr><th>Source</th><th>Destination</th><th>Part #</th><th>Part Name</th><th>Qty</th><th>Action</th></tr>
+        </thead>
+        <tbody id="pm-health-stock-transfer-body">
+          <tr><td colspan="6" style="text-align:center;padding:16px;color:#666;">Select critical rows in Health Monitoring first.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button type="button" id="pm-health-stock-transfer-submit" class="btn" style="background:#27ae60;color:white;padding:8px 16px;" disabled>File Stock Transfer Requests</button>
+      <button type="button" id="pm-health-stock-transfer-cancel" class="btn" style="background:#95a5a6;color:white;padding:8px 16px;">Cancel</button>
+      <span id="pm-health-stock-transfer-status" style="align-self:center;font-size:12px;color:#666;"></span>
     </div>
   </section>
 
@@ -682,6 +756,7 @@
             <th style="padding:8px;text-align:center;">☑</th>
             <th>Part #</th>
             <th>Part Name</th>
+            <th>Location</th>
             <th>Supplier</th>
             <th style="text-align:right;">Current Stock</th>
             <th style="text-align:right;">Safety Stock</th>

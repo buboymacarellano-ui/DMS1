@@ -41,6 +41,7 @@ function normalizeData(data) {
     store_shelves: source.store_shelves || [],
     hr_rosters: source.hr_rosters || [],
     hr_payroll: source.hr_payroll || [],
+    gm_transaction_records: source.gm_transaction_records || [],
   };
   return ensureCollections(next);
 }
@@ -66,6 +67,7 @@ const OPERATIONAL_COLLECTIONS = [
   'store_shelves',
   'hr_rosters',
   'hr_payroll',
+  'gm_transaction_records',
 ];
 
 const QTY_KEYS = [

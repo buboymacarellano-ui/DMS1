@@ -244,10 +244,13 @@ function buildLoginPayload({
   username = '',
   accessLevel = ROLE_SERVICE_ADVISOR,
   department = portals.PORTAL_SERVICE,
+  group = '',
   branch = '',
   branches = [],
 } = {}) {
-  const dept = portals.normalizeDepartment(department) || portals.PORTAL_SERVICE;
+  const legacyDepartment = portals.normalizeDepartment(department) || portals.PORTAL_SERVICE;
+  const selectedGroup = portals.normalizeGroup(group) || portals.groupForDepartment(legacyDepartment) || portals.GROUP_SERVICE;
+  const dept = portals.departmentForGroupRole(selectedGroup, accessLevel) || legacyDepartment;
   // Only SA, SR, SSR require location selection
   const needsLocation = isFrontlineRole(accessLevel);
   return Object.assign({
@@ -256,6 +259,7 @@ function buildLoginPayload({
     hasAccounts,
     username,
     accessLevel,
+    group: selectedGroup,
     department: dept,
     branch,
     branches,
@@ -308,14 +312,18 @@ router.get('/login', async (req, res) => {
   const branchRows = await store.getAll('branches').catch(() => []);
   const hasAccounts = users.length > 0;
   const success = req.query.registered ? 'Account created. Please log in.' : '';
+  const queryDepartment = portals.normalizeDepartment(req.query.department);
+  const queryAccessLevel = queryDepartment === portals.PORTAL_GM
+    ? ROLE_GENERAL_MANAGER
+    : normalizeAccessLevel(req.query.level || req.query.role || ROLE_STM);
 
   return res.render('auth/login', buildLoginPayload({
     error: '',
     success,
     hasAccounts,
     username: '',
-    accessLevel: normalizeAccessLevel(req.query.level || req.query.role || ROLE_STM),
-    department: portals.normalizeDepartment(req.query.department) || portals.departmentForRole(req.query.level),
+    accessLevel: queryAccessLevel,
+    group: portals.normalizeGroup(req.query.group || req.query.department) || portals.groupForDepartment(portals.departmentForRole(req.query.level)),
     branches: getLoginBranches(employees, branchRows),
   }));
 });
@@ -326,11 +334,12 @@ router.post('/login', async (req, res) => {
   const username = normalizeUsername(loginInputRaw);
   const technicianEmployeeIdInput = normalizeEmployeeId(loginInputRaw);
   const receptionistEmployeeIdInput = normalizeEmployeeId(loginInputRaw);
-  const department = portals.normalizeDepartment(req.body.department) || portals.PORTAL_SERVICE;
+  const selectedGroup = portals.normalizeGroup(req.body.group || req.body.department) || portals.GROUP_SERVICE;
+  const accessLevel = normalizeAccessLevel(req.body.access_level);
+  const department = portals.departmentForGroupRole(selectedGroup, accessLevel)
+    || portals.normalizeDepartment(req.body.department)
+    || portals.PORTAL_SERVICE;
   const selectedBranch = portals.canonicalizeLocation(department, req.body.branch);
-  const accessLevel = department === portals.PORTAL_GM
-    ? ROLE_GENERAL_MANAGER
-    : normalizeAccessLevel(req.body.access_level);
   const users = await store.getAll('users');
   const employees = await store.getAll('employees');
   const branchRows = await store.getAll('branches').catch(() => []);
@@ -345,12 +354,13 @@ router.post('/login', async (req, res) => {
       username: loginInputRaw,
       accessLevel,
       department,
+      group: selectedGroup,
       branch: selectedBranch,
       branches,
     }));
   }
 
-  if (!String(req.body.department || '').trim()) {
+  if (!String(req.body.group || req.body.department || '').trim()) {
     return renderLogin(400, 'Department is required.');
   }
   if (!String(req.body.access_level || '').trim() && department !== portals.PORTAL_GM) {

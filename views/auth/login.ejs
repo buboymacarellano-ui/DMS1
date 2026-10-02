@@ -18,18 +18,15 @@
       </div>
 
       <% const openAuth = typeof loginAuthDisabled !== 'undefined' && loginAuthDisabled; %>
-      <% const deptNow = typeof department !== 'undefined' && department ? department : 'service'; %>
+      <% const groupNow = typeof group !== 'undefined' && group ? group : 'service'; %>
       <% const roleNow = typeof accessLevel !== 'undefined' && accessLevel ? accessLevel : 'service_advisor'; %>
-      <% const deptList = (typeof departments !== 'undefined' && Array.isArray(departments)) ? departments : [
+      <% const groupList = (typeof groups !== 'undefined' && Array.isArray(groups)) ? groups : [
         { key: 'service', label: 'Service' },
         { key: 'parts', label: 'Parts' },
-        { key: 'stores', label: 'Stores' },
-        { key: 'hr', label: 'HR' },
-        { key: 'gm', label: 'GM' },
-        { key: 'fo', label: 'Finance Office' },
+        { key: 'admin_office', label: 'Admin & Office' },
       ]; %>
-      <% const rolesByDept = (typeof rolesByDepartment !== 'undefined' && rolesByDepartment) ? rolesByDepartment : {}; %>
-      <% const locationsByDept = (typeof locationsByDepartment !== 'undefined' && locationsByDepartment) ? locationsByDepartment : {}; %>
+      <% const loginRolesByGroup = (typeof rolesByGroup !== 'undefined' && rolesByGroup) ? rolesByGroup : {}; %>
+      <% const loginLocationsByGroup = (typeof locationsByGroup !== 'undefined' && locationsByGroup) ? locationsByGroup : {}; %>
       <% const needsLocation = true; %>
 
       <% if (error) { %>
@@ -42,10 +39,10 @@
 
       <form method="post" action="/auth/login" class="form auth-form" id="portal-login-form">
         <label>
-          Department
-          <select name="department" id="login-department" required>
-            <% deptList.forEach((dept) => { %>
-              <option value="<%= dept.key %>" <%= deptNow === dept.key ? 'selected' : '' %>><%= dept.label %></option>
+          Group
+          <select name="group" id="login-department" required>
+            <% groupList.forEach((groupOption) => { %>
+              <option value="<%= groupOption.key %>" <%= groupNow === groupOption.key ? 'selected' : '' %>><%= groupOption.label %></option>
             <% }) %>
           </select>
         </label>
@@ -53,7 +50,7 @@
           Role
           <select name="access_level" id="login-role" required>
             <option value="">-- Select role --</option>
-            <% const initialRoles = rolesByDept[deptNow] || []; %>
+            <% const initialRoles = loginRolesByGroup[groupNow] || []; %>
             <% initialRoles.forEach((roleOpt) => { %>
               <option value="<%= roleOpt.key %>" <%= roleNow === roleOpt.key ? 'selected' : '' %>><%= roleOpt.label %></option>
             <% }) %>
@@ -67,7 +64,7 @@
           Location / Branch
           <select name="branch" id="login-location-input">
             <option value="">-- Select your assigned location --</option>
-            <% const initialLocations = locationsByDept[deptNow] || []; %>
+            <% const initialLocations = loginLocationsByGroup[groupNow] || []; %>
             <% initialLocations.forEach((locationOption) => { %>
               <option value="<%= locationOption %>" <%= branch === locationOption ? 'selected' : '' %>><%= locationOption %></option>
             <% }) %>
@@ -145,9 +142,9 @@
           { key: 'admin', label: 'Admin' },
         ],
       };
-      const serverRoles = <%- JSON.stringify(rolesByDept || {}) %>;
+      const serverRoles = <%- JSON.stringify(loginRolesByGroup || {}) %>;
       const rolesByDepartment = Object.assign({}, serverRoles, fallbackRoles);
-      const locationsByDepartment = Object.assign({}, <%- JSON.stringify(locationsByDept || {}) %>);
+      const locationsByDepartment = Object.assign({}, <%- JSON.stringify(loginLocationsByGroup || {}) %>);
       const selectedRole = <%- JSON.stringify(roleNow) %>;
       const selectedLocation = <%- JSON.stringify(typeof branch !== 'undefined' ? branch : '') %>;
 
@@ -209,15 +206,15 @@
 
       function sync(fromDepartmentChange) {
         const department = String(departmentSelect.value || 'service').toLowerCase();
-        const isGm = department === 'gm';
         form.setAttribute('data-department', department);
+        const keepRole = fromDepartmentChange ? '' : (roleSelect.value || selectedRole);
+        fillRoles(department, keepRole);
+        const isGm = department === 'admin_office' && roleSelect.value === 'general_manager';
         roleField.hidden = isGm;
         idField.hidden = false;
         roleSelect.required = !isGm;
         idInput.required = true;
         if (isGm) {
-          fillRoles('gm', 'general_manager');
-          roleField.hidden = true;
           roleSelect.required = false;
           idField.hidden = false;
           idInput.required = true;
@@ -231,8 +228,6 @@
           locationInput.value = '';
           return;
         }
-        const keepRole = fromDepartmentChange ? '' : (roleSelect.value || selectedRole);
-        fillRoles(department, keepRole);
         const keepLocation = fromDepartmentChange ? '' : (locationInput.value || selectedLocation);
         syncLocation(department, keepLocation);
         idLabel.textContent = 'Employee ID';
@@ -248,7 +243,7 @@
         sync(true);
       });
       roleSelect.addEventListener('change', function onRoleChange() {
-        syncLocation(String(departmentSelect.value || 'service').toLowerCase(), locationInput.value || selectedLocation);
+        sync(false);
       });
       sync(false);
     })();

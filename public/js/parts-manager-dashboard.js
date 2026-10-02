@@ -12,7 +12,6 @@
   const modalError = document.getElementById('pm-modal-error');
   const stockDelta = document.getElementById('pm-stock-delta');
   const stockApply = document.getElementById('pm-stock-apply');
-  const reviewModal = document.getElementById('pm-review-modal');
 
   let overview = window.__PM_OVERVIEW__ || {};
   let activePart = { part_number: '', part_name: '', supplier: '', qty: 0 };
@@ -84,41 +83,7 @@
     };
     setCount('pm-low-stock-count', (overview.lowStockAlerts || []).length);
     setCount('pm-pending-po-count', (overview.pendingPOs || []).length);
-    setCount('pm-requests-count', (overview.pendingPartsRequests || []).length);
     setCount('pm-movements-count', (overview.recentMovements || []).length);
-  }
-
-  function renderRequestsTable() {
-    const tbody = document.getElementById('pm-requests-body');
-    if (!tbody) return;
-    const rows = overview.pendingPartsRequests || [];
-    if (!rows.length) {
-      tbody.innerHTML = '<tr class="pm-empty-row"><td colspan="10">No pending branch requests.</td></tr>';
-      return;
-    }
-    tbody.innerHTML = rows.map((req) => {
-      const woRaw = String(req.work_order_number || req.work_order_id || '').trim();
-      const woDisplay = woRaw || '—';
-      return (
-      `<tr class="pm-data-row pm-request-row" data-request-id="${escapeHtml(req.id)}" data-part="${escapeHtml(req.part_number || '')}" data-supplier="${escapeHtml(req.supplier || '')}">
-        <td>${escapeHtml(req.requesting_branch || req.branch || '-')}</td>
-        <td class="pm-wo-cell${woRaw ? '' : ' pm-wo-cell--empty'}">${escapeHtml(woDisplay)}</td>
-        <td>${escapeHtml(req.part_number || '-')}</td>
-        <td>${escapeHtml(req.part_name || '-')}</td>
-        <td>${escapeHtml(req.sub_id || '-')}</td>
-        <td>${escapeHtml(req.supplier || '-')}</td>
-        <td>${escapeHtml(req.qty ?? '-')}</td>
-        <td>${escapeHtml(req.branch || '-')}</td>
-        <td>${escapeHtml(req.requested_by || req.editor || '-')}</td>
-        <td class="pm-action-cell">
-          <button type="button" class="btn pm-btn-review" data-id="${escapeHtml(req.id)}">Review</button>
-          <button type="button" class="btn pm-btn-approve" data-id="${escapeHtml(req.id)}">Approve</button>
-          <button type="button" class="btn pm-btn-reject" data-id="${escapeHtml(req.id)}">Reject</button>
-        </td>
-      </tr>`
-      );
-    }).join('');
-    applyFilter();
   }
 
   function refreshQtyCells() {
@@ -150,36 +115,6 @@
   function closeStockModal() {
     modal.hidden = true;
     modal.setAttribute('aria-hidden', 'true');
-  }
-
-  function openReviewModal(id) {
-    if (!reviewModal) return;
-    const req = (overview.pendingPartsRequests || []).find((row) => String(row.id) === String(id));
-    if (!req) return;
-
-    const setText = (elementId, value) => {
-      const el = document.getElementById(elementId);
-      if (el) el.textContent = formatDisplay(value);
-    };
-
-    setText('pm-review-requesting-branch', req.requesting_branch || req.branch);
-    document.getElementById('pm-review-work-order').textContent = formatWorkOrder(req);
-    setText('pm-review-part-number', req.part_number);
-    setText('pm-review-part-name', req.part_name);
-    setText('pm-review-sub-id', req.sub_id);
-    setText('pm-review-supplier', req.supplier);
-    setText('pm-review-qty', req.qty != null ? req.qty : '');
-    setText('pm-review-fulfilling-branch', req.branch);
-    setText('pm-review-requested-by', req.requested_by || req.editor);
-
-    reviewModal.hidden = false;
-    reviewModal.setAttribute('aria-hidden', 'false');
-  }
-
-  function closeReviewModal() {
-    if (!reviewModal) return;
-    reviewModal.hidden = true;
-    reviewModal.setAttribute('aria-hidden', 'true');
   }
 
   function getSignedDelta() {
@@ -218,32 +153,6 @@
     }
   }
 
-  async function resolveRequest(id, decision) {
-    const row = dashboard.querySelector(`.pm-request-row[data-request-id="${id}"]`);
-    if (row) {
-      row.querySelectorAll('button').forEach((btn) => { btn.disabled = true; });
-    }
-    try {
-      const res = await fetch(`/parts-manager/api/parts-requests/${encodeURIComponent(id)}/resolve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ decision }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Request action failed.');
-      overview = data.overview || overview;
-      updateCounts();
-      renderRequestsTable();
-      refreshQtyCells();
-      if (decision === 'approved' && data.receiptUrl) {
-        window.open(data.receiptUrl, '_blank', 'noopener');
-      }
-    } catch (error) {
-      if (row) row.querySelectorAll('button').forEach((btn) => { btn.disabled = false; });
-      window.alert(error.message);
-    }
-  }
-
   if (searchInput) {
     searchInput.addEventListener('input', applyFilter);
   }
@@ -261,31 +170,12 @@
       return;
     }
 
-    const approveBtn = event.target.closest('.pm-btn-approve');
-    if (approveBtn) {
-      resolveRequest(approveBtn.dataset.id, 'approved');
-      return;
-    }
-
-    const reviewBtn = event.target.closest('.pm-btn-review');
-    if (reviewBtn) {
-      openReviewModal(reviewBtn.dataset.id);
-      return;
-    }
-
-    const rejectBtn = event.target.closest('.pm-btn-reject');
-    if (rejectBtn) {
-      resolveRequest(rejectBtn.dataset.id, 'rejected');
-    }
   });
 
   modal.addEventListener('click', (event) => {
     if (event.target.closest('[data-pm-close-modal]')) closeStockModal();
   });
 
-  reviewModal?.addEventListener('click', (event) => {
-    if (event.target.closest('[data-pm-close-review]')) closeReviewModal();
-  });
 
   document.getElementById('pm-stock-minus')?.addEventListener('click', () => {
     stockDelta.value = String(Math.max(1, (Number(stockDelta.value) || 1) - 1));

@@ -27,7 +27,8 @@ const { warehouseFulfillmentExtras } = require('../lib/parts-transfer-receive');
 const { allocatePartsTransactionNumber } = require('../lib/parts-transaction-number');
 const inventory = require('../lib/parts-inventory-controller');
 const stockAlerts = require('../lib/parts-stock-alerts');
-const { WAREHOUSE_1, sameLocation, filterDataToLocation, withLocationOnHand } = require('../lib/parts-location-scope');
+const { WAREHOUSE_1, sameLocation, filterDataToLocation, withLocationOnHand, stockByLocation } = require('../lib/parts-location-scope');
+const { DEFAULT_OPERATIONAL_BRANCHES } = require('../lib/branches');
 const { buildSortedDatabaseCsv, importPartsCsv } = require('../lib/parts-csv-sync');
 const { collectReportLookups } = require('../lib/parts-reports');
 const {
@@ -46,10 +47,11 @@ const {
   buildTransmittalHtml,
   buildPurchaseOrderHtml,
 } = require('../lib/pm-documents');
+const { recordGmApproval, TYPES: GM_TXN_TYPES } = require('../lib/gm-transaction-log');
 
 const router = express.Router();
 
-const PM_ROLES = new Set(['parts_manager', 'pm']);
+const PM_ROLES = new Set(['parts_manager', 'pm', 'parts_clerk']);
 const SUPERVISOR_ROLES = new Set(['general_manager']);
 const BRANCHES = ['Carx2', 'Carmen', 'CebuCity', 'Lapux2', 'Bogo', 'Toledo', 'ITPark'];
 const LOW_STOCK_THRESHOLD = 5;
@@ -232,49 +234,54 @@ function calculateHealthMetrics(data) {
  * Identify "delicate parts" - critical items needing attention
  */
 function getDelicateParts(data) {
-  const parts = (data.parts_inventory || []).filter(
-    (p) => !isPartsActivityLog(p)
-  );
-
   const safetyThreshold = 5;
-  const delicate = [];
+  const rows = (data.parts_inventory || []).filter((p) => !isPartsActivityLog(p));
+  const auditRows = inventory.allAuditRows(data);
+  const warehouseStock = stockByLocation(auditRows, WAREHOUSE_1);
+  const branchStocks = new Map(DEFAULT_OPERATIONAL_BRANCHES.map((branch) => [
+    branch,
+    stockByLocation(auditRows, branch),
+  ]));
+  const metadata = new Map();
 
-  parts.forEach((p) => {
-    const qty = toNumber(p.qty);
-    const partNum = String(p.part_number || '').trim();
-    const status = [];
-
-    // Critical low stock
-    if (qty > 0 && qty < safetyThreshold) {
-      status.push('Critical Low');
-    }
-
-    // No supplier
-    if (!String(p.supplier || '').trim() && qty > 0) {
-      status.push('No Supplier');
-    }
-
-    // Zero cost (pricing issue)
-    if (toNumber(p.cost_price) === 0 && qty > 0) {
-      status.push('$0 Cost');
-    }
-
-    if (status.length > 0) {
-      delicate.push({
-        id: p.id,
-        part_number: partNum,
-        part_name: String(p.part_name || '').trim(),
-        supplier: String(p.supplier || '').trim(),
-        current_stock: qty,
-        safety_stock: safetyThreshold,
-        cost_price: toNumber(p.cost_price),
-        status: status.join(' | '),
-      });
-    }
+  rows.forEach((p) => {
+    const partNumber = String(p.part_number || '').trim();
+    const key = inventory.normalizePartNumberKey(partNumber);
+    const subId = String(p.sub_id || '').trim().toLowerCase().replace(/[\s-]/g, '');
+    if (!key || subId === 'xparts') return;
+    if (!metadata.has(key)) metadata.set(key, p);
   });
 
-  // Sort by criticality: critical low > no supplier > $0 cost
+  const delicate = [];
+  metadata.forEach((part, key) => {
+    const warehouseQty = toNumber(warehouseStock.get(key));
+    if (warehouseQty <= 0) return;
+
+    branchStocks.forEach((stock, branch) => {
+      const branchQty = toNumber(stock.get(key));
+      if (branchQty >= safetyThreshold) return;
+      const status = ['Critical Low', `W1 Available: ${warehouseQty}`];
+      if (!String(part.supplier || '').trim()) status.push('No Supplier');
+      if (toNumber(part.cost_price) === 0) status.push('$0 Cost');
+      delicate.push({
+        id: part.id,
+        part_number: String(part.part_number || '').trim(),
+        part_name: String(part.part_name || '').trim(),
+        supplier: String(part.supplier || '').trim(),
+        location: branch,
+        source_location: WAREHOUSE_1,
+        current_stock: branchQty,
+        safety_stock: safetyThreshold,
+        cost_price: toNumber(part.cost_price),
+        status: status.join(' | '),
+      });
+    });
+  });
+
+  // Keep each branch and Warehouse 1 visible as its own health row.
   return delicate.sort((a, b) => {
+    const locationOrder = a.location.localeCompare(b.location);
+    if (locationOrder !== 0) return locationOrder;
     const aScore = (a.current_stock === 0 ? 10 : 0) + (a.status.includes('Critical Low') ? 5 : 0);
     const bScore = (b.current_stock === 0 ? 10 : 0) + (b.status.includes('Critical Low') ? 5 : 0);
     return bScore - aScore;
@@ -511,74 +518,6 @@ function mapTransferAsRequest(transfer) {
   };
 }
 
-function applyCompletedTransfer(data, transfer, editor) {
-  if (String(transfer.status || '').toLowerCase() === 'completed') {
-    const existing = (data.parts_inventory || []).filter((row) => String(row.linked_transfer_id) === String(transfer.id) && row.approved_at);
-    return { transfer, approvedRows: existing };
-  }
-
-  const stamp = stampNow();
-  const lines = transferLineList(transfer);
-  const approvedRows = [];
-  if (!Array.isArray(data.parts_inventory)) data.parts_inventory = [];
-
-  lines.forEach((line) => {
-    const outRow = {
-      id: genId(),
-      created_at: stamp.iso,
-      transaction_date: stamp.date,
-      transaction_number: allocatePartsTransactionNumber(data),
-      transaction_type: TYPE_SOLD,
-      present_location: transfer.from_branch,
-      branch: transfer.from_branch,
-      editor,
-      part_number: line.part_number,
-      part_name: line.part_name,
-      sub_id: line.sub_id,
-      qty: toNumber(line.qty),
-      unit: line.unit || '',
-      sold_to: `Transfer ${transfer.transaction_number}`,
-      linked_transfer_id: transfer.id,
-      requesting_branch: transfer.to_branch,
-      from_branch: transfer.from_branch,
-      to_branch: transfer.to_branch,
-      packing_list_number: transfer.packing_list_number,
-      transmittal_number: transfer.transmittal_number,
-      approved_at: stamp.iso,
-      approved_by: editor,
-      original_transaction_type: 'Transfer Request',
-    };
-    const inRow = {
-      id: genId(),
-      created_at: stamp.iso,
-      transaction_date: stamp.date,
-      transaction_number: allocatePartsTransactionNumber(data),
-      transaction_type: TYPE_RESTOCK,
-      present_location: transfer.to_branch,
-      branch: transfer.to_branch,
-      editor,
-      part_number: line.part_number,
-      part_name: line.part_name,
-      sub_id: line.sub_id,
-      qty: toNumber(line.qty),
-      unit: line.unit || '',
-      sold_to: '',
-      linked_transfer_id: transfer.id,
-    };
-    data.parts_inventory.push(outRow, inRow);
-    inventory.rememberTransaction(data, outRow);
-    inventory.rememberTransaction(data, inRow);
-    approvedRows.push(outRow);
-  });
-
-  transfer.status = 'completed';
-  transfer.completed_at = stamp.iso;
-  transfer.completed_by = editor;
-  transfer.stamped_at = stamp.iso;
-  transfer.stamped_label = stamp.label;
-  return { transfer, approvedRows };
-}
-
 function renderApprovePrint(res, locals) {
   return res.render('parts-manager/approve-print', locals);
 }
@@ -714,6 +653,15 @@ router.get('/transfers/:id/preview', async (req, res) => {
     return res.redirect('/parts-manager?panel=approvals&error=' + encodeURIComponent('That transfer is already completed.'));
   }
 
+  if (String(transfer.status || '').toLowerCase() === 'in_transit') {
+    const transitRow = (data.parts_inventory || []).find((row) => (
+      String(row.linked_transfer_id || '') === String(transfer.id)
+      && String(row.fulfillment_status || '').toLowerCase() === 'in_transit'
+    ));
+    if (transitRow) return res.redirect('/parts-manager/approved/' + encodeURIComponent(transitRow.id));
+    return res.redirect('/parts-manager?panel=approvals&error=' + encodeURIComponent('Transit rows are missing for this transfer.'));
+  }
+
   const source = mapTransferAsRequest(transfer);
   const record = buildApprovedTransactionRecord(source, currentEditor(req), data, {
     original_transaction_type: 'Transfer Request',
@@ -730,7 +678,12 @@ router.get('/transfers/:id/preview', async (req, res) => {
     record,
     source,
     lines: transferLineList(transfer),
-    proceedAction: '/parts-manager/transfers/' + encodeURIComponent(transfer.id) + '/proceed',
+    proceedAction: String(transfer.status || '').toLowerCase() === 'approved'
+      ? '/parts-manager/transfers/' + encodeURIComponent(transfer.id) + '/transit'
+      : '/parts-manager/transfers/' + encodeURIComponent(transfer.id) + '/proceed',
+    actionLabel: String(transfer.status || '').toLowerCase() === 'approved'
+      ? 'Create Transit Receipt'
+      : 'Approve Transfer',
     cancelHref: '/parts-manager?panel=approvals',
     autoPrint: '',
     error: '',
@@ -738,7 +691,39 @@ router.get('/transfers/:id/preview', async (req, res) => {
   });
 });
 
+router.post('/transfers/:id/remove', async (req, res) => {
+  const approverRole = String(req.session?.user?.role || '').trim().toLowerCase();
+  if (approverRole !== 'general_manager') {
+    return res.redirect('/approvals?error=' + encodeURIComponent('Only the General Manager can remove stock transfers.'));
+  }
+
+  const data = await store.getRawData();
+  const transferIndex = (data.parts_transfers || []).findIndex((row) => String(row.id) === String(req.params.id));
+  if (transferIndex === -1) return res.redirect('/approvals?error=' + encodeURIComponent('Transfer not found.'));
+
+  const transfer = data.parts_transfers[transferIndex];
+  if (String(transfer.status || '').toLowerCase() !== 'pending') {
+    return res.redirect('/approvals?error=' + encodeURIComponent('Only pending transfers can be removed.'));
+  }
+
+  data.parts_transfers.splice(transferIndex, 1);
+  data.parts_inventory = (data.parts_inventory || []).filter((row) => (
+    String(row.linked_transfer_id || '') !== String(transfer.id)
+    || row.approved_at
+  ));
+  data.parts_documents = (data.parts_documents || []).filter((document) => (
+    String(document.related_id || '') !== String(transfer.id)
+  ));
+  await store.replaceData(data);
+  return res.redirect('/approvals?success=' + encodeURIComponent(`Stock transfer ${transfer.transaction_number || transfer.id} removed.`));
+});
+
 router.post('/transfers/:id/proceed', async (req, res) => {
+  const approverRole = String(req.session?.user?.role || '').trim().toLowerCase();
+  if (approverRole !== 'general_manager') {
+    return res.redirect('/parts-manager?panel=approvals&error=' + encodeURIComponent('Only the General Manager can approve and complete stock transfers.'));
+  }
+
   const data = await store.getRawData();
   const transfer = findTransfer(data, req.params.id);
   if (!transfer) {
@@ -746,26 +731,86 @@ router.post('/transfers/:id/proceed', async (req, res) => {
   }
 
   const editor = currentEditor(req);
-  const { approvedRows } = applyCompletedTransfer(data, transfer, editor);
-  const printable = approvedRows[0];
-  if (printable) {
-    const source = mapTransferAsRequest(transfer);
-    await saveApprovedReceipt(printable, source);
-    rememberDocument(data, {
-      kind: 'receipt',
-      serial: printable.transaction_number,
-      transaction_number: printable.transaction_number,
-      related_id: printable.id,
-      created_by: editor,
-      title: 'Approved Transfer Receipt',
-    });
-  }
-  await store.replaceData(data);
+  transfer.status = 'approved';
+  transfer.approved_at = new Date().toISOString();
+  transfer.approved_by = editor;
 
-  if (printable) {
-    return res.redirect('/parts-manager/approved/' + encodeURIComponent(printable.id) + '?print=1');
+  const transferAmount = transferLineList(transfer).reduce((sum, line) => sum + (Number(line.qty) || 0) * (Number(line.cost_price) || 0), 0);
+  recordGmApproval(data, {
+    transaction_number: transfer.transaction_number || transfer.id,
+    type: GM_TXN_TYPES.STOCK_TRANSFER,
+    requester_name: transfer.editor || '',
+    requested_at: transfer.created_at || '',
+    amount: transferAmount,
+    approved_at: transfer.approved_at,
+    approved_by: editor,
+  });
+
+  await store.replaceData(data);
+  return res.redirect('/approvals?success=' + encodeURIComponent(`Stock transfer ${transfer.transaction_number || transfer.id} approved.`));
+});
+
+router.post('/transfers/:id/transit', async (req, res) => {
+  const role = String(req.session?.user?.role || '').trim().toLowerCase();
+  if (!isPartsManagerRole(role)) {
+    return res.redirect('/parts-manager?panel=approvals&error=' + encodeURIComponent('Parts Manager access is required to create a transit receipt.'));
   }
-  return res.redirect('/parts-manager?panel=approvals&success=' + encodeURIComponent('Transfer completed.'));
+  const data = await store.getRawData();
+  const transfer = findTransfer(data, req.params.id);
+  if (!transfer) return res.redirect('/parts-manager?panel=approvals&error=' + encodeURIComponent('Transfer not found.'));
+  if (String(transfer.status || '').toLowerCase() !== 'approved') {
+    return res.redirect('/parts-manager?panel=approvals&error=' + encodeURIComponent('GM approval is required before creating a transit receipt.'));
+  }
+
+  const existingTransitRow = (data.parts_inventory || []).find((row) => (
+    String(row.linked_transfer_id || '') === String(transfer.id)
+    && String(row.fulfillment_status || '').toLowerCase() === 'in_transit'
+  ));
+  if (existingTransitRow) {
+    return res.redirect('/parts-manager/approved/' + encodeURIComponent(existingTransitRow.id) + '?print=1');
+  }
+
+  const editor = currentEditor(req);
+  const stamp = stampNow();
+  const transitRows = [];
+  transferLineList(transfer).forEach((line) => {
+    const row = {
+      id: genId(),
+      created_at: stamp.iso,
+      transaction_date: stamp.date,
+      transaction_number: allocatePartsTransactionNumber(data),
+      transaction_type: 'parts request',
+      present_location: transfer.from_branch,
+      branch: transfer.from_branch,
+      requesting_branch: transfer.to_branch,
+      from_branch: transfer.from_branch,
+      to_branch: transfer.to_branch,
+      editor,
+      part_number: line.part_number,
+      part_name: line.part_name,
+      sub_id: line.sub_id,
+      unit: line.unit || '',
+      qty: toNumber(line.qty),
+      sold_to: transfer.to_branch,
+      linked_transfer_id: transfer.id,
+      approved_at: stamp.iso,
+      approved_by: transfer.approved_by || editor,
+      request_status: 'approved',
+      fulfillment_status: 'in_transit',
+      packing_list_number: transfer.packing_list_number,
+      transmittal_number: transfer.transmittal_number,
+    };
+    data.parts_inventory.push(row);
+    inventory.rememberTransaction(data, row);
+    transitRows.push(row);
+  });
+  transfer.status = 'in_transit';
+  transfer.transit_at = stamp.iso;
+  transfer.transit_by = editor;
+  await store.replaceData(data);
+  const source = mapTransferAsRequest(transfer);
+  await saveApprovedReceipt(transitRows[0], source);
+  return res.redirect('/parts-manager/approved/' + encodeURIComponent(transitRows[0].id) + '?print=1');
 });
 
 router.get('/approved/:id', async (req, res) => {
@@ -952,6 +997,50 @@ router.post('/parts/:id/delete', async (req, res) => {
   return res.redirect('/parts-manager?success=' + encodeURIComponent('Dashboard entry removed. Audit history was kept.'));
 });
 
+router.post('/transactions/:id/delete', async (req, res) => {
+  const data = await store.getRawData();
+  const selected = inventory.allAuditRows(data)
+    .find((row) => String(row.id) === String(req.params.id));
+  if (!selected) {
+    return res.redirect('/parts-manager?error=' + encodeURIComponent('Transaction record not found.'));
+  }
+
+  const transactionNumber = String(selected.transaction_number || '').trim();
+  const matchesSelectedTransaction = (row) => transactionNumber
+    ? String(row && row.transaction_number || '').trim() === transactionNumber
+    : String(row && row.id || '') === String(selected.id);
+
+  data.parts_inventory = (data.parts_inventory || []).filter((row) => !matchesSelectedTransaction(row));
+  data.transactions = (data.transactions || []).filter((row) => !matchesSelectedTransaction(row));
+  inventory.rebuildPartsCatalog(data);
+  await store.replaceData(data);
+
+  const label = transactionNumber || selected.id;
+  return res.redirect('/parts-manager?success=' + encodeURIComponent(`Transaction ${label} removed.`));
+});
+
+router.post('/transactions/:id/activate-number', async (req, res) => {
+  const data = await store.getRawData();
+  const row = (data.parts_inventory || []).find((item) => String(item.id) === String(req.params.id));
+  if (!row) return res.status(404).json({ error: 'Transaction record not found.' });
+  const transactionNumber = String(row.transaction_number || '').trim() || allocatePartsTransactionNumber(data);
+  row.transaction_number = transactionNumber;
+  inventory.rememberTransaction(data, row);
+  await store.replaceData(data);
+  return res.json({ ok: true, transaction_number: transactionNumber });
+});
+
+router.get('/print/transaction/:id', async (req, res) => {
+  const data = await store.getRawData();
+  const row = inventory.allAuditRows(data).find((item) => String(item.id) === String(req.params.id));
+  if (!row) return res.status(404).send('Transaction record not found.');
+  const esc = (value) => String(value == null ? '' : value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const number = row.transaction_number || row.id || '—';
+  return res.type('html').send(`<!doctype html><html><head><meta charset="utf-8"><title>Transaction Report ${esc(number)}</title><style>body{font-family:Arial,sans-serif;margin:24px;color:#10202f}h1{margin-bottom:4px}table{border-collapse:collapse;width:100%;max-width:720px}th,td{border:1px solid #ccd5df;padding:8px;text-align:left}th{width:30%;background:#eef4fb}.actions{margin-top:20px}@media print{.actions{display:none}}</style></head><body><h1>Parts Transaction Report</h1><p>Transaction Number: <strong>${esc(number)}</strong></p><table><tbody><tr><th>Date</th><td>${esc(row.transaction_date || row.created_at || '')}</td></tr><tr><th>Type</th><td>${esc(row.transaction_type || '')}</td></tr><tr><th>Location</th><td>${esc(row.present_location || row.branch || '')}</td></tr><tr><th>Part Number</th><td>${esc(row.part_number || '')}</td></tr><tr><th>Part Name</th><td>${esc(row.part_name || '')}</td></tr><tr><th>Quantity</th><td>${esc(row.qty)}</td></tr><tr><th>Supplier</th><td>${esc(row.supplier || '')}</td></tr><tr><th>Editor</th><td>${esc(row.editor || '')}</td></tr></tbody></table><div class="actions"><button type="button" onclick="window.print()">Print</button></div></body></html>`);
+});
+
 router.get('/print/packing/:id', async (req, res) => {
   const data = await store.getRawData();
   const record = findTransfer(data, req.params.id);
@@ -964,6 +1053,18 @@ router.get('/print/transmittal/:id', async (req, res) => {
   const record = findTransfer(data, req.params.id);
   if (!record) return res.status(404).send('Transfer not found.');
   return res.type('html').send(buildTransmittalHtml(record));
+});
+
+router.post('/transfers/:id/transmit', async (req, res) => {
+  const data = await store.getRawData();
+  const transfer = findTransfer(data, req.params.id);
+  if (!transfer) return res.redirect('/parts-manager?panel=approvals&error=' + encodeURIComponent('Transfer not found.'));
+
+  transfer.status = 'Branch Receiving';
+  transfer.transmitted_at = new Date().toISOString();
+  transfer.transmitted_by = currentEditor(req);
+  await store.replaceData(data);
+  return res.redirect('/parts-manager?panel=approvals&success=' + encodeURIComponent(`Transmittal ${transfer.transmittal_number || transfer.id} sent. Status set to Branch Receiving.`));
 });
 
 router.get('/print/po/:id', async (req, res) => {
@@ -989,6 +1090,21 @@ router.post('/transfer', async (req, res) => {
 
   if (!Array.isArray(data.parts_transfers)) data.parts_transfers = [];
   if (!Array.isArray(data.parts_inventory)) data.parts_inventory = [];
+
+  if (sameLocation(fromBranch, WAREHOUSE_1)) {
+    const warehouseStock = stockByLocation(inventory.allAuditRows(data), WAREHOUSE_1);
+    const requestedByPart = new Map();
+    lines.forEach((line) => {
+      const key = inventory.normalizePartNumberKey(line.part_number);
+      requestedByPart.set(key, (requestedByPart.get(key) || 0) + line.qty);
+    });
+    const underStock = Array.from(requestedByPart.entries()).some(([partNumber, requestedQty]) => (
+      (warehouseStock.get(partNumber) || 0) < requestedQty
+    ));
+    if (underStock) {
+      return res.redirect('/parts-manager?panel=approvals&error=' + encodeURIComponent('Under Stocks for the Request'));
+    }
+  }
 
   const stamp = stampNow();
   const numbers = allocateTransferNumbers(data);
@@ -1104,13 +1220,7 @@ router.post('/purchase-orders', async (req, res) => {
 });
 
 router.post('/api/transfers/:id/complete', async (req, res) => {
-  const data = await store.getRawData();
-  const transfer = findTransfer(data, req.params.id);
-  if (!transfer) return res.status(404).json({ error: 'Transfer not found.' });
-
-  const { transfer: updated } = applyCompletedTransfer(data, transfer, currentEditor(req));
-  await store.replaceData(data);
-  return res.json({ ok: true, transfer: updated });
+  return res.status(409).json({ error: 'Transfers are completed by Service receiving after PM transit processing.' });
 });
 
 router.post('/api/purchase-orders/:id/receive', async (req, res) => {
@@ -1328,6 +1438,7 @@ router.post('/api/parts/receiving-entry', async (req, res) => {
         cost_price: toNumber(entry.cost_price),
         markup: toNumber(entry.markup),
         retail_price: toNumber(entry.retail_price),
+        barcode: String(entry.barcode || '').trim(),
         sold_to: '',
       };
 

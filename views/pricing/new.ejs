@@ -30,7 +30,7 @@
 <section class="labor-charge-page">
   <h2>Create Labor Charge</h2>
 
-  <form method="post" action="/pricing/new" class="form">
+  <form method="post" action="/pricing/new" class="form" id="labor-charge-form" data-hourly-rate="<%= hourlyLaborRate %>">
     <label>Unit Type
       <select name="vehicle_type" required>
         <option value="">--select--</option>
@@ -48,7 +48,9 @@
     <small>Car unit types create all 6 vehicle sizes. Hours move 10% left/right from the type you pick. Equipment, Facility, and Tools stay as one line.</small>
     <label>Service Type <input name="service_type" required></label>
     <label>Service Hours <input name="hours" type="number" step="0.01" min="0" required></label>
-    <label>Price <input name="price" type="number" step="0.01" min="0" required></label>
+    <label>Service Charge/Hour <input name="service_charge" type="number" step="0.01" min="0" value="<%= hourlyLaborRate.toFixed(2) %>" required></label>
+    <label>Price <input name="price" type="number" step="0.01" min="0" readonly required></label>
+    <small>Price is calculated automatically from Service Hours and Service Charge/Hour.</small>
     <button type="submit">Create</button>
     <a href="/work-orders">Cancel</a>
   </form>
@@ -94,5 +96,28 @@
     </div>
   </article>
 </section>
+
+<script>
+  (function initLaborChargeCalculation() {
+    const form = document.getElementById('labor-charge-form');
+    if (!form) return;
+
+    const vehicleType = form.elements.vehicle_type;
+    const serviceType = form.elements.service_type;
+    const hours = form.elements.hours;
+    const serviceCharge = form.elements.service_charge;
+    const price = form.elements.price;
+
+    function updatePrice() {
+      const hasRequiredDetails = vehicleType.value && serviceType.value.trim() && hours.value !== '' && serviceCharge.value !== '';
+      const amount = hasRequiredDetails ? Number(hours.value) * Number(serviceCharge.value) : 0;
+      price.value = Number.isFinite(amount) ? amount.toFixed(2) : '0.00';
+    }
+
+    [vehicleType, serviceType, hours, serviceCharge].forEach((field) => field.addEventListener('input', updatePrice));
+    [vehicleType, serviceType, hours, serviceCharge].forEach((field) => field.addEventListener('change', updatePrice));
+    updatePrice();
+  }());
+</script>
 
 <%- include('../partials/footer') %>

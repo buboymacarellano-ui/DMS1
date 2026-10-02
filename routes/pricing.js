@@ -153,7 +153,11 @@ router.get('/new', async (req, res) => {
 });
 
 router.post('/new', async (req, res) => {
-  const { vehicle_type, service_type, hours, price } = req.body;
+  const { vehicle_type, service_type, hours, service_charge } = req.body;
+  const settings = await store.getPricingSettings();
+  const price = Number.isFinite(Number(service_charge))
+    ? Math.max(0, Number(service_charge))
+    : (Number(settings.hourly_rate) || 0);
   await upsertCarPricingFamily({
     vehicle_type,
     service_type,
