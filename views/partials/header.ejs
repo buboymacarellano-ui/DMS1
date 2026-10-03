@@ -164,6 +164,15 @@
             <a href="/approvals" class="approval-nav" title="Submit or view approval requests">Requests</a>
           <% } %>
         <% } %>
+        <% if (typeof canCreatePo !== 'undefined' && canCreatePo) { %>
+          <a href="/po/create" class="<%= pathNow.indexOf('/po/create') === 0 ? 'nav-link--active' : '' %>">Create PO</a>
+        <% } %>
+        <% if (typeof isPoApprover !== 'undefined' && (isPoApprover || canManagePo)) { %>
+          <a href="/po/approvals" class="approval-nav <%= poPendingCount > 0 ? 'approval-nav--pending' : '' %>">PO Approvals<% if (poPendingCount > 0) { %> <span class="approval-nav__count"><%= poPendingCount %></span><% } %></a>
+        <% } %>
+        <% if (typeof canManagePo !== 'undefined' && canManagePo) { %>
+          <a href="/po/settings">PO Settings</a>
+        <% } %>
         <% if (currentUser) { %>
           <span class="header-user-badge"><%= roleLabel %>: <%= currentUser.username %><%= ['service_receptionist', 'senior_service_receptionist', 'service_advisor'].includes(activeRole) && currentUser.branch ? ` | ${currentUser.branch}` : '' %></span>
         <% } %>

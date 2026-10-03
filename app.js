@@ -29,6 +29,8 @@ const authRouter = require('./routes/auth');
 const kpiRouter = require('./routes/kpi');
 const approvalsRouter = require('./routes/approvals');
 const reportsRouter = require('./routes/reports');
+const poRouter = require('./routes/po');
+const poLib = require('./lib/po-create');
 const store = require('./data/store');
 const {
   buildComebackWorkOrderIdSet,
@@ -232,6 +234,15 @@ app.use(async (req, res, next) => {
   res.locals.pendingApprovalCount = res.locals.canApproveRequests
     ? (await store.getAll('approval_requests')).filter(request => request.status === 'pending').length
     : 0;
+  const poSettings = await store.getPoSettings();
+  const poUser = req.session.user || null;
+  res.locals.canCreatePo = poLib.canCreatePo(poUser, poSettings);
+  res.locals.canManagePo = poLib.canManagePoSettings(poUser);
+  res.locals.poPendingCount = poUser
+    ? (await store.getAll('po_orders')).filter((order) => poLib.isAssignedApprover(order, poUser)).length
+    : 0;
+  res.locals.isPoApprover = res.locals.poPendingCount > 0
+    || (poSettings.approvers || []).some((rule) => poUser && String(rule.approver_user_id) === String(poUser.id));
   delete req.session.globalError;
   next();
 });
@@ -3078,6 +3089,7 @@ app.use('/parts', requireAnyRole(
 ), partsRouter);
 app.use('/helper', helperRouter);
 app.use('/approvals', approvalsRouter);
+app.use('/po', poRouter);
 app.use('/api/kpi', kpiRouter);
 app.use('/kpi', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_ADMIN, ROLE_STM), kpiRouter);
 

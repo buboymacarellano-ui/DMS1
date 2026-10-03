@@ -42,6 +42,8 @@ function normalizeData(data) {
     hr_rosters: source.hr_rosters || [],
     hr_payroll: source.hr_payroll || [],
     gm_transaction_records: source.gm_transaction_records || [],
+    po_orders: source.po_orders || [],
+    po_settings: source.po_settings || { creator_roles: [], creator_user_ids: [], approvers: [] },
   };
   return ensureCollections(next);
 }
@@ -68,6 +70,7 @@ const OPERATIONAL_COLLECTIONS = [
   'hr_rosters',
   'hr_payroll',
   'gm_transaction_records',
+  'po_orders',
 ];
 
 const QTY_KEYS = [
@@ -254,6 +257,18 @@ async function setLoginAuthDisabled(disabled) {
   return data.auth_settings.login_disabled === true;
 }
 
+async function getPoSettings() {
+  const data = await load();
+  return data.po_settings || { creator_roles: [], creator_user_ids: [], approvers: [] };
+}
+
+async function setPoSettings(settings) {
+  const data = await load();
+  data.po_settings = Object.assign({}, settings, { updated_at: new Date().toISOString() });
+  await save();
+  return data.po_settings;
+}
+
 async function getPricingSettings() {
   const data = await load();
   return data.pricing_settings || { hourly_rate: 350 };
@@ -324,6 +339,8 @@ module.exports = {
   remove,
   isLoginAuthDisabled,
   setLoginAuthDisabled,
+  getPoSettings,
+  setPoSettings,
   getPricingSettings,
   updatePricingSettings,
   hasDeletePassword,
