@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const express = require('express');
 const store = require('../data/store');
 const portals = require('../lib/portals');
@@ -22,16 +23,28 @@ function deny(req, res, message) {
   return res.status(403).render('po/denied', { message });
 }
 
-async function requireCreator(req, res, next) {
+const requireCreator = safe(async (req, res, next) => {
   const user = activeUser(req);
   const settings = await store.getPoSettings();
   if (po.canCreatePo(user, settings)) return next();
   return deny(req, res, 'Access denied. You have not been granted the "Create PO" (po.create) permission.');
-}
+});
 
 function requireGm(req, res, next) {
   if (po.canManagePoSettings(activeUser(req))) return next();
   return deny(req, res, 'Access denied. Only the General Manager can manage PO approvers and permissions.');
+}
+
+function safe(handler) {
+  return (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
+}
+
+// Serializes PO-number allocation + insert so concurrent saves never share a number.
+let createQueue = Promise.resolve();
+function createSerialized(task) {
+  const run = createQueue.then(task);
+  createQueue = run.catch(() => {});
+  return run;
 }
 
 function asArray(value) {
@@ -54,15 +67,15 @@ function flash(req) {
   return { success: normalize(req.query.success), error: normalize(req.query.error) };
 }
 
-router.get('/', requireCreator, async (req, res) => {
+router.get('/', requireCreator, safe(async (req, res) => {
   const user = activeUser(req);
   const orders = (await store.getAll('po_orders'))
     .filter((order) => po.canManagePoSettings(user) || order.created_by_user_id === normalize(user.id))
     .sort(byNewest);
   res.render('po/index', Object.assign({ orders, STATUS_LABELS: po.STATUS_LABELS }, flash(req)));
-});
+}));
 
-router.get('/create', requireCreator, async (req, res) => {
+router.get('/create', requireCreator, safe(async (req, res) => {
   const user = activeUser(req);
   let order = null;
   if (req.query.id) {
@@ -88,10 +101,10 @@ router.get('/create', requireCreator, async (req, res) => {
     defaultDepartment: portals.departmentForRole(user.role),
     defaultRequestor: normalize(user.username),
   });
-});
+}));
 
 // Item lookup against existing parts and inventory lots.
-router.get('/api/items', requireCreator, async (req, res) => {
+router.get('/api/items', requireCreator, safe(async (req, res) => {
   const q = normalize(req.query.q).toLowerCase();
   const [parts, inventory] = await Promise.all([store.getAll('parts'), store.getAll('parts_inventory')]);
   const seen = new Map();
@@ -109,9 +122,9 @@ router.get('/api/items', requireCreator, async (req, res) => {
     .filter((item) => !q || item.item_code.toLowerCase().includes(q) || item.description.toLowerCase().includes(q))
     .slice(0, 20);
   res.json({ items });
-});
+}));
 
-router.post('/save', requireCreator, async (req, res) => {
+router.post('/save', requireCreator, safe(async (req, res) => {
   try {
     const user = activeUser(req);
     const body = req.body || {};
@@ -160,21 +173,20 @@ router.post('/save', requireCreator, async (req, res) => {
     if (order) {
       order = await store.update('po_orders', order.id, patch);
     } else {
-      const existing = await store.getAll('po_orders');
-      order = await store.create('po_orders', Object.assign({
-        po_number: po.allocatePoNumber(existing),
+      order = await createSerialized(async () => store.create('po_orders', Object.assign({
+        po_number: po.allocatePoNumber(await store.getAll('po_orders')),
         created_by_user_id: normalize(user.id),
         created_by: normalize(user.username),
-      }, patch));
+      }, patch)));
     }
     return res.json({ ok: true, id: order.id, po_number: order.po_number, status: order.status, redirect: `/po/${order.id}` });
   } catch (error) {
     console.error('POST /po/save failed', error);
     return res.status(500).json({ error: 'Unable to save the PO.' });
   }
-});
+}));
 
-router.get('/approvals', async (req, res) => {
+router.get('/approvals', safe(async (req, res) => {
   const user = activeUser(req);
   const orders = await store.getAll('po_orders');
   const mine = user ? normalize(user.id) : '';
@@ -189,9 +201,9 @@ router.get('/approvals', async (req, res) => {
   }
   const all = po.canManagePoSettings(user) ? orders.slice().sort(byNewest) : [];
   res.render('po/approvals', Object.assign({ awaiting, decided, all, STATUS_LABELS: po.STATUS_LABELS }, flash(req)));
-});
+}));
 
-router.get('/settings', requireGm, async (req, res) => {
+router.get('/settings', requireGm, safe(async (req, res) => {
   const [settings, users] = await Promise.all([store.getPoSettings(), store.getAll('users')]);
   const roles = [];
   Object.keys(portals.ROLES_BY_DEPARTMENT || {}).forEach((dept) => {
@@ -205,9 +217,9 @@ router.get('/settings', requireGm, async (req, res) => {
     roles,
     departments: po.DEPARTMENTS,
   }, flash(req)));
-});
+}));
 
-router.post('/settings', requireGm, async (req, res) => {
+router.post('/settings', requireGm, safe(async (req, res) => {
   const user = activeUser(req);
   const users = await store.getAll('users');
   const body = req.body || {};
@@ -228,7 +240,7 @@ router.post('/settings', requireGm, async (req, res) => {
       return res.redirect('/po/settings?error=Invalid+amount+range+in+approver+rule.');
     }
     rules.push({
-      id: `${Date.now().toString(36)}${i}`,
+      id: crypto.randomUUID(),
       department: normalize(depts[i]) || '*',
       min_amount: min,
       max_amount: max,
@@ -247,9 +259,9 @@ router.post('/settings', requireGm, async (req, res) => {
     updated_by: normalize(user && user.username),
   });
   res.redirect('/po/settings?success=PO+settings+saved.');
-});
+}));
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', safe(async (req, res) => {
   const user = activeUser(req);
   const [order, settings] = await Promise.all([store.getById('po_orders', normalize(req.params.id)), store.getPoSettings()]);
   if (!order) return res.status(404).render('po/denied', { message: 'Purchase order not found.' });
@@ -260,7 +272,7 @@ router.get('/:id', async (req, res) => {
     canEdit: order.status === po.STATUS.draft && order.created_by_user_id === normalize(user.id),
     STATUS_LABELS: po.STATUS_LABELS,
   }, flash(req)));
-});
+}));
 
 async function decide(req, res, decision) {
   const user = activeUser(req);
@@ -273,25 +285,12 @@ async function decide(req, res, decision) {
   if (decision === 'rejected' && !remarks) {
     return res.redirect(`/po/${order.id}?error=Remarks+are+required+when+rejecting.`);
   }
-  const history = (order.history || []).slice();
-  const patch = {};
-  const level = (order.approval_chain || [])[order.current_level_index || 0];
-  history.push(po.historyEntry(decision, user, remarks, { level: level ? level.level : null }));
-  if (decision === 'rejected') {
-    patch.status = po.STATUS.rejected;
-    patch.rejected_at = new Date().toISOString();
-  } else if ((order.current_level_index || 0) + 1 < order.approval_chain.length) {
-    patch.current_level_index = (order.current_level_index || 0) + 1;
-  } else {
-    patch.status = po.STATUS.approved;
-    patch.approved_at = new Date().toISOString();
-  }
-  patch.history = history;
+  const patch = po.applyDecision(order, decision, user, remarks);
   await store.update('po_orders', order.id, patch);
   return res.redirect(`/po/${order.id}?success=PO+${decision}.`);
 }
 
-router.post('/:id/approve', (req, res) => decide(req, res, 'approved'));
-router.post('/:id/reject', (req, res) => decide(req, res, 'rejected'));
+router.post('/:id/approve', safe((req, res) => decide(req, res, 'approved')));
+router.post('/:id/reject', safe((req, res) => decide(req, res, 'rejected')));
 
 module.exports = router;

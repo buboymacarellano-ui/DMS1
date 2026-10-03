@@ -50,3 +50,32 @@ test('approver chain is routed by department, amount and level; excludes request
   assert.deepStrictEqual(po.resolveApprovalChain(settings, 'hr', 500, 'x').map((l) => l.approvers[0].user_id), ['req']);
   assert.strictEqual(po.resolveApprovalChain({}, 'parts', 5, 'x').length, 0);
 });
+
+test('approval advances levels, then approves; rejection ends the flow', () => {
+  const user = { id: 'a1', username: 'A1' };
+  const order = {
+    status: po.STATUS.pending, current_level_index: 0, history: [],
+    approval_chain: [
+      { level: 1, approvers: [{ user_id: 'a1' }] },
+      { level: 2, approvers: [{ user_id: 'a2' }] },
+    ],
+  };
+  assert.ok(po.isAssignedApprover(order, user));
+  assert.ok(!po.isAssignedApprover(order, { id: 'a2' }));
+  const step1 = po.applyDecision(order, 'approved', user, 'ok');
+  assert.strictEqual(step1.current_level_index, 1);
+  assert.strictEqual(step1.status, undefined);
+  const next = Object.assign({}, order, step1);
+  assert.ok(po.isAssignedApprover(next, { id: 'a2' }));
+  const final = po.applyDecision(next, 'approved', { id: 'a2', username: 'A2' }, '');
+  assert.strictEqual(final.status, po.STATUS.approved);
+  assert.strictEqual(final.history.length, 2);
+  const rejected = po.applyDecision(order, 'rejected', user, 'no');
+  assert.strictEqual(rejected.status, po.STATUS.rejected);
+  assert.strictEqual(rejected.history[0].remarks, 'no');
+});
+
+test('draft only requires a supplier', () => {
+  assert.strictEqual(po.hasErrors(po.validatePo({ supplier: 'Acme' }, [], { submit: false })), false);
+  assert.ok(po.validatePo({}, [], { submit: false }).header.supplier);
+});
