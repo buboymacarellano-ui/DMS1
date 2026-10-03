@@ -9271,3 +9271,13 @@ body:has(.auth-shell) .auth-card--login-gray .auth-form > button:hover{
   color:#111827 !important;
 }
 
+
+/* Create PO */
+.po-header-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:12px}
+.po-grid input{width:100%;min-width:70px}
+.po-grid td:nth-child(3) input{min-width:180px}
+.po-totals{display:flex;gap:24px;justify-content:flex-end;margin:12px 0}
+.po-totals dt{font-size:12px;opacity:.8}
+.po-totals dd{margin:0;font-weight:700;font-size:18px}
+.po-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.po-check{display:inline-block;margin:0 14px 6px 0}

@@ -1,0 +1,38 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell">
+  <div class="dashboard-title admin-title role-dashboard-title">Purchase Orders</div>
+  <% if (error) { %><p class="error"><%= error %></p><% } %>
+  <% if (success) { %><p class="success"><%= success %></p><% } %>
+
+  <article class="dashboard-card admin-panel">
+    <div class="dashboard-card__header admin-panel-header">
+      <%= canManagePo ? 'All POs' : 'My POs' %>
+      <a class="btn" href="/po/create">Create PO</a>
+    </div>
+    <% if (!orders.length) { %>
+      <p class="dashboard-note admin-note">No purchase orders yet.</p>
+    <% } else { %>
+      <div class="table-scroll">
+        <table class="list">
+          <thead><tr><th>PO No.</th><th>Date</th><th>Supplier</th><th>Department</th><th>Total</th><th>Status</th><th>Created By</th></tr></thead>
+          <tbody>
+            <% orders.forEach((order) => { %>
+              <tr>
+                <td><a href="/po/<%= order.id %>"><%= order.po_number %></a></td>
+                <td><%= order.po_date %></td>
+                <td><%= order.supplier %></td>
+                <td><%= order.department %></td>
+                <td><%= order.currency %> <%= Number(order.grand_total || 0).toFixed(2) %></td>
+                <td><%= STATUS_LABELS[order.status] || order.status %></td>
+                <td><%= order.created_by %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </article>
+</section>
+
+<%- include('../partials/footer') %>

@@ -5,6 +5,7 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
+    "test": "node --test test/*.test.js",
     "start:admin": "node app-admin.js",
     "start:gm": "node app-gm.js",
     "migrate:sqlite": "node scripts/migrate-json-to-sqlite.js",

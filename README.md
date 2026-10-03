@@ -209,6 +209,14 @@ Some actions need someone else to say yes — for example a branch asking the wa
 
 If you have approval rights, the **Approvals** link in your header shows a count of items waiting. Check it daily. If you only submit requests, the same link is labelled **Requests**.
 
+### Create PO (purchase orders)
+
+- **Who can use it:** the General Manager, plus any role or user the GM grants the `po.create` permission under **PO Settings**. Everyone else sees an "Access denied" message (the server enforces this too).
+- **Create PO** opens a header (PO number is automatic) and a line-item grid (add, duplicate, remove rows; totals calculate as you type). **Save as Draft** keeps it editable; **Submit for Approval** validates every field.
+- **PO Settings (GM only)** also defines the approvers: rules by department, amount range and level. Levels approve in order; any one approver within a level may act. If no rule matches, submission is blocked with a message.
+- Assigned approvers find POs under **PO Approvals** and can approve or reject (remarks required to reject). Every step is recorded in the PO's status history.
+- Tests: `npm test`.
+
 ---
 
 ## 7. Deleting records

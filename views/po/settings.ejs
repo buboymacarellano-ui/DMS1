@@ -1,0 +1,63 @@
+<%- include('../partials/header') %>
+<% const blankRows = 3; const rules = settings.approvers.concat(Array.from({ length: blankRows }, () => ({}))); %>
+
+<section class="dashboard-shell admin-shell">
+  <div class="dashboard-title admin-title role-dashboard-title">PO Settings (GM Control)</div>
+  <% if (error) { %><p class="error"><%= error %></p><% } %>
+  <% if (success) { %><p class="success"><%= success %></p><% } %>
+
+  <form method="post" action="/po/settings" class="form">
+    <article class="dashboard-card admin-panel">
+      <div class="dashboard-card__header admin-panel-header">Permission: po.create (Create PO)</div>
+      <p class="dashboard-note admin-note">The General Manager always has access. Grant the permission to whole roles and/or individual users.</p>
+      <fieldset>
+        <legend>Roles</legend>
+        <% roles.forEach((r) => { %>
+          <label class="po-check"><input type="checkbox" name="creator_roles" value="<%= r.key %>" <%= settings.creator_roles.includes(r.key) ? 'checked' : '' %>> <%= r.label %></label>
+        <% }) %>
+      </fieldset>
+      <label>Individual users (Ctrl/Cmd-click for multiple)
+        <select name="creator_user_ids" multiple size="8">
+          <% users.forEach((u) => { %>
+            <option value="<%= u.id %>" <%= settings.creator_user_ids.includes(u.id) ? 'selected' : '' %>><%= u.username %> (<%= u.role %>)</option>
+          <% }) %>
+        </select>
+      </label>
+    </article>
+
+    <article class="dashboard-card admin-panel">
+      <div class="dashboard-card__header admin-panel-header">PO Approvers</div>
+      <p class="dashboard-note admin-note">A submitted PO matches every rule whose department and amount range (grand total) fit. Rules are grouped by level; levels approve in sequence and any one approver within a level may act. Leave the approver blank to remove a rule.</p>
+      <div class="table-scroll">
+        <table class="list">
+          <thead><tr><th>Department</th><th>Min Amount</th><th>Max Amount</th><th>Level</th><th>Approver</th></tr></thead>
+          <tbody>
+            <% rules.forEach((rule) => { %>
+              <tr>
+                <td>
+                  <select name="rule_department">
+                    <option value="*">All departments</option>
+                    <% departments.forEach((d) => { %><option value="<%= d.key %>" <%= rule.department === d.key ? 'selected' : '' %>><%= d.label %></option><% }) %>
+                  </select>
+                </td>
+                <td><input type="number" min="0" step="0.01" name="rule_min" value="<%= rule.min_amount || '' %>"></td>
+                <td><input type="number" min="0" step="0.01" name="rule_max" value="<%= rule.max_amount || '' %>"></td>
+                <td><input type="number" min="1" step="1" name="rule_level" value="<%= rule.level || 1 %>"></td>
+                <td>
+                  <select name="rule_approver">
+                    <option value="">— none —</option>
+                    <% users.forEach((u) => { %><option value="<%= u.id %>" <%= rule.approver_user_id === u.id ? 'selected' : '' %>><%= u.username %> (<%= u.role %>)</option><% }) %>
+                  </select>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </article>
+    <button type="submit" class="btn">Save PO Settings</button>
+    <small>Save to add more blank rows.</small>
+  </form>
+</section>
+
+<%- include('../partials/footer') %>
