@@ -5,6 +5,22 @@
   <p class="dashboard-note">Work orders, seven service bays, and technician scheduling. Existing boards and metrics are unchanged.</p>
 
   <section class="sa-home-group">
+    <h3 class="sa-home-group__title">System Status</h3>
+    <div class="sa-grid sa-grid--4">
+      <div class="workorder-nav-card sa-home-card" id="db-health-card" style="border-left:4px solid #27ae60;">
+        <div class="workorder-nav-card__icon" id="db-health-icon">&mdash;</div>
+        <div class="workorder-nav-card__body">
+          <strong>Database Health</strong>
+          <div id="db-health-percent">&mdash;</div>
+          <div id="db-health-message">&mdash;</div>
+          <small>Response: <span id="db-health-time">&mdash;</span> ms</small><br>
+          <small>Updated: <span id="db-health-updated">&mdash;</span></small>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sa-home-group">
     <h3 class="sa-home-group__title">1. Work Orders</h3>
     <div class="sa-grid sa-grid--4">
       <% if (canGrant('service', 'view') || canGrant('service', 'access')) { %>
@@ -124,5 +140,31 @@
     </div>
   </section>
 </section>
+
+<script>
+(function () {
+  var COLORS = { healthy: '#27ae60', degraded: '#f39c12', error: '#e74c3c' };
+  var ICONS = { healthy: '\u2713', degraded: '\u26A0', error: '\u2715' };
+  function set(id, v) { document.getElementById(id).textContent = v; }
+  function render(d) {
+    var st = d && COLORS[d.status] ? d.status : 'error';
+    document.getElementById('db-health-card').style.borderLeft = '4px solid ' + COLORS[st];
+    set('db-health-icon', ICONS[st]);
+    set('db-health-percent', d && d.healthPercentage != null ? d.healthPercentage + '%' : '\u2014');
+    set('db-health-message', d && d.message ? d.message : '\u2014');
+    set('db-health-time', d && d.responseTime != null ? d.responseTime : '\u2014');
+    set('db-health-updated', d && d.timestamp
+      ? new Date(d.timestamp).toLocaleString('en-PH', { timeZone: 'Asia/Manila' }) : '\u2014');
+  }
+  function refresh() {
+    fetch('/api/health/database', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(render)
+      .catch(function () { render(null); });
+  }
+  refresh();
+  setInterval(refresh, 30000);
+})();
+</script>
 
 <%- include('../partials/footer') %>

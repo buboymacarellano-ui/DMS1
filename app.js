@@ -2191,6 +2191,23 @@ app.get('/service', requirePortalAccess(portals.PORTAL_SERVICE), async (req, res
   });
 });
 
+app.get('/api/health/database', async (req, res) => {
+  try {
+    const databaseHealth = require('./lib/database-health');
+    const health = await databaseHealth.checkDatabaseHealth();
+    const display = databaseHealth.formatHealthDisplay(health);
+    return res.json({
+      status: health.status,
+      healthPercentage: health.healthPercentage,
+      message: display.message,
+      responseTime: health.responseTime,
+      timestamp: health.timestamp,
+    });
+  } catch (err) {
+    return res.status(500).json({ status: 'error', healthPercentage: 0, message: 'Health check failed', responseTime: null, timestamp: new Date().toISOString() });
+  }
+});
+
 app.get('/receiving', requireAnyRole(
   ROLE_SERVICE_ADVISOR,
   ROLE_SERVICE_RECEPTIONIST,
