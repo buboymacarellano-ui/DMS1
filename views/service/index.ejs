@@ -65,7 +65,7 @@
   <section class="sa-home-group">
     <h3 class="sa-home-group__title">2. Seven Service Bays</h3>
     <div class="sa-grid sa-grid--4">
-      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="<%= (typeof canGrant === 'function' && (canGrant('service', 'schedule') || canGrant('service', 'approval'))) ? '/stm' : '/service-receptionist' %>">
+      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="<%= (typeof canGrant === 'function' && (canGrant('service', 'schedule') || canGrant('service', 'approval'))) ? '/stm[...]
         <div class="workorder-nav-card__icon">&#128736;</div>
         <div class="workorder-nav-card__body">
           <h3>Bay Monitor</h3>
@@ -144,17 +144,17 @@
 <script>
 (function () {
   var COLORS = { healthy: '#27ae60', degraded: '#f39c12', error: '#e74c3c' };
-  var ICONS = { healthy: '\u2713', degraded: '\u26A0', error: '\u2715' };
+  var ICONS = { healthy: '✓', degraded: '⚠', error: '✕' };
   function set(id, v) { document.getElementById(id).textContent = v; }
   function render(d) {
     var st = d && COLORS[d.status] ? d.status : 'error';
     document.getElementById('db-health-card').style.borderLeft = '4px solid ' + COLORS[st];
     set('db-health-icon', ICONS[st]);
-    set('db-health-percent', d && d.healthPercentage != null ? d.healthPercentage + '%' : '\u2014');
-    set('db-health-message', d && d.message ? d.message : '\u2014');
-    set('db-health-time', d && d.responseTime != null ? d.responseTime : '\u2014');
+    set('db-health-percent', d && d.healthPercentage != null ? d.healthPercentage + '%' : '—');
+    set('db-health-message', d && d.message ? d.message : '—');
+    set('db-health-time', d && d.responseTime != null ? d.responseTime : '—');
     set('db-health-updated', d && d.timestamp
-      ? new Date(d.timestamp).toLocaleString('en-PH', { timeZone: 'Asia/Manila' }) : '\u2014');
+      ? new Date(d.timestamp).toLocaleString('en-PH', { timeZone: 'Asia/Manila' }) : '—');
   }
   function refresh() {
     fetch('/api/health/database', { credentials: 'same-origin' })
