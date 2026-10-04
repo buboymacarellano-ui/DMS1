@@ -314,6 +314,10 @@ async function loadWorkspaceLocals(req) {
     .filter(po => String(po.status || '').trim().toLowerCase() === 'approved')
     .sort((a, b) => new Date(b.approved_at || 0) - new Date(a.approved_at || 0));
 
+  const approvedTransfers = (data.parts_transfers || [])
+    .filter((row) => String(row.status || '').trim().toLowerCase() === 'approved')
+    .sort((a, b) => new Date(b.approved_at || 0) - new Date(a.approved_at || 0));
+
   return {
     parts: viewRows,
     total: viewRows.length,
@@ -331,6 +335,7 @@ async function loadWorkspaceLocals(req) {
     healthMetrics,
     delicateParts,
     approvedPOs,
+    approvedTransfers,
     partsView: {
       isFrontline: false,
       scope: 'all',
@@ -526,6 +531,27 @@ function findTransfer(data, id) {
   return (data.parts_transfers || []).find((row) => String(row.id) === String(id)) || null;
 }
 
+function recordTransactionMade(data, req, kind, record, status, extra) {
+  if (!Array.isArray(data.transactions_made)) data.transactions_made = [];
+  const entry = Object.assign({
+    id: genId(),
+    kind,
+    status,
+    ref_id: record.id,
+    reference_number: record.po_number || record.transaction_number || record.id,
+    supplier: record.supplier || '',
+    from_branch: record.from_branch || '',
+    to_branch: record.to_branch || '',
+    lines: Array.isArray(record.lines) ? record.lines.map((line) => Object.assign({}, line)) : [],
+    approved_by: record.approved_by || '',
+    approved_at: record.approved_at || '',
+    recorded_by: currentEditor(req),
+    recorded_at: new Date().toISOString(),
+  }, extra || {});
+  data.transactions_made.push(entry);
+  return entry;
+}
+
 function findPurchaseOrder(data, id) {
   return (data.parts_purchase_orders || []).find((row) => String(row.id) === String(id)) || null;
 }
@@ -685,6 +711,9 @@ router.get('/transfers/:id/preview', async (req, res) => {
       ? 'Create Transit Receipt'
       : 'Approve Transfer',
     cancelHref: '/parts-manager?panel=approvals',
+    removeAction: String(transfer.status || '').toLowerCase() === 'approved'
+      ? '/parts-manager/transfers/' + encodeURIComponent(transfer.id) + '/pm-remove'
+      : '',
     autoPrint: '',
     error: '',
     success: '',
@@ -716,6 +745,24 @@ router.post('/transfers/:id/remove', async (req, res) => {
   ));
   await store.replaceData(data);
   return res.redirect('/approvals?success=' + encodeURIComponent(`Stock transfer ${transfer.transaction_number || transfer.id} removed.`));
+});
+
+router.post('/transfers/:id/pm-remove', async (req, res) => {
+  const role = String(req.session?.user?.role || '').trim().toLowerCase();
+  if (!isPartsManagerRole(role)) {
+    return res.redirect('/parts-manager?panel=approvals&error=' + encodeURIComponent('Parts Manager access is required to remove an approved transfer.'));
+  }
+  const data = await store.getRawData();
+  const transfer = findTransfer(data, req.params.id);
+  if (!transfer || String(transfer.status || '').toLowerCase() !== 'approved') {
+    return res.redirect('/parts-manager?panel=approvals&error=' + encodeURIComponent('Approved transfer not found.'));
+  }
+  transfer.status = 'removed';
+  transfer.removed_at = new Date().toISOString();
+  transfer.removed_by = currentEditor(req);
+  recordTransactionMade(data, req, 'transfer', transfer, 'remove', { removed_at: transfer.removed_at });
+  await store.replaceData(data);
+  return res.redirect('/parts-manager?panel=approvals&success=' + encodeURIComponent(`Transfer ${transfer.transaction_number || transfer.id} removed and recorded.`));
 });
 
 router.post('/transfers/:id/proceed', async (req, res) => {
@@ -807,6 +854,7 @@ router.post('/transfers/:id/transit', async (req, res) => {
   transfer.status = 'in_transit';
   transfer.transit_at = stamp.iso;
   transfer.transit_by = editor;
+  recordTransactionMade(data, req, 'transfer', transfer, 'executed', { executed_at: stamp.iso });
   await store.replaceData(data);
   const source = mapTransferAsRequest(transfer);
   await saveApprovedReceipt(transitRows[0], source);
@@ -1071,7 +1119,61 @@ router.get('/print/po/:id', async (req, res) => {
   const data = await store.getRawData();
   const record = findPurchaseOrder(data, req.params.id);
   if (!record) return res.status(404).send('Purchase order not found.');
-  return res.type('html').send(buildPurchaseOrderHtml(record));
+  return res.type('html').send(buildPurchaseOrderHtml(record, { autoPrint: String(req.query.print || '') === '1' }));
+});
+
+router.get('/po/:id', async (req, res) => {
+  const data = await store.getRawData();
+  const po = findPurchaseOrder(data, req.params.id);
+  if (!po || String(po.status || '').trim().toLowerCase() !== 'approved') {
+    return res.redirect('/parts-manager?panel=approvals&error=' + encodeURIComponent('Approved purchase order not found.'));
+  }
+  const id = encodeURIComponent(po.id);
+  const actionsHtml = `
+    <form method="post" action="/parts-manager/po/${id}/proceed" style="display:inline-block;margin-left:8px;">
+      <button type="submit">Proceed</button>
+    </form>
+    <form method="post" action="/parts-manager/po/${id}/remove" style="display:inline-block;margin-left:8px;" onsubmit="return confirm('Remove this ticket? It will be recorded with status remove.');">
+      <button type="submit">Remove</button>
+    </form>
+    <a href="/parts-manager?panel=approvals" style="margin-left:8px;">Back</a>`;
+  return res.type('html').send(buildPurchaseOrderHtml(po, { actionsHtml }));
+});
+
+router.post('/po/:id/proceed', async (req, res) => {
+  const role = String(req.session?.user?.role || '').trim().toLowerCase();
+  if (!isPartsManagerRole(role)) {
+    return res.redirect('/parts-manager?panel=approvals&error=' + encodeURIComponent('Parts Manager access is required.'));
+  }
+  const data = await store.getRawData();
+  const po = findPurchaseOrder(data, req.params.id);
+  if (!po || String(po.status || '').trim().toLowerCase() !== 'approved') {
+    return res.redirect('/parts-manager?panel=approvals&error=' + encodeURIComponent('Approved purchase order not found.'));
+  }
+  po.status = 'executed';
+  po.executed_at = new Date().toISOString();
+  po.executed_by = currentEditor(req);
+  recordTransactionMade(data, req, 'purchase_order', po, 'executed', { executed_at: po.executed_at });
+  await store.replaceData(data);
+  return res.redirect('/parts-manager/print/po/' + encodeURIComponent(po.id) + '?print=1');
+});
+
+router.post('/po/:id/remove', async (req, res) => {
+  const role = String(req.session?.user?.role || '').trim().toLowerCase();
+  if (!isPartsManagerRole(role)) {
+    return res.redirect('/parts-manager?panel=approvals&error=' + encodeURIComponent('Parts Manager access is required.'));
+  }
+  const data = await store.getRawData();
+  const po = findPurchaseOrder(data, req.params.id);
+  if (!po || String(po.status || '').trim().toLowerCase() !== 'approved') {
+    return res.redirect('/parts-manager?panel=approvals&error=' + encodeURIComponent('Approved purchase order not found.'));
+  }
+  po.status = 'removed';
+  po.removed_at = new Date().toISOString();
+  po.removed_by = currentEditor(req);
+  recordTransactionMade(data, req, 'purchase_order', po, 'remove', { removed_at: po.removed_at });
+  await store.replaceData(data);
+  return res.redirect('/parts-manager?panel=approvals&success=' + encodeURIComponent(`Purchase order ${po.po_number || po.id} removed and recorded.`));
 });
 
 router.post('/transfer', async (req, res) => {

@@ -823,7 +823,7 @@
   <!-- Approved Purchase Orders - Shared View with GM -->
   <section class="pm-panel-card dashboard-card gm-panel" style="margin-bottom:24px;">
     <div class="dashboard-card__header gm-panel-header">✓ Approved Purchase Orders (GM Approved)</div>
-    <p class="dashboard-note">Purchase orders already reviewed and approved by GM. This is a shared read-only view for tracking approved orders.</p>
+    <p class="dashboard-note">Purchase orders already reviewed and approved by GM. Open View to Proceed (print and record) or Remove (record with status remove).</p>
     
     <% if (typeof approvedPOs !== 'undefined' && approvedPOs && approvedPOs.length > 0) { %>
       <div class="table-scroll" style="border:1px solid #ddd;border-radius:4px;">
@@ -851,7 +851,7 @@
                 <td style="text-align:right;padding:6px;"><%= (po.lines && po.lines.length) || 0 %></td>
                 <td style="padding:6px;font-size:10px;"><%= po.approved_at ? new Date(po.approved_at).toLocaleString('en-PH') : '-' %></td>
                 <td style="text-align:center;padding:6px;">
-                  <button type="button" class="pm-approved-po-view-btn btn btn-sm" data-po-json="<%= (JSON.stringify(po)).replace(/'/g, '&apos;') %>" style="background:#2980b9;color:white;padding:4px 8px;font-size:10px;border:none;border-radius:2px;cursor:pointer;">View</button>
+                  <a class="btn btn-sm" href="/parts-manager/po/<%= encodeURIComponent(po.id) %>" style="background:#2980b9;color:white;padding:4px 8px;font-size:10px;border-radius:2px;text-decoration:none;">View</a>
                 </td>
               </tr>
             <% }) %>
@@ -860,6 +860,31 @@
       </div>
     <% } else { %>
       <p class="dashboard-note" style="background:#f0f0f0;padding:12px;border-radius:3px;margin:0;">No approved purchase orders yet.</p>
+    <% } %>
+  </section>
+
+  <section class="pm-panel-card dashboard-card gm-panel" style="margin-bottom:24px;">
+    <div class="dashboard-card__header gm-panel-header">✓ Approved Stock Transfers (GM Approved)</div>
+    <% if (typeof approvedTransfers !== 'undefined' && approvedTransfers && approvedTransfers.length > 0) { %>
+      <div class="table-scroll">
+        <table class="list" style="font-size:11px;">
+          <thead><tr><th>PTN</th><th>Route</th><th>Lines</th><th>Approved By (GM)</th><th>Approval Date</th><th>Action</th></tr></thead>
+          <tbody>
+            <% approvedTransfers.forEach((row) => { %>
+              <tr>
+                <td><%= row.transaction_number || row.id %></td>
+                <td><%= row.from_branch %> → <%= row.to_branch %></td>
+                <td><%= Array.isArray(row.lines) ? row.lines.length : 1 %></td>
+                <td><%= row.approved_by || '-' %></td>
+                <td><%= row.approved_at ? new Date(row.approved_at).toLocaleString('en-PH') : '-' %></td>
+                <td><a class="btn btn-sm" href="/parts-manager/transfers/<%= encodeURIComponent(row.id) %>/preview">View</a></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p class="dashboard-note" style="background:#f0f0f0;padding:12px;border-radius:3px;margin:0;">No approved stock transfers awaiting action.</p>
     <% } %>
   </section>
 
