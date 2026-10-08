@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title><%= report.title %></title>
+  <link rel="stylesheet" href="/fonts/inter.css">
   <style>
     :root {
       --ink: #10243d;
@@ -15,7 +16,7 @@
     html, body { margin: 0; background: #fff; color: var(--ink); }
     body {
       padding: 18px 22px 28px;
-      font-family: "Segoe UI", Calibri, Arial, Helvetica, sans-serif;
+      font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
       font-size: 12px;
       line-height: 1.45;
     }
@@ -72,6 +73,9 @@
 <body>
   <div class="no-print">
     <button type="button" onclick="window.print()">Print / Save as PDF</button>
+    <% if (report.ok && report.excelUrl) { %>
+      <a href="<%= report.excelUrl %>">Save as Excel (.xlsx)</a>
+    <% } %>
     <a href="/parts">Back to Parts Database</a>
   </div>
 

@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const express = require('express');
 const store = require('../data/store');
+const { canonicalizeBranchName } = require('../lib/branches');
 
 const router = express.Router();
 
@@ -129,6 +130,23 @@ router.post('/users/:id/password-enabled', async (req, res) => {
   );
 });
 
+function employeeIsActive(employee) {
+  const status = String((employee && employee.employment_status) || '').trim().toLowerCase();
+  if (['terminated', 'inactive', 'resigned'].includes(status)) return false;
+  return !String((employee && employee.termination_date) || '').trim();
+}
+
+function tally(rows, keyOf, limit) {
+  const counts = new Map();
+  rows.forEach((row) => {
+    const key = String(keyOf(row) || '').trim() || 'Unassigned';
+    counts.set(key, (counts.get(key) || 0) + 1);
+  });
+  return Array.from(counts, ([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+    .slice(0, limit || 50);
+}
+
 router.get('/portal', async (req, res) => {
   const [employees, users, rosters, payroll] = await Promise.all([
     store.getAll('employees'),
@@ -136,11 +154,19 @@ router.get('/portal', async (req, res) => {
     store.getAll('hr_rosters'),
     store.getAll('hr_payroll'),
   ]);
+  const staff = employees || [];
+  const active = staff.filter(employeeIsActive);
   return res.render('hr/portal', {
-    employeeCount: (employees || []).length,
+    employeeCount: staff.length,
+    activeCount: active.length,
+    inactiveCount: staff.length - active.length,
     accountCount: (users || []).length,
+    noPasswordCount: (users || []).filter((user) => !hasPassword(user)).length,
     rosterCount: (rosters || []).length,
     payrollCount: (payroll || []).length,
+    byBranch: tally(active, (row) => canonicalizeBranchName(row.work_location_branch_id)),
+    byStatus: tally(active, (row) => row.employment_status),
+    byDepartment: tally(active, (row) => row.department_id_name, 12),
   });
 });
 

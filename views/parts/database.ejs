@@ -1,0 +1,104 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell pm-workspace">
+  <div class="dashboard-title">Parts Database</div>
+  <p class="dashboard-note">Read-only database view using the PM Parts Database layout.</p>
+
+  <form method="get" action="/parts/database" class="form pm-db-filter">
+    <label style="margin:0;">Search
+      <input type="search" name="q" value="<%= q %>" placeholder="Part #, name, Sub-ID, supplier..." />
+    </label>
+    <label style="margin:0;">Date From
+      <input type="date" name="date_from" value="<%= dateFrom %>" />
+    </label>
+    <label style="margin:0;">Date To
+      <input type="date" name="date_to" value="<%= dateTo %>" />
+    </label>
+    <label style="margin:0;">Stock Qty
+      <select name="stock_sort">
+        <option value="">Default</option>
+        <option value="asc" <%= stockSort === 'asc' ? 'selected' : '' %>>Low to High</option>
+        <option value="desc" <%= stockSort === 'desc' ? 'selected' : '' %>>High to Low</option>
+      </select>
+    </label>
+    <label style="margin:0;">Type
+      <select name="type">
+        <option value="">All Types</option>
+        <% databaseTypes.forEach((item) => { %>
+          <option value="<%= item.value %>" <%= filterType === item.value ? 'selected' : '' %>><%= item.label %></option>
+        <% }) %>
+      </select>
+    </label>
+    <label style="margin:0;">Location
+      <select name="location">
+        <option value="">All branches + Warehouse 1</option>
+        <% locations.forEach((name) => { %>
+          <option value="<%= name %>" <%= locationFilter === name ? 'selected' : '' %>><%= name %></option>
+        <% }) %>
+      </select>
+    </label>
+    <button type="submit">Filter</button>
+    <a class="btn" href="/parts/database">Clear</a>
+    <span class="dashboard-note" style="margin:0;">Visible records: <strong><%= total %></strong></span>
+  </form>
+
+  <p class="dashboard-note">TR Qty is the original quantity entered when receiving stock; sales and transfers do not change it. Current On-Hand is the live stock balance.</p>
+
+  <div id="parts-records" class="table-scroll" style="overflow-x:auto;max-height:72vh;overflow-y:auto;">
+    <table class="list" style="min-width:max-content;font-size:12px;">
+      <thead style="position:sticky;top:0;z-index:5;">
+        <tr>
+          <th>#</th>
+          <th style="white-space:nowrap;">Transaction Date</th>
+          <th style="white-space:nowrap;">Transaction Type</th>
+          <th style="white-space:nowrap;">Present Location</th>
+          <th style="white-space:nowrap;">Editor</th>
+          <th style="white-space:nowrap;">Barcode</th>
+          <th style="white-space:nowrap;">Part Number</th>
+          <th style="white-space:nowrap;">Part Name</th>
+          <th style="white-space:nowrap;">Sub-ID</th>
+          <th style="white-space:nowrap;">Generic</th>
+          <th style="white-space:nowrap;">Supplier</th>
+          <th style="white-space:nowrap;">Receiving Receipt #</th>
+          <th style="white-space:nowrap;">TR Qty</th>
+          <th style="white-space:nowrap;">Current On-Hand</th>
+          <th style="white-space:nowrap;">Cost Price</th>
+          <th style="white-space:nowrap;">Markup (%)</th>
+          <th style="white-space:nowrap;">Retail Price</th>
+          <th style="white-space:nowrap;">Sold To (WO#)</th>
+          <th style="white-space:nowrap;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!parts.length) { %>
+          <tr><td colspan="19" style="text-align:center;padding:20px;">No records found.</td></tr>
+        <% } %>
+        <% parts.forEach((part, index) => { %>
+          <tr>
+            <td><%= index + 1 %></td>
+            <td style="white-space:nowrap;"><%= part.transaction_date || '' %></td>
+            <td style="white-space:nowrap;font-weight:700;"><%= part.database_label || '' %></td>
+            <td style="white-space:nowrap;"><%= part.present_location || part.branch || part.requesting_branch || '—' %></td>
+            <td style="white-space:nowrap;"><%= part.editor || '' %></td>
+            <td style="white-space:nowrap;"><%= part.barcode || '' %></td>
+            <td style="white-space:nowrap;"><%= part.part_number || '' %></td>
+            <td style="white-space:nowrap;"><%= part.part_name || '' %></td>
+            <td style="white-space:nowrap;"><%= part.sub_id || '' %></td>
+            <td style="white-space:nowrap;"><%= part.generic || '' %></td>
+            <td style="white-space:nowrap;"><%= part.supplier || '' %></td>
+            <td style="white-space:nowrap;"><%= part.receiving_receipt_number || '' %></td>
+            <td style="text-align:right;"><%= transactionQty(part) != null ? transactionQty(part) : 'Unavailable' %></td>
+            <td style="text-align:right;"><%= part.on_hand != null ? part.on_hand : '' %></td>
+            <td style="text-align:right;"><%= part.cost_price != null ? Number(part.cost_price).toFixed(2) : '' %></td>
+            <td style="text-align:right;"><%= part.markup != null ? part.markup : '' %></td>
+            <td style="text-align:right;"><%= part.retail_price != null ? Number(part.retail_price).toFixed(2) : '' %></td>
+            <td style="white-space:nowrap;"><%= part.sold_to || '' %></td>
+            <td style="white-space:nowrap;">
+              <a class="btn" href="/parts/history/<%= encodeURIComponent(part.part_number || '') %>" style="font-size:11px;padding:4px 8px;">History</a>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>

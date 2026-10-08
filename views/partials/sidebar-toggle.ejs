@@ -1,0 +1,39 @@
+<button type="button" class="pm-sidebar-toggle" id="sidebar-toggle" aria-controls="portal-sidebar" aria-expanded="true" title="Hide / show menu">&#9776;</button>
+<script>
+(function () {
+  var root = document.documentElement;
+  var bar = document.querySelector('nav.pm-sidebar');
+  var toggle = document.getElementById('sidebar-toggle');
+  var header = document.querySelector('.site-header');
+  var KEY = 'dms-sidebar-hidden';
+  if (!bar || !toggle) return;
+  if (bar.id) toggle.setAttribute('aria-controls', bar.id);
+
+  function place() {
+    if (!header) return;
+    root.style.setProperty('--pm-sidebar-top', header.getBoundingClientRect().height + 'px');
+  }
+  function read() {
+    try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; }
+  }
+  function apply(hidden) {
+    root.classList.toggle('sidebar-hidden', hidden);
+    toggle.setAttribute('aria-expanded', hidden ? 'false' : 'true');
+  }
+
+  place();
+  apply(read());
+
+  toggle.addEventListener('click', function () {
+    var hidden = !root.classList.contains('sidebar-hidden');
+    apply(hidden);
+    try { localStorage.setItem(KEY, hidden ? '1' : '0'); } catch (e) {}
+  });
+
+  window.addEventListener('resize', place);
+  window.addEventListener('load', place);
+  window.addEventListener('pageshow', function () { place(); apply(read()); });
+  window.addEventListener('storage', function (e) { if (e.key === KEY) apply(read()); });
+  if (header && window.ResizeObserver) new ResizeObserver(place).observe(header);
+})();
+</script>

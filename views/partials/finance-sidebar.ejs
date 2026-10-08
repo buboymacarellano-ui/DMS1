@@ -1,0 +1,24 @@
+<%
+  const finDate = typeof reportingDate !== 'undefined' && reportingDate ? String(reportingDate) : '';
+  const finQuery = finDate ? '?date=' + encodeURIComponent(finDate) : '';
+  const finGroups = [
+    { title: 'Finance', items: [
+      { label: 'Finance Dashboard', href: '/finance' + finQuery, exact: true },
+      { label: 'Daily Payment Matrix', href: '/finance' + finQuery + '#fm-payment-panel', anchor: true },
+      { label: 'Accounts Receivable', href: '/finance' + finQuery + '#fm-receivables-panel', anchor: true },
+    ] },
+    { title: 'Reports', items: [
+      { label: 'EOD Cash Drawer', href: '/finance/eod-report' + finQuery, blank: true },
+    ] },
+  ];
+  const finPath = typeof currentPath !== 'undefined' && currentPath ? String(currentPath) : '';
+  const finActive = (item) => !item.anchor && !item.blank && item.exact && (finPath === '/finance' || finPath === '/finance/');
+%>
+<nav class="pm-sidebar" id="finance-sidebar" aria-label="Finance menu">
+  <% finGroups.forEach((group) => { %>
+    <div class="pm-sidebar__group"><%= group.title %></div>
+    <% group.items.forEach((item) => { %>
+      <a class="pm-sidebar__link<%= finActive(item) ? ' pm-sidebar__link--active' : '' %>" href="<%= item.href %>"<%- item.blank ? ' target="_blank" rel="noopener"' : '' %>><%= item.label %></a>
+    <% }) %>
+  <% }) %>
+</nav>

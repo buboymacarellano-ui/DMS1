@@ -1,0 +1,30 @@
+<%
+  const admGroups = [
+    { title: 'Admin', items: [
+      { label: 'Employee DB', href: '/employees' },
+    ] },
+    { title: 'Records', items: [
+      { label: 'Transaction Database', href: '/admin/gates/transaction-database' },
+      { label: 'Removed Records', href: '/admin/gates/removed-records' },
+    ] },
+    { title: 'Data Tools', items: [
+      { label: 'Delete Password', href: '/admin#admin-delete-password', anchor: true },
+      { label: 'Import Transactions', href: '/admin#admin-import', anchor: true },
+      { label: 'Collect & Edit', href: '/admin#admin-collect-edit', anchor: true },
+    ] },
+  ];
+  const admPath = typeof currentPath !== 'undefined' && currentPath ? String(currentPath) : '';
+  const admActive = (item) => {
+    if (item.anchor) return false;
+    if (item.exact) return admPath === '/admin' || admPath === '/admin/';
+    return admPath === item.href || admPath.indexOf(item.href + '/') === 0;
+  };
+%>
+<nav class="portal-sidebar" id="admin-sidebar" aria-label="Admin menu">
+  <% admGroups.forEach((group) => { %>
+    <div class="portal-sidebar__group"><%= group.title %></div>
+    <% group.items.forEach((item) => { %>
+      <a class="portal-sidebar__link<%= admActive(item) ? ' portal-sidebar__link--active' : '' %>" href="<%= item.href %>"><%= item.label %></a>
+    <% }) %>
+  <% }) %>
+</nav>

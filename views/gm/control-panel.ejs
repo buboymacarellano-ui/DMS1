@@ -1,0 +1,187 @@
+<%- include('../partials/header') %>
+<%
+  const groups = [];
+  controls.forEach((control) => {
+    let group = groups.find((g) => g.name === control.group);
+    if (!group) { group = { name: control.group, items: [] }; groups.push(group); }
+    group.items.push(control);
+  });
+  const amountValue = (value) => (value === null || value === undefined || value === '' ? '' : value);
+%>
+<style>
+  .gm-cp { max-width: 1200px; }
+  .gm-cp__intro { color: #4b5563; margin: 4px 0 16px; }
+  .gm-cp__msg { padding: 10px 14px; margin-bottom: 14px; border: 1px solid; }
+  .gm-cp__msg--ok { background: #ecfdf5; border-color: #10b981; color: #065f46; }
+  .gm-cp__msg--err { background: #fef2f2; border-color: #ef4444; color: #991b1b; }
+  .gm-cp__group { background: #fff; border: 1px solid #d1d5db; margin-bottom: 18px; }
+  .gm-cp__group h2 { margin: 0; padding: 10px 14px; font-size: 15px; background: #f3f4f6; border-bottom: 1px solid #d1d5db; text-transform: uppercase; letter-spacing: .04em; }
+  .gm-cp__table { width: 100%; border-collapse: collapse; }
+  .gm-cp__table th, .gm-cp__table td { padding: 10px 14px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: top; }
+  .gm-cp__table th { font-size: 12px; text-transform: uppercase; color: #6b7280; background: #fafafa; }
+  .gm-cp__table tr:last-child td { border-bottom: 0; }
+  .gm-cp__label { font-weight: 600; }
+  .gm-cp__desc { font-size: 12px; color: #6b7280; margin-top: 4px; }
+  .gm-cp__switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; }
+  .gm-cp__switch input { width: 18px; height: 18px; }
+  .gm-cp__state { display: inline-block; min-width: 40px; text-align: center; padding: 2px 8px; font-size: 12px; font-weight: 700; color: #fff; }
+  .gm-cp__state--on { background: #16a34a; }
+  .gm-cp__state--off { background: #dc2626; }
+  .gm-cp__range { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .gm-cp__range input { width: 130px; padding: 6px 8px; border: 1px solid #9ca3af; }
+  .gm-cp__range input:disabled { background: #f3f4f6; color: #9ca3af; }
+  .gm-cp__range-note { font-size: 12px; margin-top: 4px; color: #6b7280; }
+  .gm-cp__range-note--active { color: #b45309; font-weight: 600; }
+  .gm-cp__na { color: #9ca3af; font-style: italic; }
+  .gm-cp__footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .gm-cp__stamp { font-size: 12px; color: #6b7280; }
+</style>
+
+<section class="dashboard-shell gm-shell gm-cp">
+  <h1>Control Panel</h1>
+  <p class="gm-cp__intro">
+    Master switches for every approval level. <strong>ON</strong> means the item always needs approval.
+    <strong>OFF</strong> means the amount threshold applies: requests whose amount is within the From–To range are auto-approved, and anything outside the range still goes through normal approval.
+    When a switch is OFF, you must set the "To" amount. Items with no amount (RWO, CBD) are auto-approved when OFF.
+  </p>
+
+  <% if (success) { %><div class="gm-cp__msg gm-cp__msg--ok"><%= success %></div><% } %>
+  <% if (error) { %><div class="gm-cp__msg gm-cp__msg--err"><%= error %></div><% } %>
+
+  <div class="gm-cp__group">
+    <h2>Pricing Controls</h2>
+    <% if (pricingSuccess) { %><div class="gm-cp__msg gm-cp__msg--ok" style="margin:12px 14px 0"><%= pricingSuccess %></div><% } %>
+    <% if (pricingError) { %><div class="gm-cp__msg gm-cp__msg--err" style="margin:12px 14px 0"><%= pricingError %></div><% } %>
+    <form method="post" action="/gm/control-panel/pricing">
+      <table class="gm-cp__table">
+        <thead>
+          <tr>
+            <th style="width:34%">Setting</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div class="gm-cp__label">Hour/Labor Rate</div>
+              <div class="gm-cp__desc">Base ₱ amount charged per labor hour across all service pricing and incentive calculations.</div>
+            </td>
+            <td>
+              <div class="gm-cp__range">
+                <span>₱</span>
+                <input type="number" min="1" step="0.01" name="hourly_rate" value="<%= pricingSettings.hourly_rate %>" required />
+                <span>/ hour</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <div class="gm-cp__label">Part Retail Margin</div>
+              <div class="gm-cp__desc">Default markup % applied to a part's cost price when no markup is entered on the parts form.</div>
+            </td>
+            <td>
+              <div class="gm-cp__range">
+                <input type="number" min="0" step="0.01" name="parts_retail_margin_percent" value="<%= pricingSettings.parts_retail_margin_percent %>" required />
+                <span>%</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="gm-cp__footer" style="padding:12px 14px">
+        <div></div>
+        <button type="submit" class="btn btn-primary">Save Pricing Controls</button>
+      </div>
+    </form>
+  </div>
+
+  <form method="post" action="/gm/control-panel" id="gm-cp-form">
+    <% groups.forEach((group) => { %>
+      <div class="gm-cp__group">
+        <h2><%= group.name %></h2>
+        <table class="gm-cp__table">
+          <thead>
+            <tr>
+              <th style="width:34%">Approval Item</th>
+              <th style="width:16%">Approval</th>
+              <th>Auto-approve Amount Threshold (₱)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% group.items.forEach((control) => { %>
+              <tr data-cp-row="<%= control.key %>">
+                <td>
+                  <div class="gm-cp__label"><%= control.label %></div>
+                  <div class="gm-cp__desc" data-cp-desc-on <%= control.required ? '' : 'hidden' %>>ON: <%= control.on %></div>
+                  <div class="gm-cp__desc" data-cp-desc-off <%= control.required ? 'hidden' : '' %>>OFF: <%= control.off %></div>
+                </td>
+                <td>
+                  <label class="gm-cp__switch">
+                    <input type="checkbox" name="<%= control.key %>" value="on" data-cp-toggle <%= control.required ? 'checked' : '' %> />
+                    <span class="gm-cp__state <%= control.required ? 'gm-cp__state--on' : 'gm-cp__state--off' %>" data-cp-state><%= control.required ? 'ON' : 'OFF' %></span>
+                  </label>
+                </td>
+                <td>
+                  <% if (control.hasAmount) { %>
+                    <div class="gm-cp__range">
+                      <span>From</span>
+                      <input type="number" min="0" step="0.01" name="<%= control.key %>_min" value="<%= amountValue(control.threshold && control.threshold.min) %>" placeholder="0.00" data-cp-min <%= control.required ? 'disabled' : '' %> />
+                      <span>To</span>
+                      <input type="number" min="0" step="0.01" name="<%= control.key %>_max" value="<%= amountValue(control.threshold && control.threshold.max) %>" placeholder="Required when OFF" data-cp-max <%= control.required ? 'disabled' : 'required' %> />
+                    </div>
+                    <div class="gm-cp__range-note <%= control.required ? '' : 'gm-cp__range-note--active' %>" data-cp-note>
+                      <%= control.required ? 'Inactive — approval is ON, every request needs approval.' : 'Active — amounts within this range are auto-approved.' %>
+                    </div>
+                  <% } else { %>
+                    <span class="gm-cp__na">N/A (no amount)</span>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% }) %>
+
+    <div class="gm-cp__footer">
+      <div class="gm-cp__stamp">
+        <% if (updatedAt) { %>Last saved <%= new Date(updatedAt).toLocaleString('en-PH') %><%= updatedBy ? ' by ' + updatedBy : '' %><% } else { %>Using defaults (all approvals ON).<% } %>
+      </div>
+      <button type="submit" class="btn btn-primary">Save Control Panel</button>
+    </div>
+  </form>
+</section>
+
+<script>
+  (function () {
+    document.querySelectorAll('[data-cp-row]').forEach(function (row) {
+      var toggle = row.querySelector('[data-cp-toggle]');
+      var state = row.querySelector('[data-cp-state]');
+      var min = row.querySelector('[data-cp-min]');
+      var max = row.querySelector('[data-cp-max]');
+      var note = row.querySelector('[data-cp-note]');
+      var descOn = row.querySelector('[data-cp-desc-on]');
+      var descOff = row.querySelector('[data-cp-desc-off]');
+      function sync() {
+        var on = toggle.checked;
+        state.textContent = on ? 'ON' : 'OFF';
+        state.className = 'gm-cp__state ' + (on ? 'gm-cp__state--on' : 'gm-cp__state--off');
+        if (descOn) descOn.hidden = !on;
+        if (descOff) descOff.hidden = on;
+        if (min) min.disabled = on;
+        if (max) { max.disabled = on; max.required = !on; }
+        if (note) {
+          note.textContent = on ? 'Inactive — approval is ON, every request needs approval.' : 'Active — amounts within this range are auto-approved.';
+          note.className = 'gm-cp__range-note' + (on ? '' : ' gm-cp__range-note--active');
+        }
+      }
+      toggle.addEventListener('change', sync);
+    });
+    // Disabled inputs are not submitted; enable them before submit so saved ranges are kept.
+    document.getElementById('gm-cp-form').addEventListener('submit', function () {
+      this.querySelectorAll('[data-cp-min],[data-cp-max]').forEach(function (input) { input.disabled = false; });
+    });
+  })();
+</script>
+
+<%- include('../partials/footer') %>

@@ -2,8 +2,11 @@
 
 <section class="dashboard-shell admin-shell">
   <% const view = typeof partsView !== 'undefined' && partsView ? partsView : { isFrontline: false, scope: 'all', readOnly: false, label: 'Parts Database', location: '' }; %>
-  <div class="dashboard-title admin-title"><%= view.label || 'Parts Database' %></div>
-
+  <% if (view.isFrontline) { %>
+    <div style="margin-bottom:14px;">
+      <%- include('../partials/db-health-card', { stockUrl: '/parts/api/stock-health' + (view.scope === 'warehouse1' ? '?scope=warehouse1' : '') }) %>
+    </div>
+  <% } %>
   <% if (error) { %><p class="error" style="font-weight:700;margin-bottom:10px;"><%= error %></p><% } %>
   <% if (success) { %><p class="success" style="font-weight:700;margin-bottom:10px;"><%= success %></p><% } %>
 
@@ -31,19 +34,6 @@
     </div>
   <% } %>
 
-  <div class="parts-action-row">
-    <% if (!view.readOnly) { %>
-    <a class="btn" href="/parts/new" style="background:#1a6bbf;">+ New Entry</a>
-    <a class="btn" href="#parts-records" style="background:#1f8f53;">EditParts</a>
-    <% } %>
-    <span class="dashboard-note admin-note" style="margin:0;">Visible records: <strong><%= total %></strong> · Restock rows hide from this table after 3 working days but stay in History</span>
-    <div class="report-export">
-      <button type="button" class="btn report-export__btn" id="parts-report-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="parts-report-modal">
-        Create Report
-      </button>
-    </div>
-  </div>
-
   <%- include('../partials/parts-report-modal') %>
 
   <form method="get" action="/parts" class="form" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;">
@@ -61,6 +51,12 @@
     </label>
     <button type="submit">Filter</button>
     <a class="btn" href="<%= view.scope === 'warehouse1' ? '/parts?scope=warehouse1' : '/parts' %>">Clear</a>
+    <% if (!view.readOnly) { %>
+    <a class="btn" href="/parts/new" style="background:#1a6bbf;">+ New Entry</a>
+    <a class="btn" href="#parts-records" style="background:#1f8f53;">EditParts</a>
+    <% } %>
+    <button type="button" class="btn report-export__btn" id="parts-report-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="parts-report-modal">Create Report</button>
+    <span class="dashboard-note admin-note" style="margin:0;align-self:center;">Visible records: <strong><%= total %></strong> · Depleted New / Stock rows hide from this table after 3 working days but stay in History</span>
   </form>
 
   <div id="parts-records" class="table-scroll" style="overflow-x:auto;max-height:72vh;overflow-y:auto;">
@@ -204,4 +200,3 @@
 <% } %>
 
 <%- include('../partials/footer') %>
-

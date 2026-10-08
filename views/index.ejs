@@ -1,15 +1,10 @@
 <%- include('partials/header') %>
 
 <section class="dashboard-shell admin-shell sa-shell" id="service-portal-home">
-  <% const dashRole = String((typeof roleLabel !== 'undefined' && roleLabel) || (currentUser && currentUser.role) || '').toLowerCase(); %>
-  <% const dashLabel = dashRole === 'sa' || dashRole === 'service_advisor' ? 'SA' : (dashRole === 'ssr' || dashRole === 'senior_service_receptionist' ? 'SSR' : (dashRole === 'sr' || dashRole === 'service_receptionist' ? 'SR' : (String((typeof roleLabel !== 'undefined' && roleLabel) || 'SA').toUpperCase()))); %>
-  <% const openCount = typeof openWorkOrdersCount !== 'undefined' ? openWorkOrdersCount : work_orders.filter((wo) => String(wo.status || '').trim().toLowerCase() !== 'closed').length; %>
-  <% const safeTechStats = (typeof technicianStats !== 'undefined' && technicianStats) ? technicianStats : []; %>
-  <div class="dashboard-title admin-title sa-title role-dashboard-title"><span><%= dashLabel %> <%= branch %></span> <span class="role-dashboard-title__suffix">Dashboard</span></div>
   <% const revenueBars = (typeof branchRevenueBars !== 'undefined' && branchRevenueBars) ? branchRevenueBars : { bars: [], monthLabel: '', branch: branch }; %>
 
-  <section class="sa-home-group sa-mtd-group" id="sa-mtd-bars" aria-label="Branch month-to-date revenue">
-    <h3 class="sa-home-group__title">Month-to-date · <%= revenueBars.monthLabel || 'This month' %> · <%= revenueBars.branch || branch %></h3>
+  <section class="sa-home-group sa-mtd-group" id="sa-mtd-bars" aria-label="Branch sales report">
+    <h3 class="sa-home-group__title">Sales Report · <%= revenueBars.monthLabel || 'This month' %> · <%= revenueBars.branch || branch %></h3>
     <div class="sa-mtd-bars">
       <% (revenueBars.bars || []).forEach((bar) => { %>
         <article class="sa-mtd-bar sa-mtd-bar--<%= bar.tone %>" data-key="<%= bar.key %>" data-fill="<%= bar.fillPct %>" data-tone="<%= bar.tone %>">
@@ -31,118 +26,136 @@
     </div>
   </section>
 
-  <%- include('partials/parts-ready-messages') %>
-
-  <section class="sa-home-group">
-    <h3 class="sa-home-group__title">1. Shop floor</h3>
-    <div class="sa-grid sa-grid--4">
-      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card sa-home-card--kpi" href="/work-orders" aria-label="Open Work Orders">
-        <div class="workorder-nav-card__icon">&#9881;</div>
-        <div class="workorder-nav-card__body">
-          <h3>Work Orders</h3>
-          <p><%= openCount %></p>
-          <span>Open list · create WO, parts, labor</span>
-        </div>
-      </a>
-      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card sa-home-card--kpi" href="/work-order-transactions/technicians" aria-label="Open Technician Portal">
-        <div class="workorder-nav-card__icon">&#128295;</div>
-        <div class="workorder-nav-card__body">
-          <h3>Technicians</h3>
-          <p><%= safeTechStats.length %></p>
-          <span>Status · assignments</span>
-        </div>
-      </a>
-      <a class="workorder-nav-card workorder-nav-card--orange sa-home-card sa-home-card--kpi" href="/customers" aria-label="Open Customers">
-        <div class="workorder-nav-card__icon">&#128101;</div>
-        <div class="workorder-nav-card__body">
-          <h3>Customers</h3>
-          <p><%= customers.length %></p>
-          <span>Directory · Viber</span>
-        </div>
-      </a>
-      <a class="workorder-nav-card workorder-nav-card--green sa-home-card" href="/work-order-transactions" aria-label="Work Orders Transactions Database">
-        <div class="workorder-nav-card__icon">📊</div>
-        <div class="workorder-nav-card__body">
-          <h3>WO Transactions Database</h3>
-          <p>All records and history</p>
-          <span>Billing · History</span>
-        </div>
-      </a>
+  <%
+    const salesRows = (typeof salesReportRows !== 'undefined' && salesReportRows) ? salesReportRows : [];
+    const salesSummary = (typeof salesReportSummary !== 'undefined' && salesReportSummary)
+      ? salesReportSummary
+      : { count: 0, laborTotal: 0, partsTotal: 0, grandTotal: 0 };
+    const peso = (value) => '₱' + Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  %>
+  <section class="sa-home-group sales-report-group" id="sales-report-database" aria-label="Sales report database">
+    <div class="stm-section__title-row">
+      <h3 class="sa-home-group__title">Sales Report Database · Closed Work Orders Converted to Sales</h3>
+      <p class="dashboard-note stm-section__note">Branch: <%= branch %> &middot; <%= salesSummary.count %> invoiced sale(s)</p>
     </div>
-  </section>
 
-  <section class="sa-home-group">
-    <h3 class="sa-home-group__title">2. Parts</h3>
-    <div class="sa-grid sa-grid--4">
-      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/parts" aria-label="Open branch Parts Database">
-        <div class="workorder-nav-card__icon">&#128230;</div>
-        <div class="workorder-nav-card__body">
-          <h3>Parts Database</h3>
-          <p><%= branch || 'This branch' %> stock and history</p>
-          <span>Branch lookup</span>
-        </div>
-      </a>
+    <div class="sales-report-summary">
+      <article class="sales-report-summary__card">
+        <p class="sales-report-summary__label">Total Sales (Invoices)</p>
+        <p class="sales-report-summary__value"><%= salesSummary.count %></p>
+      </article>
+      <article class="sales-report-summary__card">
+        <p class="sales-report-summary__label">Total Labor Revenue</p>
+        <p class="sales-report-summary__value"><%= peso(salesSummary.laborTotal) %></p>
+      </article>
+      <article class="sales-report-summary__card">
+        <p class="sales-report-summary__label">Total Parts Revenue</p>
+        <p class="sales-report-summary__value"><%= peso(salesSummary.partsTotal) %></p>
+      </article>
+      <article class="sales-report-summary__card sales-report-summary__card--gross">
+        <p class="sales-report-summary__label">Total Grand Revenue (w/ VAT)</p>
+        <p class="sales-report-summary__value"><%= peso(salesSummary.grandTotal) %></p>
+      </article>
     </div>
-  </section>
 
-  <section class="sa-home-group">
-    <h3 class="sa-home-group__title">3. Tools</h3>
-    <div class="sa-grid sa-grid--4">
-      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="/gm/fte" aria-label="Open FTE workspace">
-        <div class="workorder-nav-card__icon">&#128736;</div>
-        <div class="workorder-nav-card__body">
-          <h3>FTE Workspace</h3>
-          <p>Log branch issues and time</p>
-          <span>Records</span>
-        </div>
-      </a>
+    <div class="sales-report-toolbar">
+      <input
+        type="text"
+        id="sales-report-search"
+        class="sales-report-toolbar__input"
+        placeholder="Search invoice #, customer, plate, technician, service, part..."
+        aria-label="Search sales report database"
+      >
     </div>
-  </section>
 
-  <article class="dashboard-card admin-panel sa-tech-panel sa-tech-panel--fill">
-    <div class="dashboard-card__header admin-panel-header">Live technicians</div>
-    <p class="dashboard-note admin-note">Status, present WO, vehicle, and labor from the same board as Technician Portal. Names open technician activity; present WO opens the work order.</p>
-    <% if (!safeTechStats.length) { %>
-      <p class="dashboard-note admin-note">No technician assignments yet.</p>
-    <% } else { %>
-      <div class="table-scroll sa-tech-panel__scroll">
-        <table class="list">
-          <thead>
+    <div class="table-scroll transaction-table-wrap">
+      <table class="list transaction-table sales-report-table" id="sales-report-table">
+        <thead>
+          <tr>
+            <th class="sticky-col sticky-col-1">Invoice #</th>
+            <th class="sticky-col sticky-col-2">Invoiced Date</th>
+            <th>Br. Loc</th>
+            <th>Work Order #</th>
+            <th>Customer Name</th>
+            <th>Contact Number</th>
+            <th>Vehicle Brand</th>
+            <th>Vehicle Model</th>
+            <th>Year</th>
+            <th>Plate Number</th>
+            <th>Odometer</th>
+            <th>Service Advisor</th>
+            <th>Technician</th>
+            <th>Date Opened</th>
+            <th>Time In</th>
+            <th>Time Out</th>
+            <th>Services Rendered</th>
+            <th>Services Count</th>
+            <th>Parts Used</th>
+            <th>Parts Count</th>
+            <th>Labor Total</th>
+            <th>Parts Total</th>
+            <th>Subtotal</th>
+            <th>VAT (12%)</th>
+            <th>Grand Total</th>
+            <th>Payment Method</th>
+            <th>Payment Status</th>
+            <th>Balance Due</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!salesRows.length) { %>
             <tr>
-              <th>Technician</th>
-              <th>Status</th>
-              <th>Present WO</th>
-              <th>Assigned Car (Current)</th>
-              <th>Time Spent (Present Job)</th>
-              <th>Total Labor (Accumulated)</th>
-              <th>Total Labor Price MTD</th>
-              <th>Work Orders Handled MTD</th>
+              <td colspan="28" class="sales-report-empty">No closed work orders have been converted into sales yet for this branch.</td>
             </tr>
-          </thead>
-          <tbody>
-            <% safeTechStats.forEach(stat => { %>
-              <tr>
-                <td><a href="/work-order-transactions/technicians/<%= encodeURIComponent(stat.technician) %>"><%= stat.technician %></a></td>
-                <td><%= stat.live_status || 'Idle' %></td>
-                <td>
-                  <% if (stat.present_wo_id) { %>
-                    <a href="/work-orders/<%= stat.present_wo_id %>/edit">WO <%= stat.present_wo %></a>
-                  <% } else { %>—<% } %>
-                </td>
-                <td><%= stat.current_car %></td>
-                <td><%= stat.current_job_time %></td>
-                <td>₱<%= Number(stat.total_labor_accumulated || 0).toFixed(2) %></td>
-                <td>₱<%= Number(stat.total_labor_mtd || 0).toFixed(2) %></td>
-                <td><%= stat.work_orders_mtd %></td>
-              </tr>
-            <% }) %>
-          </tbody>
-        </table>
-      </div>
-    <% } %>
-  </article>
+          <% } %>
+          <% salesRows.forEach((row) => { %>
+            <tr>
+              <td class="sticky-col sticky-col-1 sales-report-invoice-cell">
+                <a
+                  class="sales-report-invoice__trigger"
+                  href="/work-orders/<%= encodeURIComponent(row.id) %>/billing"
+                  target="_blank"
+                  rel="noopener"
+                ><%= row.invoice_number %></a>
+              </td>
+              <td class="sticky-col sticky-col-2"><%= row.invoice_date %></td>
+              <td><%= row.branch %></td>
+              <td><%= row.work_order_number %></td>
+              <td><%= row.customer_name %></td>
+              <td><%= row.telephone_number %></td>
+              <td><%= row.car_brand %></td>
+              <td><%= row.car_model %></td>
+              <td><%= row.car_year %></td>
+              <td><%= row.plate_number %></td>
+              <td><%= row.odometer %></td>
+              <td><%= row.service_advisor %></td>
+              <td><%= row.technician %></td>
+              <td><%= row.date_opened %></td>
+              <td><%= row.time_in %></td>
+              <td><%= row.time_out %></td>
+              <td><%= row.services_rendered %></td>
+              <td><%= row.services_count %></td>
+              <td><%= row.parts_used %></td>
+              <td><%= row.parts_count %></td>
+              <td><%= peso(row.labor_total) %></td>
+              <td><%= peso(row.parts_total) %></td>
+              <td><%= peso(row.subtotal) %></td>
+              <td><%= peso(row.vat) %></td>
+              <td><%= peso(row.grand_total) %></td>
+              <td><%= row.payment_method %></td>
+              <td><%= row.payment_status %></td>
+              <td><%= peso(row.balance_due) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+  </section>
+
 </section>
 
 <script src="/js/sa-revenue-bars.js"></script>
+<script src="/js/sales-report-search.js"></script>
 <%- include('partials/sa-reminder') %>
 <%- include('partials/footer') %>

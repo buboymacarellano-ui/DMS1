@@ -1,0 +1,42 @@
+<%
+  const svcGroups = [
+    { items: [
+      { label: 'Sales Report', href: '/service-receptionist#sa-mtd-bars' },
+      { label: 'Quotations', href: '/quotations' },
+      { label: 'New WO', href: '/work-orders/new' },
+      { label: 'Work Orders', href: '/work-orders' },
+      { label: 'WO Tracker', href: '/work-order-transactions' },
+      { label: 'Create Labor', href: '/pricing/new' },
+      { label: 'Create Parts', href: '/parts/create' },
+      { label: 'Parts Receiving', href: '/parts/receiving' },
+      { label: 'Parts Database', href: '/parts' },
+      { label: 'Approvals', href: '/approvals' },
+      { label: 'FTE WorkSpace', href: '/gm/fte' },
+    ] },
+    { items: [
+      { label: 'Customers', href: '/customers' },
+      { label: 'Billing Queue', href: '/transactions' },
+      { label: 'Log Expenses', href: '/expenses' },
+    ] },
+  ];
+  const svcPath = typeof currentPath !== 'undefined' && currentPath ? String(currentPath) : '';
+  const svcActive = (item) => {
+    const base = item.href.split('#')[0];
+    if (item.href.indexOf('#my-tickets') !== -1) return false;
+    if (item.label === 'Month to Date Report') return svcPath === '/service-receptionist';
+    if (item.label === 'Work Orders') return svcPath === '/work-orders' || (svcPath.indexOf('/work-orders/') === 0 && svcPath !== '/work-orders/new');
+    if (item.label === 'WO Tracker') return svcPath === base || svcPath.indexOf(base + '/') === 0;
+    if (item.label === 'Parts Database') return svcPath === '/parts' || (svcPath.indexOf('/parts/') === 0 && svcPath !== '/parts/create' && svcPath.indexOf('/parts/receiving') !== 0);
+    return svcPath === base || svcPath.indexOf(base + '/') === 0;
+  };
+%>
+<nav class="pm-sidebar" id="service-sidebar" aria-label="Service Portal menu">
+  <% svcGroups.forEach((group) => { %>
+    <% if (group.title) { %>
+      <div class="pm-sidebar__group"><%= group.title %></div>
+    <% } %>
+    <% group.items.forEach((item) => { %>
+      <a class="pm-sidebar__link<%= svcActive(item) ? ' pm-sidebar__link--active' : '' %>" href="<%= item.href %>"><%= item.label %></a>
+    <% }) %>
+  <% }) %>
+</nav>

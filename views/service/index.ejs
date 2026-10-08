@@ -7,16 +7,7 @@
   <section class="sa-home-group">
     <h3 class="sa-home-group__title">System Status</h3>
     <div class="sa-grid sa-grid--4">
-      <div class="workorder-nav-card sa-home-card" id="db-health-card" style="border-left:4px solid #27ae60;">
-        <div class="workorder-nav-card__icon" id="db-health-icon">&mdash;</div>
-        <div class="workorder-nav-card__body">
-          <strong>Database Health</strong>
-          <div id="db-health-percent">&mdash;</div>
-          <div id="db-health-message">&mdash;</div>
-          <small>Response: <span id="db-health-time">&mdash;</span> ms</small><br>
-          <small>Updated: <span id="db-health-updated">&mdash;</span></small>
-        </div>
-      </div>
+      <%- include('../partials/db-health-card') %>
     </div>
   </section>
 
@@ -65,7 +56,7 @@
   <section class="sa-home-group">
     <h3 class="sa-home-group__title">2. Seven Service Bays</h3>
     <div class="sa-grid sa-grid--4">
-      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="<%= (typeof canGrant === 'function' && (canGrant('service', 'schedule') || canGrant('service', 'approval'))) ? '/stm[...]
+      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card" href="<%= (typeof canGrant === 'function' && (canGrant('service', 'schedule') || canGrant('service', 'approval'))) ? '/stm' : '/service-receptionist' %>">
         <div class="workorder-nav-card__icon">&#128736;</div>
         <div class="workorder-nav-card__body">
           <h3>Bay Monitor</h3>
@@ -117,54 +108,19 @@
   </section>
 
   <section class="sa-home-group">
-    <h3 class="sa-home-group__title">4. Receiving</h3>
+    <h3 class="sa-home-group__title">4. Parts Receiving</h3>
     <div class="sa-grid sa-grid--4">
-      <% if (canGrant('parts', 'request')) { %>
-        <a class="workorder-nav-card workorder-nav-card--orange sa-home-card" href="/parts#approved-transfers">
-          <div class="workorder-nav-card__icon">&#128230;</div>
-          <div class="workorder-nav-card__body">
-            <h3>Parts Receiving</h3>
-            <p>Verify approved transfers</p>
-            <span>Update branch stock</span>
-          </div>
-        </a>
-      <% } %>
-      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card sa-home-card--kpi" href="/receiving">
-        <div class="workorder-nav-card__icon">📦</div>
+      <a class="workorder-nav-card workorder-nav-card--orange sa-home-card sa-home-card--kpi" href="/parts/receiving">
+        <div class="workorder-nav-card__icon">&#128230;</div>
         <div class="workorder-nav-card__body">
-          <h3>Receiving Transactions</h3>
+          <h3>Parts Receiving</h3>
           <p><%= receivingCount || 0 %></p>
-          <span>Approve & restock</span>
+          <span>Stock transfers to receive</span>
         </div>
       </a>
     </div>
   </section>
 </section>
 
-<script>
-(function () {
-  var COLORS = { healthy: '#27ae60', degraded: '#f39c12', error: '#e74c3c' };
-  var ICONS = { healthy: '✓', degraded: '⚠', error: '✕' };
-  function set(id, v) { document.getElementById(id).textContent = v; }
-  function render(d) {
-    var st = d && COLORS[d.status] ? d.status : 'error';
-    document.getElementById('db-health-card').style.borderLeft = '4px solid ' + COLORS[st];
-    set('db-health-icon', ICONS[st]);
-    set('db-health-percent', d && d.healthPercentage != null ? d.healthPercentage + '%' : '—');
-    set('db-health-message', d && d.message ? d.message : '—');
-    set('db-health-time', d && d.responseTime != null ? d.responseTime : '—');
-    set('db-health-updated', d && d.timestamp
-      ? new Date(d.timestamp).toLocaleString('en-PH', { timeZone: 'Asia/Manila' }) : '—');
-  }
-  function refresh() {
-    fetch('/api/health/database', { credentials: 'same-origin' })
-      .then(function (r) { return r.json(); })
-      .then(render)
-      .catch(function () { render(null); });
-  }
-  refresh();
-  setInterval(refresh, 30000);
-})();
-</script>
 
 <%- include('../partials/footer') %>

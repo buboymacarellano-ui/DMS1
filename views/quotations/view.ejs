@@ -1,0 +1,89 @@
+<%- include('../partials/header') %>
+
+<%
+  const peso = (n) => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const items = Array.isArray(quotation.service_items) ? quotation.service_items : [];
+  const vehicleLabel = [quotation.car_brand, quotation.car_model, quotation.car_year].filter(Boolean).join(' ');
+%>
+
+<div class="pm-print-actions" style="margin-bottom:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+  <button type="button" class="btn" onclick="window.print()">Print / Save as PDF</button>
+  <% if (quotation.work_order_id && quotation.work_order_number) { %>
+    <span>Sent to Work Order <strong><%= quotation.work_order_number %></strong></span>
+    <a class="btn" href="/work-orders">Open Work Orders</a>
+  <% } else { %>
+    <form method="post" action="/quotations/<%= quotation.id %>/send-to-work-order" style="display:inline" onsubmit="return confirm('Send this quotation to Work Orders? It will become a new open work order you can edit further.');">
+      <button type="submit" class="btn">Send to Work Orders</button>
+    </form>
+  <% } %>
+  <a href="/quotations">Back to Quotations</a>
+</div>
+<% if (typeof sendError !== 'undefined' && sendError) { %>
+  <p class="error pm-print-actions"><%= sendError %></p>
+<% } %>
+
+<div class="quotation-sheet">
+  <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+    <div>
+      <h1 style="margin:0">A&amp;E Auto Repair Service Group</h1>
+      <div>Quotation</div>
+    </div>
+    <div style="text-align:right">
+      <div>Date: <strong><%= quotation.created_at ? new Date(quotation.created_at).toLocaleDateString('en-PH') : '' %></strong></div>
+      <div>Branch: <strong><%= quotation.branch || '—' %></strong></div>
+    </div>
+  </header>
+
+  <section style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+    <div>
+      <h3>Customer</h3>
+      <div><strong><%= quotation.customer_name || '—' %></strong></div>
+      <div>CP#-Viber: <%= quotation.telephone_number || '—' %></div>
+      <div>Type: <%= quotation.customer_type || '—' %></div>
+    </div>
+    <div>
+      <h3>Vehicle</h3>
+      <div><strong><%= vehicleLabel || '—' %></strong></div>
+      <div>Plate: <%= quotation.plate_number || '—' %></div>
+      <div>Unit Type: <%= quotation.vehicle_type || '—' %></div>
+      <div>Odometer: <%= quotation.odometer || '—' %></div>
+    </div>
+  </section>
+
+  <h3>Services</h3>
+  <div class="table-scroll">
+  <table class="list">
+    <thead>
+      <tr>
+        <th>#</th><th>Service Work and Reason</th><th>Service Required</th><th>Labor Price</th><th>Qty.</th>
+        <th>Parts</th><th>Part Number</th><th>Unit</th><th>Unit Price</th><th>QTY</th><th>Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!items.length) { %>
+        <tr><td colspan="11">No service lines.</td></tr>
+      <% } %>
+      <% items.forEach((item, i) => { %>
+        <tr>
+          <td><%= i + 1 %></td>
+          <td><%= item.reason || '—' %></td>
+          <td><%= item.description || '—' %></td>
+          <td><%= peso(item.labor_price) %></td>
+          <td><%= item.service_qty %></td>
+          <td><%= item.parts || '—' %></td>
+          <td><%= item.part_number || '—' %></td>
+          <td><%= item.unit || '—' %></td>
+          <td><%= peso(item.parts_price) %></td>
+          <td><%= item.parts_qty %></td>
+          <td><%= peso(item.total_price) %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  </div>
+
+  <p style="text-align:right;font-size:1.1em;margin-top:10px;">Grand Total: <strong><%= peso(quotation.grand_total) %></strong></p>
+  <p style="margin-top:18px;font-size:.9em;">Prepared by: <%= quotation.created_by || '—' %></p>
+</div>
+
+<%- include('../partials/footer') %>

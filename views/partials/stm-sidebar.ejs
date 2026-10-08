@@ -1,0 +1,21 @@
+<%
+  const stmItems = [
+    { label: 'STM Dashboard', href: '/stm', match: (p) => p === '/stm' || p === '/stm/' },
+    { label: 'STM Monitor', href: '/stm/monitor', match: (p) => p.indexOf('/stm/monitor') === 0 },
+    { label: '+ New Work Order', href: '/work-orders/new', match: (p) => p === '/work-orders/new' },
+    { label: 'Customer Lookup', href: '/customers', match: (p) => p.indexOf('/customers') === 0 },
+    { label: 'Live Data', href: '/work-orders', match: (p) => p === '/work-orders' || (p.indexOf('/work-orders/') === 0 && p !== '/work-orders/new') },
+    { label: 'Pending Approvals', href: '/approvals', match: (p) => p.indexOf('/approvals') === 0, badge: true },
+    { label: 'Tech Activities', href: '/work-order-transactions/technicians', match: (p) => p.indexOf('/work-order-transactions/technicians') === 0 },
+    { label: 'Parts Database', href: '/parts/database', match: (p) => p === '/parts/database' },
+    { label: 'Billing Queue', href: '/transactions', match: (p) => p.indexOf('/transactions') === 0 },
+    { label: 'Sales Reports / Branch Metrics', href: '/kpi', match: (p) => p.indexOf('/kpi') === 0 },
+  ];
+  const stmPath = typeof currentPath !== 'undefined' && currentPath ? String(currentPath) : '';
+  const stmPending = typeof pendingApprovalCount !== 'undefined' ? Number(pendingApprovalCount || 0) : 0;
+%>
+<nav class="pm-sidebar" id="stm-sidebar" aria-label="STM portal menu">
+  <% stmItems.forEach((item) => { %>
+    <a class="pm-sidebar__link<%= item.match(stmPath) ? ' pm-sidebar__link--active' : '' %>" href="<%= item.href %>"><%= item.label %><% if (item.badge && stmPending > 0) { %> (<%= stmPending %>)<% } %></a>
+  <% }) %>
+</nav>

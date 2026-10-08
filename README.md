@@ -101,13 +101,15 @@ You only see the screens your role is allowed to open. This is normal — it is 
 
 ## 4. Moving around the screens
 
+Database/list views size columns primarily to their data cells with uniform cell padding: words, quantities, and amounts are all left-aligned. Headers use white, left-aligned text. Long headers wrap instead of widening short-value columns, with a six-character minimum header width for readability. Empty columns retain header-based sizing. Wide tables scroll horizontally instead of clipping text or stretching short columns across the page. Numeric identifiers (part numbers, phone numbers, and document references) retain text alignment. Editable entry grids and nested detail layouts keep their existing sizing; a table can opt out with `data-table-layout="manual"`.
+
 - **The company name at the top left** takes you back to the main page.
 - **The menu links in the header** are your main screens.
 - **The Back chip under the logo** goes back one screen.
 - **Pressing the ESC key** also goes back one screen. This is the quickest way when you open something by mistake.
 - **Approvals / Requests** in the header shows pending items. If there is a number beside it, that many items are waiting for you.
 
-Your role and name are shown in the header so you can always confirm who is logged in. Branch staff also see their branch name there.
+Your role and name are shown in the header so you can always confirm who is logged in. Accounts signed into any of the seven operational branches also see their branch name in a separate 50%-faded red badge beside the session controls. This reflects the signed-in branch, not a report's selected branch filter; warehouse and unassigned accounts do not show a branch badge.
 
 ---
 
@@ -209,8 +211,23 @@ Some actions need someone else to say yes — for example a branch asking the wa
 
 If you have approval rights, the **Approvals** link in your header shows a count of items waiting. Check it daily. If you only submit requests, the same link is labelled **Requests**.
 
+### Parts receiving quantities
+
+The Parts Manager database Type filter offers **New**, **Stock**, **Stock Transfer**, **Edited**, and **Removed**, plus All Types. Stock is the display label for the existing `restock` type; stored type values and stock calculations are unchanged. Stock Transfer shows transfer records and standalone transfer-request entries. Edited and Removed show immutable snapshots logged by Parts Manager and branch part-edit/removal actions; existing price-edit rows are also included under Edited. These display-only operation rows never add stock. Edit/removal snapshots start when this logging is enabled; earlier unlogged actions cannot be reconstructed.
+
+**New** identifies the first received entry for a part number across the whole system, not the first receipt at each branch. Subsequent receiving entries using that part number are automatically **Stock**, even after stock reaches zero or the next receipt is at another location. Each new receipt stores `initial_receipt_id` linking it to the original receipt (the New row links to itself). New and Stock both add stock, retain received quantities, appear in type filters/history/audit reports, and trigger the same availability checks. Purchase lines show the expected type based on existing receipts; the final type/reference is recorded when received. Saving or approving an order does not add stock.
+
+This classification applies to new receiving and part-creation entries. Existing historical rows and explicit CSV transaction types are preserved rather than relabeled. Legacy New Entry / New Stock aliases retain their previous `restock` meaning for compatibility; the distinct new type is `new` / **New**. Importable database CSV exports retain the Restock token to distinguish it from the existing `stock` type, while screen and report labels show Stock. CSV exports include Initial Receipt ID for preserving the reference on round trips.
+
+The Parts Manager database and transaction reports show **TR Qty** (received / transaction quantity) separately from **Current On-Hand**. The received quantity is saved when a new stock receipt is recorded and stays fixed when sales or transfers consume stock. Current On-Hand continues to show the live stock balance. The Edit form's Qty and the database CSV's Qty remain the remaining lot quantity used for stock calculations; the CSV also carries a separate Received Qty column so exporting/importing does not lose the receipt quantity.
+
+Older receipts without a saved original quantity show **Unavailable** in the database; their original quantity cannot safely be inferred from remaining stock. Parts Manager keeps depleted and older receipt records visible for tracing receipts. Other daily parts views retain their existing age filters.
+
+The Part History page has a horizontal **Current stocks of this item** grid directly below the heading and audit summary, with Warehouse 1 and each operational branch across the columns and stock quantities beneath (including zero stock). It scrolls horizontally on smaller screens and uses current remaining stock regardless of the history date filter. Frontline users continue to see only their permitted branch or Warehouse 1 scope.
+
 ### Create PO (purchase orders)
 
+- In Parts Manager's **Purchase** grid, scan a previously saved barcode into a line's Barcode field. Enter, Tab, and scanners with no suffix trigger lookup; the part details and prices fill automatically and a blank Supplier header is filled. Enter the order quantity yourself. Barcodes are retained on PO lines after **Save** or **Create PO**; lookup uses received stock first, then saved PO lines, without adding stock before receiving. Unsaved grid entries are not registered. Removed, cancelled, and rejected POs are excluded from lookup. Unknown barcodes and lookup failures appear below the grid; failed lookups can be retried with Enter.
 - **Who can use it:** the General Manager, plus any role or user the GM grants the `po.create` permission under **PO Settings**. Everyone else sees an "Access denied" message (the server enforces this too).
 - **Create PO** opens a header (PO number is automatic) and a line-item grid (add, duplicate, remove rows; totals calculate as you type). **Save as Draft** keeps it editable; **Submit for Approval** validates every field.
 - **PO Settings (GM only)** also defines the approvers: rules by department, amount range and level. Levels approve in order; any one approver within a level may act. If no rule matches, submission is blocked with a message.

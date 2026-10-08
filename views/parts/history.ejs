@@ -1,12 +1,51 @@
 <%- include('../partials/header') %>
 
 <section class="dashboard-shell admin-shell">
-  <div class="dashboard-title admin-title">Part History — <%= partNumber %></div>
-  <p class="dashboard-note admin-note">
-    Permanent audit log. These records are never deleted.
-    Current on-hand: <strong><%= onHand %></strong>
-    <% if (part && part.part_name) { %> · <%= part.part_name %><% } %>
-  </p>
+  <style>
+    .part-history-header { margin-bottom:14px; }
+    .part-history-stock { width:100%; box-sizing:border-box; padding:10px; }
+    .part-history-stock h2 { margin:0 0 6px; font-size:14px; }
+    .part-history-stock-scroll { overflow-x:auto; }
+    .part-history-stock table { width:100%; min-width:max-content; font-size:12px; }
+    .part-history-stock table th, .part-history-stock table td { padding:6px 10px; text-align:center; white-space:nowrap; }
+    .part-history-stock table th:first-child { text-align:left; }
+    .part-history-stock .stock-qty { font-variant-numeric:tabular-nums; }
+    .part-history-stock .dashboard-note { margin:6px 0 0; font-size:11px; }
+  </style>
+  <div class="part-history-header">
+    <div class="part-history-heading">
+      <div class="dashboard-title admin-title">Part History — <%= partNumber %></div>
+      <p class="dashboard-note admin-note">
+        Permanent audit log. These records are never deleted.
+        Current on-hand: <strong><%= onHand %></strong>
+        <% if (part && part.part_name) { %> · <%= part.part_name %><% } %>
+      </p>
+    </div>
+    <aside class="dashboard-card part-history-stock" aria-labelledby="part-history-stock-title">
+      <h2 id="part-history-stock-title">Current stocks of this item</h2>
+      <div class="part-history-stock-scroll">
+        <table class="list" data-table-layout="manual">
+          <thead>
+            <tr>
+              <th scope="col">Location</th>
+              <% currentStocks.forEach((stock) => { %>
+                <th scope="col"><%= stock.location %></th>
+              <% }) %>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Stock Qty</th>
+              <% currentStocks.forEach((stock) => { %>
+                <td class="stock-qty"><%= stock.qty %></td>
+              <% }) %>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="dashboard-note">Live on-hand stock; not limited by the history date filter.</p>
+    </aside>
+  </div>
 
   <% const view = typeof partsView !== 'undefined' && partsView ? partsView : { scope: 'all' }; %>
   <form method="get" action="/parts/history/<%= encodeURIComponent(partNumber) %>" class="form" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;">
@@ -47,7 +86,7 @@
             <th>#</th>
             <th>Date</th>
             <th>Type</th>
-            <th>Qty</th>
+            <th>TR Qty</th>
             <th>Location</th>
             <th>Editor</th>
             <th>Part Name</th>
@@ -57,18 +96,19 @@
             <th>Retail</th>
             <th>Sold To</th>
             <th>Txn #</th>
+            <th>Initial Receipt ID</th>
           </tr>
         </thead>
         <tbody>
           <% if (!group.rows.length) { %>
-            <tr><td colspan="13" style="text-align:center;padding:20px;">No history in this range.</td></tr>
+            <tr><td colspan="14" style="text-align:center;padding:20px;">No history in this range.</td></tr>
           <% } %>
           <% group.rows.forEach((row, i) => { %>
             <tr>
               <td><%= i + 1 %></td>
               <td><%= row.transaction_date || (row.created_at || '').slice(0, 10) %></td>
               <td><strong><%= displayPartsTransactionType(row.transaction_type) %></strong></td>
-              <td style="text-align:right;"><%= row.qty != null ? row.qty : '' %></td>
+              <td style="text-align:right;"><%= transactionQty(row) != null ? transactionQty(row) : 'Unavailable' %></td>
               <td><%= row.present_location || row.branch || row.requesting_branch || '—' %></td>
               <td><%= row.editor || '' %></td>
               <td><%= row.part_name || '' %></td>
@@ -78,6 +118,7 @@
               <td style="text-align:right;"><%= row.retail_price != null && row.retail_price !== '' ? Number(row.retail_price).toFixed(2) : '' %></td>
               <td><%= row.sold_to || '' %></td>
               <td><%= row.transaction_number || '' %></td>
+              <td><%= row.initial_receipt_id || '' %></td>
             </tr>
           <% }) %>
         </tbody>

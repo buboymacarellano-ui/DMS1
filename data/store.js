@@ -16,6 +16,8 @@ function normalizeData(data) {
     customers: source.customers || [],
     vehicles: source.vehicles || [],
     work_orders: source.work_orders || [],
+    quotations: source.quotations || [],
+    expense_logs: source.expense_logs || [],
     transaction_records: source.transaction_records || [],
     pricing_rules: source.pricing_rules || [],
     pricing_settings: source.pricing_settings || { hourly_rate: 350 },
@@ -45,6 +47,7 @@ function normalizeData(data) {
     gm_transaction_records: source.gm_transaction_records || [],
     po_orders: source.po_orders || [],
     po_settings: source.po_settings || { creator_roles: [], creator_user_ids: [], approvers: [] },
+    approval_controls: source.approval_controls || {},
   };
   return ensureCollections(next);
 }
@@ -53,6 +56,7 @@ const OPERATIONAL_COLLECTIONS = [
   'customers',
   'vehicles',
   'work_orders',
+  'quotations',
   'transaction_records',
   'transactions',
   'transactions_made',
@@ -271,14 +275,30 @@ async function setPoSettings(settings) {
   return data.po_settings;
 }
 
+async function getApprovalControls() {
+  const data = await load();
+  return data.approval_controls || {};
+}
+
+async function setApprovalControls(controls) {
+  const data = await load();
+  data.approval_controls = Object.assign({}, controls, { updated_at: new Date().toISOString() });
+  await save();
+  return data.approval_controls;
+}
+
 async function getPricingSettings() {
   const data = await load();
-  return data.pricing_settings || { hourly_rate: 350 };
+  return Object.assign({ hourly_rate: 350, parts_retail_margin_percent: 20 }, data.pricing_settings || {});
 }
 
 async function updatePricingSettings(patch) {
   const data = await load();
-  data.pricing_settings = Object.assign({}, data.pricing_settings || { hourly_rate: 350 }, patch);
+  data.pricing_settings = Object.assign(
+    { hourly_rate: 350, parts_retail_margin_percent: 20 },
+    data.pricing_settings || {},
+    patch
+  );
   await save();
   return data.pricing_settings;
 }
@@ -343,6 +363,8 @@ module.exports = {
   setLoginAuthDisabled,
   getPoSettings,
   setPoSettings,
+  getApprovalControls,
+  setApprovalControls,
   getPricingSettings,
   updatePricingSettings,
   hasDeletePassword,

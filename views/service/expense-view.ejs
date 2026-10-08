@@ -1,0 +1,44 @@
+<%- include('../partials/header') %>
+
+<% const peso = (n) => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); %>
+
+<div class="pm-print-actions" style="margin-bottom:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+  <button type="button" class="btn" onclick="window.print()">Print</button>
+  <a href="/expenses">Back to Log Expenses</a>
+</div>
+
+<div class="quotation-sheet">
+  <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+    <div>
+      <h1 style="margin:0">A&amp;E Auto Repair Service Group</h1>
+      <div>Expense Log</div>
+    </div>
+    <div style="text-align:right">
+      <div>Log Date: <strong><%= expense.log_date || '—' %></strong></div>
+      <div>Branch: <strong><%= expense.branch || '—' %></strong></div>
+    </div>
+  </header>
+
+  <table class="list">
+    <tbody>
+      <tr><th>Expenses Type</th><td><%= expense.expense_type || '—' %></td></tr>
+      <tr><th>Category / Account</th><td><%= expense.category || '—' %></td></tr>
+      <tr><th>Business Purpose / Notes</th><td><%= expense.business_purpose || '—' %></td></tr>
+      <tr><th>Vendor / Supplier</th><td><%= expense.vendor || '—' %></td></tr>
+      <tr><th>Specifics</th><td><%= expense.specifics || '—' %></td></tr>
+      <tr><th>Unit</th><td><%= expense.unit || '—' %></td></tr>
+      <tr><th>Unit Price</th><td><%= peso(expense.unit_price) %></td></tr>
+      <tr><th>QTY</th><td><%= expense.qty %></td></tr>
+      <tr><th>Total</th><td><strong><%= peso(expense.total) %></strong></td></tr>
+      <tr><th>Reference Receipt</th><td><%= expense.reference_receipt || '—' %></td></tr>
+      <tr><th>Petty Cash Out</th><td><%= peso(expense.petty_cash_out) %></td></tr>
+      <tr><th>Petty Cash In</th><td><%= peso(expense.petty_cash_in) %></td></tr>
+      <tr><th>Received By</th><td><%= expense.received_by || '—' %></td></tr>
+      <tr><th>Note</th><td><%= expense.note || '—' %></td></tr>
+    </tbody>
+  </table>
+
+  <p style="margin-top:18px;font-size:.9em;">Logged by: <%= expense.created_by || '—' %></p>
+</div>
+
+<%- include('../partials/footer') %>

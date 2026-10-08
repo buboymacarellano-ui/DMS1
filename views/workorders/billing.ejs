@@ -97,6 +97,7 @@
       <form method="post" action="/work-orders/<%= wo.id %>/billing/save-pdf" style="display:inline">
         <button type="submit" class="btn">Save PDF</button>
       </form>
+      <button type="button" class="btn" onclick="window.print()">Print Copy</button>
       <form method="post" action="/work-orders/<%= wo.id %>/billing/final-print" onsubmit="return confirmFinalPrint();" style="display:inline">
         <button type="submit" name="next_action" value="print" class="btn">Print</button>
         <button type="submit" name="next_action" value="viber" class="btn" <%= viberNumber ? '' : 'disabled title="Customer phone number is required"' %>>Send via Viber</button>
@@ -113,7 +114,8 @@
 
   (function continueFinalBillingAction() {
     const finalAction = '<%= finalAction %>';
-    if (finalAction === 'print') {
+    const autoPrint = <%= autoPrint ? 'true' : 'false' %>;
+    if (finalAction === 'print' || autoPrint) {
       window.print();
       return;
     }

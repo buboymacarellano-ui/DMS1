@@ -1,0 +1,111 @@
+<%- include('../partials/header') %>
+<%
+  const peso = (value) => value === null || value === undefined ? '-' : '₱' + Number(value).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const when = (value) => value ? new Date(value).toLocaleString('en-PH') : '-';
+  const label = (status) => String(status || '').replace(/_/g, ' ').toUpperCase();
+  const tone = (status) => {
+    if (['approved', 'closed', 'received', 'completed', 'released', 'purchased'].includes(status)) return 'ok';
+    if (['rejected', 'removed', 'cancelled', 'canceled', 'returned'].includes(status)) return 'bad';
+    if (['pending', 'pending_approval', 'submitted'].includes(status)) return 'wait';
+    return 'neutral';
+  };
+  const hasFilter = filters.q || filters.type || filters.status || filters.start || filters.end;
+%>
+<style>
+  .gm-rec__intro { color: #4b5563; margin: 4px 0 14px; }
+  .gm-rec__filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; background: #fff; border: 1px solid #d1d5db; padding: 12px; margin-bottom: 12px; }
+  .gm-rec__filters label { display: flex; flex-direction: column; font-size: 12px; font-weight: 600; color: #374151; gap: 4px; }
+  .gm-rec__filters input, .gm-rec__filters select { padding: 6px 8px; border: 1px solid #9ca3af; min-width: 150px; }
+  .gm-rec__summary { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; font-size: 13px; }
+  .gm-rec__chip { border: 1px solid #d1d5db; background: #fff; padding: 4px 10px; }
+  .gm-rec__status { display: inline-block; padding: 2px 8px; font-size: 11px; font-weight: 700; color: #fff; white-space: nowrap; }
+  .gm-rec__status--ok { background: #16a34a; }
+  .gm-rec__status--bad { background: #dc2626; }
+  .gm-rec__status--wait { background: #d97706; }
+  .gm-rec__status--neutral { background: #6b7280; }
+  .gm-rec__auto { display: block; font-size: 11px; color: #6b7280; margin-top: 2px; }
+  .gm-rec__ref { font-weight: 700; white-space: nowrap; }
+  .gm-rec__refs { font-size: 11px; color: #6b7280; }
+  .gm-rec__amount { text-align: right; white-space: nowrap; }
+</style>
+
+<section class="dashboard-shell gm-shell">
+  <h1>My Record</h1>
+  <p class="gm-rec__intro">Every request and transaction across the app, with its ticket, PTN, PO or transaction number: approved, pending, rejected, removed and auto-approved.</p>
+
+  <form method="get" action="/gm/my-record" class="gm-rec__filters">
+    <label>Search<input type="search" name="q" value="<%= filters.q %>" placeholder="Number, requester, part, branch..."></label>
+    <label>Type
+      <select name="type">
+        <option value="">All types</option>
+        <% types.forEach((type) => { %><option value="<%= type %>" <%= filters.type === type ? 'selected' : '' %>><%= type %></option><% }) %>
+      </select>
+    </label>
+    <label>Status
+      <select name="status">
+        <option value="">All statuses</option>
+        <% statuses.forEach((status) => { %><option value="<%= status %>" <%= filters.status === status ? 'selected' : '' %>><%= label(status) %></option><% }) %>
+      </select>
+    </label>
+    <label>Requested From<input type="date" name="start" value="<%= filters.start %>"></label>
+    <label>Requested To<input type="date" name="end" value="<%= filters.end %>"></label>
+    <button type="submit" class="btn btn-primary">Filter</button>
+    <% if (hasFilter) { %><a class="btn" href="/gm/my-record">Clear</a><% } %>
+  </form>
+
+  <div class="gm-rec__summary">
+    <span class="gm-rec__chip"><strong><%= records.length %></strong> of <%= totalCount %> record(s)</span>
+    <% Object.keys(statusCounts).sort().forEach((status) => { %>
+      <span class="gm-rec__chip"><%= label(status) %>: <strong><%= statusCounts[status] %></strong></span>
+    <% }) %>
+  </div>
+
+  <article class="dashboard-card admin-panel">
+    <% if (!records.length) { %>
+      <p class="dashboard-note admin-note">No records found.</p>
+    <% } else { %>
+      <div class="table-scroll">
+        <table class="list">
+          <thead>
+            <tr>
+              <th>Number</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Requested By</th>
+              <th>Details</th>
+              <th class="gm-rec__amount">Amount</th>
+              <th>Requested</th>
+              <th>Decided</th>
+              <th>Decided By</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% records.forEach((r) => { %>
+              <tr>
+                <td>
+                  <span class="gm-rec__ref"><%= r.ref %></span>
+                  <% if (r.refs.length) { %><div class="gm-rec__refs"><%= r.refs.join(' · ') %></div><% } %>
+                </td>
+                <td><%= r.type %></td>
+                <td>
+                  <span class="gm-rec__status gm-rec__status--<%= tone(r.status) %>"><%= label(r.status) %></span>
+                  <% if (r.auto_approved) { %><span class="gm-rec__auto">Auto-approved</span><% } %>
+                </td>
+                <td><%= r.requester %></td>
+                <td><%= r.details || '-' %></td>
+                <td class="gm-rec__amount"><%= peso(r.amount) %></td>
+                <td><%= when(r.requested_at) %></td>
+                <td><%= when(r.decided_at) %></td>
+                <td><%= r.decided_by || '-' %></td>
+                <td><% if (r.link) { %><a class="btn btn-sm" href="<%= r.link %>">View</a><% } %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </article>
+</section>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,18 @@
+<%
+  const gmTop = [
+    { label: 'GM Dashboard', href: '/gm', match: (p) => p === '/gm' || p === '/gm/' || p.indexOf('/gm/aging') === 0 },
+    { label: 'Targets & Incentives', href: '/gm/targets-incentives', match: (p) => p.indexOf('/gm/targets-incentives') === 0 || p.indexOf('/gm/performance-incentives') === 0 },
+    { label: 'Approvals', href: '/approvals', match: (p) => p.indexOf('/approvals') === 0, badge: true },
+    { label: 'Control Panel', href: '/gm/control-panel', match: (p) => p.indexOf('/gm/control-panel') === 0 },
+    { label: 'My Record', href: '/gm/my-record', match: (p) => p.indexOf('/gm/my-record') === 0 },
+    { label: gmMenu.GM_HUBS['work-spaces'].title, href: gmMenu.GM_HUBS['work-spaces'].href, match: (p) => gmMenu.hubMatchesPath('work-spaces', p) },
+    { label: gmMenu.GM_HUBS.more.title, href: gmMenu.GM_HUBS.more.href, match: (p) => gmMenu.hubMatchesPath('more', p) && !gmMenu.hubMatchesPath('work-spaces', p) },
+  ];
+  const gmPath = typeof currentPath !== 'undefined' && currentPath ? String(currentPath) : '';
+  const gmPending = typeof pendingApprovalCount !== 'undefined' ? Number(pendingApprovalCount || 0) : 0;
+%>
+<nav class="portal-sidebar" id="gm-sidebar" aria-label="GM portal menu">
+  <% gmTop.forEach((item) => { %>
+    <a class="portal-sidebar__link<%= item.match(gmPath) ? ' portal-sidebar__link--active' : '' %>" href="<%= item.href %>"><%= item.label %><% if (item.badge && gmPending > 0) { %> (<%= gmPending %>)<% } %></a>
+  <% }) %>
+</nav>

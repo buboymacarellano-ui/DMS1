@@ -1,0 +1,44 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell sa-shell">
+  <div class="dashboard-title admin-title sa-title role-dashboard-title"><span><%= hub.title %></span></div>
+  <p class="dashboard-note"><%= hub.note %></p>
+
+  <% if (groups.length) { %>
+    <div class="gm-ws-grid">
+      <% groups.forEach((group) => { %>
+        <article class="gm-ws-card">
+          <div class="gm-ws-card__title" role="heading" aria-level="3"><%= group.title %></div>
+          <p class="gm-ws-card__count"><%= group.roles.length %> role<%= group.roles.length === 1 ? '' : 's' %></p>
+          <ul class="gm-ws-roles">
+            <% group.roles.forEach((item) => { %>
+              <li>
+                <a class="gm-ws-role" href="<%= item.href %>">
+                  <span class="gm-ws-role__tag"><%= item.label %></span>
+                  <span class="gm-ws-role__name"><%= item.full %></span>
+                </a>
+              </li>
+            <% }) %>
+          </ul>
+        </article>
+      <% }) %>
+    </div>
+  <% } else { %>
+    <section class="sa-home-group">
+      <div class="sa-grid sa-grid--4">
+        <% const tones = ['blue', 'orange', 'yellow']; %>
+        <% items.forEach((item, index) => { %>
+          <a class="workorder-nav-card workorder-nav-card--<%= tones[index % tones.length] %> sa-home-card" href="<%= item.href %>">
+            <div class="workorder-nav-card__icon"><%- item.icon %></div>
+            <div class="workorder-nav-card__body">
+              <h3><%= item.label %></h3>
+              <p><%= item.desc %></p>
+            </div>
+          </a>
+        <% }) %>
+      </div>
+    </section>
+  <% } %>
+</section>
+
+<%- include('../partials/footer') %>

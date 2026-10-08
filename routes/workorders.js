@@ -718,7 +718,7 @@ router.get('/', async (req, res) => {
   });
 });
 
-router.get('/new', async (req, res) => {
+async function buildNewFormContext(req) {
   let customers = await store.getAll('customers');
   let vehicles = await store.getAll('vehicles');
   ({ customers, vehicles } = await scopeCustomerVehicleData(req, customers, vehicles));
@@ -751,7 +751,7 @@ router.get('/new', async (req, res) => {
 
   applyCatalogUnitType(prefill, vehicleCatalog);
 
-  res.render('workorders/new', {
+  return {
     customers,
     vehicles,
     vehicleCatalog,
@@ -759,7 +759,11 @@ router.get('/new', async (req, res) => {
     technicianDirectory,
     vehicleTypeError: req.query.vehicleTypeError || '',
     prefill,
-  });
+  };
+}
+
+router.get('/new', async (req, res) => {
+  res.render('workorders/new', await buildNewFormContext(req));
 });
 
 router.post('/new', async (req, res) => {
@@ -1135,4 +1139,91 @@ router.post('/:id/delete', async (req, res) => {
 });
 
 router.removeWorkOrder = removeWorkOrder;
+async function buildServiceModuleContext() {
+  return {
+    labor_price_matrix: await loadLaborPriceMatrix(),
+    parts_catalog: buildPartsCatalog(await store.getAll('parts_inventory')),
+  };
+}
+
+async function createWorkOrderFromQuotation(req, quotation) {
+  const customers = await store.getAll('customers');
+  const vehicles = await store.getAll('vehicles');
+  const vehicleCatalog = await loadVehicleTypeCatalog();
+  const body = {
+    customer_id: quotation.customer_id,
+    customer_entry: quotation.customer_name,
+    telephone_number: quotation.telephone_number,
+    car_brand: quotation.car_brand,
+    car_model: quotation.car_model,
+    car_year: quotation.car_year,
+    plate_number: quotation.plate_number,
+    vehicle_type: quotation.vehicle_type,
+    odometer: quotation.odometer,
+    customer_type: quotation.customer_type,
+  };
+  applyCatalogUnitType(body, vehicleCatalog);
+
+  const branch = canonicalizeBranchName(quotation.branch || receptionistBranch(req) || '');
+  const generatedNumber = await generateNextWorkOrderNumber();
+  const workOrderNumber = normalizeWorkOrderNumber(generatedNumber, generatedNumber);
+  const username = req.session && req.session.user ? normalizeText(req.session.user.username) : '';
+
+  const service_items = (Array.isArray(quotation.service_items) ? quotation.service_items : []).map(item => ({
+    description: item.description || '',
+    reason: item.reason || '',
+    labor_price: toNumber(item.labor_price),
+    service_qty: Math.max(1, Math.floor(toNumber(item.service_qty) || 1)),
+    part_number: normalizePartNumber(item.part_number),
+    unit: normalizeText(item.unit),
+    parts: item.parts || '',
+    parts_qty: Math.max(0, toNumber(item.parts_qty)),
+    parts_price: toNumber(item.parts_price),
+    total_price: toNumber(item.total_price),
+  }));
+
+  // Deduct stock per line like the Services page does. A line whose part can't be deducted
+  // (not stocked at this branch / short on stock) is still sent, minus its part number, so the
+  // work order is never blocked; the part number can be re-selected on the Services page.
+  const stockWarnings = [];
+  for (const item of service_items) {
+    if (!item.part_number || item.parts_qty <= 0) continue;
+    const result = await applyPartsInventoryAdjustments([], [item], workOrderNumber, username, branch);
+    if (!result.ok) {
+      stockWarnings.push(result.error);
+      item.part_number = '';
+    }
+  }
+
+  const customer_id = await resolveCustomerId(body, customers);
+  const vehicle_id = await resolveVehicleId(body, vehicles, customer_id, vehicleCatalog);
+  const selectedCustomer = customer_id ? (await store.getById('customers', customer_id)) || {} : {};
+  const selectedVehicle = vehicle_id ? (await store.getById('vehicles', vehicle_id)) || {} : {};
+
+  const wo = await store.create('work_orders', {
+    customer_id,
+    vehicle_id,
+    description: stockWarnings.length
+      ? `From quotation. Stock not deducted: ${stockWarnings.join(' ')} Re-select the part number on Services to deduct stock.`
+      : '',
+    status: resolveWorkOrderLifecycleStatus({ hasTechnician: false, postedStatus: 'open', currentStatus: 'open' }),
+    branch,
+    work_order_number: workOrderNumber,
+    service_advisor: username || normalizeText(quotation.created_by),
+    technician: '',
+    technician_assigned_at: '',
+    time_in: '',
+    time_out: '',
+    quotation_id: quotation.id,
+    service_items,
+    ...mergeWorkOrderMask(body, selectedCustomer, selectedVehicle),
+  });
+  await saveTransactionRecord(wo.id, 'created');
+  return { ok: true, workOrder: wo };
+}
+
+router.buildNewFormContext = buildNewFormContext;
+router.createWorkOrderFromQuotation = createWorkOrderFromQuotation;
+router.buildServiceModuleContext = buildServiceModuleContext;
+
 module.exports = router;

@@ -5,6 +5,7 @@ const store = require('../data/store');
 
 const router = express.Router();
 const ALLOWED_COLLECTIONS = ['users', 'customers', 'vehicles', 'work_orders', 'transaction_records', 'pricing_rules'];
+const SUMMARY_COLLECTIONS = ALLOWED_COLLECTIONS;
 const ADMIN_GATES = [
   { slug: 'transaction-database', label: 'Transaction Database' },
   { slug: 'removed-records', label: 'Removed Records' },
@@ -175,7 +176,10 @@ function buildAdminSummary(data) {
 }
 
 async function renderAdmin(res, options = {}) {
-  const data = await store.getRawData();
+  const data = {};
+  for (const name of SUMMARY_COLLECTIONS) {
+    data[name] = await store.getAll(name);
+  }
   const deletePasswordConfigured = await store.hasDeletePassword();
   const deletePasswordEnabled = await store.isDeletePasswordEnabled();
   const selectedCollection = ALLOWED_COLLECTIONS.includes(options.selectedCollection)
@@ -184,9 +188,7 @@ async function renderAdmin(res, options = {}) {
 
   return res.render('admin/index', {
     summary: buildAdminSummary(data),
-    databaseJson: JSON.stringify(data, null, 2),
     selectedCollection,
-    collectionJson: JSON.stringify(data[selectedCollection] || [], null, 2),
     collectionOptions: ALLOWED_COLLECTIONS,
     importMode: options.importMode || 'merge',
     importJson: options.importJson || '',
@@ -206,6 +208,19 @@ router.get('/', async (req, res) => {
     success: req.query.success || '',
     error: req.query.error || '',
   });
+});
+
+router.get('/data/collection/:name', async (req, res) => {
+  if (!ALLOWED_COLLECTIONS.includes(req.params.name)) {
+    return res.status(404).json({ error: 'Unknown collection.' });
+  }
+  const items = await store.getAll(req.params.name);
+  return res.type('application/json').send(JSON.stringify(items, null, 2));
+});
+
+router.get('/data/database', async (req, res) => {
+  const data = await store.getRawData();
+  return res.type('application/json').send(JSON.stringify(data, null, 2));
 });
 
 router.post('/delete-password', async (req, res) => {

@@ -11,9 +11,12 @@
     'date-range': 'Filter records by month or a custom start/end date window.',
     supplier: 'Limit the report to a specific supplier.',
     warehouse: 'Sort and list parts by warehouse or present location.',
-    audit: 'Side-by-side restock and sold transactions for accounting verification. Optional date window.',
+    audit: 'Side-by-side New / Stock and sold transactions for accounting verification. Optional date window.',
     'low-stock': 'Lists catalog items whose current stock is at or below the safe minimum.',
-    'whole-database': 'Downloads every parts-database row as a CSV file. No extra filters required.'
+    'whole-database': 'Downloads every parts-database row as a CSV file. No extra filters required.',
+    stock: 'Lists Stock (restock receipt) records. Date and location filters are optional.',
+    new: 'Lists New (first receipt) records. Date and location filters are optional.',
+    removed: 'Lists saved removal-history records, including removed transfer items. Date and location filters are optional.'
   };
 
   function openModal() {
@@ -87,7 +90,7 @@
     };
     Object.keys(fields).forEach(function (key) {
       var value = fields[key] && String(fields[key].value || '').trim();
-      if (value) params.set(key, value);
+      if (value && !fields[key].closest('.report-criteria').hidden) params.set(key, value);
     });
 
     window.open('/api/reports/generate?' + params.toString(), '_blank', 'noopener');

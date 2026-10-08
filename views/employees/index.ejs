@@ -27,12 +27,10 @@
 </style>
 
 <section class="dashboard-shell admin-shell">
-  <div class="dashboard-title admin-title">Employee Database</div>
-
   <% if (error) { %><p class="error"><%= error %></p><% } %>
   <% if (success) { %><p class="success"><%= success %></p><% } %>
 
-  <div class="no-print employee-toolbar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+  <div class="no-print employee-toolbar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
     <a class="btn employee-toolbar__btn employee-toolbar__btn--blue" href="/employees/new">+ New Employee</a>
     <button type="button" class="employee-toolbar__btn employee-toolbar__btn--orange" id="toggle-edb-panel">Download EDB</button>
     <a class="btn employee-toolbar__btn employee-toolbar__btn--yellow" href="/employees/export.csv?mode=all">Download EDB All</a>
@@ -96,7 +94,7 @@
     </form>
   </div>
 
-  <div class="table-scroll" style="overflow-x:auto;max-height:72vh;overflow-y:auto;">
+  <div class="table-scroll" style="overflow-x:auto;max-height:82vh;overflow-y:auto;">
     <table class="list" style="min-width:max-content;font-size:12px;">
       <thead style="position:sticky;top:0;z-index:5;">
         <tr>

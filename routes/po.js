@@ -3,6 +3,7 @@ const express = require('express');
 const store = require('../data/store');
 const portals = require('../lib/portals');
 const po = require('../lib/po-create');
+const approvalControls = require('../lib/approval-controls');
 
 const router = express.Router();
 
@@ -145,7 +146,8 @@ router.post('/save', requireCreator, safe(async (req, res) => {
     const totals = po.computeTotals(lines);
     const patch = Object.assign({}, header, { lines }, totals);
     let chain = [];
-    if (submit) {
+    const chainRequired = submit ? !(await approvalControls.autoApprovesAsync(store, 'po_module_approval', totals.grand_total)) : true;
+    if (submit && chainRequired) {
       const settings = await store.getPoSettings();
       chain = po.resolveApprovalChain(settings, header.department, totals.grand_total, user.id);
       if (!chain.length) {
@@ -156,7 +158,17 @@ router.post('/save', requireCreator, safe(async (req, res) => {
     }
 
     const history = (order && order.history ? order.history.slice() : []);
-    if (submit) {
+    if (submit && !chainRequired) {
+      const now = new Date().toISOString();
+      patch.status = po.STATUS.approved;
+      patch.approval_chain = [];
+      patch.current_level_index = 0;
+      patch.submitted_at = now;
+      patch.approved_at = now;
+      patch.auto_approved = true;
+      history.push(po.historyEntry('submitted', user, header.remarks));
+      history.push(po.historyEntry('approved', { id: '', username: approvalControls.AUTO_APPROVER }, 'Within the auto-approve amount range set in the GM Control Panel.'));
+    } else if (submit) {
       patch.status = po.STATUS.pending;
       patch.approval_chain = chain;
       patch.current_level_index = 0;

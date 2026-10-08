@@ -7,6 +7,8 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 const customersRouter = require('./routes/customers');
+const quotationsRouter = require('./routes/quotations');
+const expensesRouter = require('./routes/expenses');
 const vehiclesRouter = require('./routes/vehicles');
 const workOrdersRouter = require('./routes/workorders');
 const workOrderTransactionsRouter = require('./routes/workorder-transactions');
@@ -31,6 +33,7 @@ const approvalsRouter = require('./routes/approvals');
 const reportsRouter = require('./routes/reports');
 const poRouter = require('./routes/po');
 const poLib = require('./lib/po-create');
+const { listDecidedTickets } = require('./lib/requester-tickets');
 const store = require('./data/store');
 const {
   buildComebackWorkOrderIdSet,
@@ -47,6 +50,7 @@ const {
 } = require('./lib/branches');
 const { buildOcpdReport } = require('./lib/ocpd-reporting');
 const { buildTechnicianOperations, toDashboardStats } = require('./lib/technician-activity');
+const { buildSalesReportRows, summarizeSalesReportRows } = require('./lib/sales-report');
 const { getFteSeedTransactions } = require('./lib/fte-seed');
 const {
   TYPE_SOLD,
@@ -74,6 +78,7 @@ const {
 } = require('./lib/frontline-roles');
 const stockAlerts = require('./lib/parts-stock-alerts');
 const portals = require('./lib/portals');
+const gmMenu = require('./lib/gm-menu');
 const ROLE_STM = portals.ROLE_STM;
 const ROLE_PARTS_MANAGER = portals.ROLE_PARTS_MANAGER;
 const ROLE_TECHNICIAN = portals.ROLE_TECHNICIAN;
@@ -128,7 +133,9 @@ const HR_SEED_PASSWORD = 'PW123456';
 // HR Sign Up also has a Disable Login Auth button for empty-form login while building.
 const AUTH_DISABLED = envLoginDisabled();
 const requestedBypassRole = String(process.env.BYPASS_ROLE || ROLE_SERVICE_RECEPTIONIST).trim().toLowerCase();
-const BYPASS_ROLE = BYPASS_ROLES.has(requestedBypassRole) ? requestedBypassRole : ROLE_SERVICE_RECEPTIONIST;
+const BYPASS_ROLE = BYPASS_ROLES.has(requestedBypassRole) && portals.isRoleEnabled(requestedBypassRole)
+  ? requestedBypassRole
+  : ROLE_SERVICE_RECEPTIONIST;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -200,6 +207,10 @@ const authLimiter = rateLimit({
 });
 
 app.use(async (req, res, next) => {
+  if (req.session.user && !portals.isRoleEnabled(req.session.user.role)) {
+    delete req.session.user;
+    req.session.globalError = 'Your role is not enabled in the current setup.';
+  }
   if (AUTH_DISABLED && !req.session.user) {
     const roleLabel = BYPASS_ROLE === ROLE_GENERAL_MANAGER
       ? 'GM'
@@ -211,6 +222,8 @@ app.use(async (req, res, next) => {
     };
   }
   res.locals.currentUser = req.session.user || null;
+  const signedInBranch = canonicalizeBranchName(req.session.user && req.session.user.branch);
+  res.locals.signedInBranch = DEFAULT_OPERATIONAL_BRANCHES.includes(signedInBranch) ? signedInBranch : '';
   res.locals.globalError = req.session.globalError || '';
   res.locals.loginAuthDisabled = isLoginAuthDisabled();
   res.locals.openLoginEnabled = isOpenLoginEnabled();
@@ -231,8 +244,11 @@ app.use(async (req, res, next) => {
   res.locals.accessiblePortals = activeRole ? portals.accessiblePortals(activeRole) : [];
   res.locals.accessibleGroups = activeRole ? portals.accessibleGroups(activeRole) : [];
   res.locals.canGrant = (portalKey, grantKey) => portals.hasGrant(activeRole, portalKey, grantKey);
+  res.locals.portalEnabled = portals.isPortalEnabled;
+  res.locals.gmMenu = gmMenu;
   res.locals.pendingApprovalCount = res.locals.canApproveRequests
     ? (await store.getAll('approval_requests')).filter(request => request.status === 'pending').length
+      + (await store.getAll('parts_purchase_orders')).filter(po => String(po.status || '').trim().toLowerCase() === 'pending_approval').length
     : 0;
   const poSettings = await store.getPoSettings();
   const poUser = req.session.user || null;
@@ -243,6 +259,15 @@ app.use(async (req, res, next) => {
     : 0;
   res.locals.isPoApprover = res.locals.poPendingCount > 0
     || (poSettings.approvers || []).some((rule) => poUser && String(rule.approver_user_id) === String(poUser.id));
+  res.locals.myTickets = [];
+  const wantsPage = req.method === 'GET' && !req.path.startsWith('/api') && String(req.headers.accept || '').includes('text/html');
+  if (poUser && wantsPage) {
+    try {
+      res.locals.myTickets = await listDecidedTickets(poUser);
+    } catch (error) {
+      console.error('Unable to load requester tickets:', error.message || error);
+    }
+  }
   delete req.session.globalError;
   next();
 });
@@ -599,10 +624,17 @@ function buildTopTechnicians(workOrders) {
 
 const GM_BRANCH_TARGET_TOTAL = 25;
 
+function currentTargetMonth() {
+  const now = new Date();
+  return {
+    monthKey: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+    monthLabel: now.toLocaleString('en-US', { month: 'long', year: 'numeric' }),
+  };
+}
+
 function defaultGmBranchSalesTargets() {
   return {
-    monthKey: '2026-08',
-    monthLabel: 'August 2026',
+    ...currentTargetMonth(),
     branches: {
       Carx2: 1800000,
       Carmen: 1500000,
@@ -626,9 +658,9 @@ function resolveGmBranchSalesTargets(pricingSettings) {
     const value = Number(storedBranches[name]);
     branches[name] = Number.isFinite(value) && value >= 0 ? value : defaults.branches[name];
   });
+  // Targets are standing monthly goals: they carry forward until the GM changes them.
   return {
-    monthKey: stored.monthKey || defaults.monthKey,
-    monthLabel: stored.monthLabel || defaults.monthLabel,
+    ...currentTargetMonth(),
     branches,
   };
 }
@@ -714,7 +746,7 @@ function buildRevenueBarsFromTotals(opts) {
   const pacingHealthPct = expectedPct > 0 ? (actualPct / expectedPct) * 100 : 0;
   const healthStatus = pacingHealthStatus(pacingHealthPct);
   const targetShare = (amount) => (monthlyTarget > 0 ? (amount / monthlyTarget) * 100 : 0);
-  const noTargetMeta = 'Set this branch target in GM My Enterprises';
+  const noTargetMeta = 'Set this branch target in GM Targets & Incentives';
   const monthLabel = opts.monthLabel || '';
 
   return {
@@ -954,6 +986,30 @@ function resolveGmReportPeriod(value) {
     year: 'numeric',
   }).format(new Date(`${dateKey}T12:00:00+08:00`));
   return { dateKey, label, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear };
+}
+
+// Start/End range for the Targets & Incentives page; `date` stays the end date so older links keep working.
+function resolveGmReportRange(startValue, endValue) {
+  const end = resolveGmReportPeriod(endValue);
+  const requestedStart = String(startValue || '').trim();
+  let startKey = /^\d{4}-\d{2}-\d{2}$/.test(requestedStart) && Number.isFinite(new Date(`${requestedStart}T00:00:00+08:00`).getTime())
+    ? requestedStart
+    : `${end.dateKey.slice(0, 8)}01`;
+  let period = end;
+  if (startKey > end.dateKey) {
+    period = resolveGmReportPeriod(startKey);
+    startKey = end.dateKey;
+  }
+  const rangeStart = new Date(`${startKey}T00:00:00+08:00`);
+  const startLabel = new Intl.DateTimeFormat('en-PH', {
+    timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric',
+  }).format(new Date(`${startKey}T12:00:00+08:00`));
+  return {
+    ...period,
+    startKey,
+    rangeStart,
+    rangeLabel: startKey === period.dateKey ? period.label : `${startLabel} – ${period.label}`,
+  };
 }
 
 function normalizeGmDuration(value) {
@@ -1372,7 +1428,7 @@ function buildGmTechnicianPerformance(workOrders, employees, pricingSettings, pe
     hourlyRate,
     incentiveConfigured: false,
     periods: [
-      { key: 'mtd', label: 'MTD', rows: rowsFor(period.startOfMonth, period.endOfDay) },
+      { key: 'mtd', label: 'MTD', rows: rowsFor(period.rangeStart || period.startOfMonth, period.endOfDay) },
       { key: 'week', label: 'Week', rows: rowsFor(period.startOfWeek, period.endOfWeek) },
       { key: 'month', label: 'Month', rows: rowsFor(period.startOfMonth, period.endOfMonth) },
     ],
@@ -1398,7 +1454,7 @@ function buildGmEmployeeSalesPerformance(transactionRecords, employees, pricingS
 
   const totals = new Map(Array.from(roster.entries()).map(([key, profile]) => [key, { ...profile, totalSales: 0 }]));
   getLatestTransactionSnapshots(transactionRecords || [], period.endOfDay).forEach(({ record, date }) => {
-    if (date < period.startOfMonth) return;
+    if (date < (period.rangeStart || period.startOfMonth)) return;
     const advisor = canonicalGmTechnicianName(record['Service Advice Advisor'] || record.service_advisor);
     const entry = totals.get(advisor);
     if (entry) entry.totalSales += getTransactionRecordTotal(record);
@@ -1413,7 +1469,7 @@ function buildGmEmployeeSalesPerformance(transactionRecords, employees, pricingS
 
 function buildGmCurrentTransactions(transactionRecords, period) {
   return getLatestTransactionSnapshots(transactionRecords || [], period.endOfDay)
-    .filter(({ date }) => date >= period.startOfDay)
+    .filter(({ date }) => date >= (period.rangeStart || period.startOfDay))
     .map(({ record, date }) => ({
       date,
       workOrderNumber: String(record['work order Number'] || record.work_order_number || '-'),
@@ -2169,19 +2225,16 @@ app.get('/', async (req, res) => {
 });
 
 app.get('/service', requirePortalAccess(portals.PORTAL_SERVICE), async (req, res) => {
-  const [workOrders, customers, employees, partsTransactions] = await Promise.all([
+  const [workOrders, customers, employees, partsInventory] = await Promise.all([
     store.getAll('work_orders'),
     store.getAll('customers'),
     store.getAll('employees'),
-    store.getAll('parts_transactions'),
+    store.getAll('parts_inventory'),
   ]);
   
-  // Count pending receiving transactions (parts awaiting branch confirmation)
-  const receivingCount = (partsTransactions || []).filter((tx) => {
-    const status = String(tx.request_status || '').trim().toLowerCase();
-    const fulfilled = String(tx.fulfillment || '').trim().toLowerCase();
-    return status === 'approved' && fulfilled !== 'complete' && !tx.received_at;
-  }).length;
+  // Stock-transfer lines from Warehouse 1 still awaiting branch receipt (Parts Receiving).
+  const { isAwaitingBranchReceive } = require('./lib/parts-transfer-receive');
+  const receivingCount = (partsInventory || []).filter((row) => isAwaitingBranchReceive(row)).length;
   
   return res.render('service/index', {
     openWorkOrdersCount: (workOrders || []).filter((wo) => !isWorkOrderClosed(wo)).length,
@@ -2209,6 +2262,13 @@ app.get('/api/health/database', async (req, res) => {
 });
 
 app.get('/receiving', requireAnyRole(
+  ROLE_SERVICE_ADVISOR,
+  ROLE_SERVICE_RECEPTIONIST,
+  ROLE_SENIOR_SERVICE_RECEPTIONIST,
+  ROLE_GENERAL_MANAGER
+), (req, res) => res.redirect('/parts/receiving'));
+
+app.get('/receiving-legacy', requireAnyRole(
   ROLE_SERVICE_ADVISOR,
   ROLE_SERVICE_RECEPTIONIST,
   ROLE_SENIOR_SERVICE_RECEPTIONIST,
@@ -2340,6 +2400,8 @@ app.get('/service-receptionist', requireAnyRole(
     normalizeBranchKey(employee.work_location_branch_id) === branchKey
   ));
   const openWorkOrdersCount = workOrders.filter((wo) => !isWorkOrderClosed(wo)).length;
+  const salesReportRows = buildSalesReportRows(workOrders, customers, vehicles);
+  const salesReportSummary = summarizeSalesReportRows(salesReportRows);
   stockAlerts.reconcileWarehouse1Stock(rawData);
   return res.render('index', {
     work_orders: workOrders,
@@ -2351,6 +2413,8 @@ app.get('/service-receptionist', requireAnyRole(
     roleLabel: frontlineRoleLabel(user.role) || 'SA',
     branch: branchName,
     openWorkOrdersCount,
+    salesReportRows,
+    salesReportSummary,
     branchRevenueBars: buildFrontlineBranchRevenueBars(branchName, transactionRecords, pricingSettings),
     readyMessages: stockAlerts.listReadyMessages(rawData, branchName),
   });
@@ -2429,13 +2493,17 @@ app.post('/gm/branch-targets', requireRole(ROLE_GENERAL_MANAGER), async (req, re
     },
   });
   const date = String((req.body && req.body.date) || req.query.date || '').trim();
+  const startDate = String((req.body && req.body.start) || req.query.start || '').trim();
   const duration = normalizeGmDuration((req.body && req.body.duration) || req.query.duration);
   const params = new URLSearchParams();
   if (date) params.set('date', date);
+  if (startDate && /^\d{4}-\d{2}-\d{2}$/.test(startDate)) params.set('start', startDate);
   if (duration) params.set('duration', duration);
   params.set('targetsSaved', '1');
   const returnTo = String((req.body && req.body.return_to) || '').trim().toLowerCase();
-  const dest = returnTo === 'enterprise' ? '/gm/enterprise' : '/gm';
+  const toTargetsPage = returnTo === 'targets-incentives' || returnTo === 'incentives';
+  const dest = toTargetsPage ? '/gm/targets-incentives' : '/gm';
+  if (toTargetsPage) params.delete('duration');
   return res.redirect(dest + '?' + params.toString());
 });
 
@@ -2443,9 +2511,7 @@ app.get('/gm', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
   return res.render('gm/index', await loadGmDashboardPage(req));
 });
 
-app.get('/gm/enterprise', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
-  return res.render('gm/enterprise', await loadGmDashboardPage(req));
-});
+
 
 app.get(
   '/gm/fte',
@@ -2680,19 +2746,132 @@ app.get(
   }
 );
 
-app.get('/gm/performance-incentives', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
+app.get('/gm/performance-incentives', requireRole(ROLE_GENERAL_MANAGER), (req, res) => {
+  const query = new URLSearchParams(req.query).toString();
+  return res.redirect(301, '/gm/targets-incentives' + (query ? '?' + query : ''));
+});
+
+app.get('/gm/:hub(work-spaces|more)', requireRole(ROLE_GENERAL_MANAGER), (req, res) => {
+  const hub = gmMenu.GM_HUBS[req.params.hub];
+  return res.render('gm/hub', { hub, groups: gmMenu.hubGroups(req.params.hub), items: gmMenu.hubItems(req.params.hub) });
+});
+
+app.get('/gm/my-record', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
+  const myRecord = require('./lib/gm-my-record');
+  const all = myRecord.buildRecords(await store.getRawData());
+  const filters = {
+    q: String(req.query.q || '').trim(),
+    type: String(req.query.type || '').trim(),
+    status: String(req.query.status || '').trim().toLowerCase(),
+    start: String(req.query.start || '').trim(),
+    end: String(req.query.end || '').trim(),
+  };
+  const records = myRecord.filterRecords(all, filters);
+  const countBy = (rows, key) => rows.reduce((acc, row) => { acc[row[key]] = (acc[row[key]] || 0) + 1; return acc; }, {});
+  return res.render('gm/my-record', {
+    records,
+    filters,
+    totalCount: all.length,
+    types: Object.keys(countBy(all, 'type')).sort(),
+    statuses: Object.keys(countBy(all, 'status')).sort(),
+    statusCounts: countBy(records, 'status'),
+  });
+});
+
+app.get('/gm/control-panel', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
+  const gmApprovalControls = require('./lib/approval-controls');
+  const [saved, pricingSettings] = await Promise.all([
+    store.getApprovalControls(),
+    store.getPricingSettings(),
+  ]);
+  return res.render('gm/control-panel', {
+    controls: gmApprovalControls.CONTROLS.map((control) => Object.assign({}, control, {
+      required: gmApprovalControls.isRequired(saved, control.key),
+      threshold: gmApprovalControls.threshold(saved, control.key),
+    })),
+    updatedAt: saved.updated_at || '',
+    updatedBy: saved.updated_by || '',
+    pricingSettings,
+    success: String(req.query.success || ''),
+    error: String(req.query.error || ''),
+    pricingSuccess: String(req.query.pricingSuccess || ''),
+    pricingError: String(req.query.pricingError || ''),
+  });
+});
+
+app.post('/gm/control-panel/pricing', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
+  const body = req.body || {};
+  const problems = [];
+
+  const hourlyRateRaw = String(body.hourly_rate || '').trim();
+  const marginRaw = String(body.parts_retail_margin_percent || '').trim();
+  const hourlyRate = Number(hourlyRateRaw);
+  const margin = Number(marginRaw);
+
+  if (!hourlyRateRaw || !Number.isFinite(hourlyRate) || hourlyRate <= 0) {
+    problems.push('Hour/Labor Rate must be a number greater than 0.');
+  }
+  if (!marginRaw || !Number.isFinite(margin) || margin < 0) {
+    problems.push('Part Retail Margin must be a number of 0 or more.');
+  }
+
+  if (problems.length) {
+    return res.redirect('/gm/control-panel?pricingError=' + encodeURIComponent(problems.join(' ')));
+  }
+
+  await store.updatePricingSettings({
+    hourly_rate: hourlyRate,
+    parts_retail_margin_percent: margin,
+  });
+  return res.redirect('/gm/control-panel?pricingSuccess=' + encodeURIComponent('Pricing controls saved.'));
+});
+
+app.post('/gm/control-panel', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
+  const gmApprovalControls = require('./lib/approval-controls');
+  const body = req.body || {};
+  const next = { updated_by: String((req.session.user && req.session.user.username) || '').trim() };
+  const problems = [];
+  gmApprovalControls.CONTROLS.forEach((control) => {
+    const required = String(body[control.key] || '') === 'on';
+    next[control.key] = required;
+    if (!control.hasAmount) return;
+    const minRaw = String(body[`${control.key}_min`] || '').trim();
+    const maxRaw = String(body[`${control.key}_max`] || '').trim();
+    const min = gmApprovalControls.toAmount(minRaw);
+    const max = gmApprovalControls.toAmount(maxRaw);
+    if ((minRaw && min === null) || (maxRaw && max === null)) {
+      problems.push(`${control.label}: amounts must be numbers of 0 or more.`);
+    } else if (!required && max === null) {
+      problems.push(`${control.label}: approval is OFF, so set the "To" amount of the auto-approve range.`);
+    } else if (min !== null && max !== null && max < min) {
+      problems.push(`${control.label}: "To" must be greater than or equal to "From".`);
+    }
+    next[`${control.key}_min`] = min === null ? '' : min;
+    next[`${control.key}_max`] = max === null ? '' : max;
+  });
+  if (problems.length) {
+    return res.redirect('/gm/control-panel?error=' + encodeURIComponent(problems.join(' ')));
+  }
+  await store.setApprovalControls(next);
+  return res.redirect('/gm/control-panel?success=' + encodeURIComponent('Control Panel saved.'));
+});
+
+app.get('/gm/targets-incentives', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
   const [workOrders, transactionRecords, employees, pricingSettings] = await Promise.all([
     store.getAll('work_orders'),
     store.getAll('transaction_records'),
     store.getAll('employees'),
     store.getPricingSettings(),
   ]);
-  const period = resolveGmReportPeriod(req.query.date);
-  return res.render('gm/performance-incentives', {
-    reporting: { date: period.dateKey, label: period.label },
+  const period = resolveGmReportRange(req.query.start, req.query.date);
+  return res.render('gm/targets-incentives', {
+    reporting: { date: period.dateKey, start: period.startKey, label: period.label, rangeLabel: period.rangeLabel },
     technicianPerformance: buildGmTechnicianPerformance(workOrders, employees, pricingSettings, period),
     employeeSalesPerformance: buildGmEmployeeSalesPerformance(transactionRecords, employees, pricingSettings, period),
     currentTransactions: buildGmCurrentTransactions(transactionRecords, period),
+    branchSalesTargets: resolveGmBranchSalesTargets(pricingSettings),
+    targetBranches: DEFAULT_OPERATIONAL_BRANCHES.slice(),
+    targetsSaved: String(req.query.targetsSaved || '') === '1',
   });
 });
 
@@ -3066,9 +3245,13 @@ app.use('/employees', requireAnyRole(
   ROLE_HR_CLERK,
   ROLE_PAYROLL
 ), employeesRouter);
-app.use('/stores', requirePortalAccess(portals.PORTAL_STORES), storesRouter);
+if (portals.isPortalEnabled(portals.PORTAL_STORES)) {
+  app.use('/stores', requirePortalAccess(portals.PORTAL_STORES), storesRouter);
+}
 
 app.use('/customers', customersRouter);
+app.use('/quotations', quotationsRouter);
+app.use('/expenses', expensesRouter);
 app.use('/vehicles', vehiclesRouter);
 app.use('/work-orders', workOrdersRouter);
 app.use('/work-order-transactions', workOrderTransactionsRouter);
@@ -3107,8 +3290,107 @@ app.use('/parts', requireAnyRole(
 app.use('/helper', helperRouter);
 app.use('/approvals', approvalsRouter);
 app.use('/po', poRouter);
+async function loadKpiReportPage(selectedBranch) {
+  const [workOrders, transactionRecords, pricingSettings] = await Promise.all([
+    store.getAll('work_orders'),
+    store.getAll('transaction_records'),
+    store.getPricingSettings(),
+  ]);
+  const window = monthPacingWindow();
+  const pacing = buildPacingByScope(transactionRecords, pricingSettings);
+  const snapshots = getLatestTransactionSnapshots(transactionRecords, window.period.endOfDay)
+    .filter(({ date }) => date >= window.period.startOfMonth && date < window.period.endOfDay);
+
+  const rows = DEFAULT_OPERATIONAL_BRANCHES.map((name) => {
+    const scope = pacing[name] || {};
+    const key = normalizeGmBranchKey(name);
+    const roCount = snapshots.filter(({ record }) => normalizeGmBranchKey(record && record.Branch) === key).length;
+    const branchOrders = (workOrders || []).filter((wo) => (
+      normalizeGmBranchKey(canonicalizeBranchName(wo.branch) || wo.branch) === key
+    ));
+    const gross = Number(scope.totalGross || 0);
+    return {
+      branch: name,
+      laborRevenue: Number(scope.laborRevenue || 0),
+      partsRevenue: Number(scope.partsRevenue || 0),
+      totalGross: gross,
+      monthlyTarget: Number(scope.monthlyTarget || 0),
+      actualPct: Number(scope.actualPct || 0),
+      pacingHealthPct: Number(scope.pacingHealthPct || 0),
+      health: pacingHealthStatus(Number(scope.pacingHealthPct || 0)),
+      invoicedCount: roCount,
+      averageTicket: roCount > 0 ? gross / roCount : 0,
+      openCount: branchOrders.filter(isWorkOrderOpen).length,
+      completedCount: branchOrders.filter((wo) => String(wo.status || '').trim().toLowerCase() === 'completed').length,
+    };
+  });
+
+  const wanted = canonicalizeBranchName(selectedBranch) || '';
+  const visible = wanted && DEFAULT_OPERATIONAL_BRANCHES.includes(wanted)
+    ? rows.filter((row) => row.branch === wanted)
+    : rows;
+  const sum = (field) => visible.reduce((acc, row) => acc + Number(row[field] || 0), 0);
+  const totals = {
+    laborRevenue: sum('laborRevenue'),
+    partsRevenue: sum('partsRevenue'),
+    totalGross: sum('totalGross'),
+    monthlyTarget: sum('monthlyTarget'),
+    invoicedCount: sum('invoicedCount'),
+    openCount: sum('openCount'),
+    completedCount: sum('completedCount'),
+  };
+  totals.actualPct = totals.monthlyTarget > 0 ? roundOneDecimal((totals.totalGross / totals.monthlyTarget) * 100) : 0;
+  totals.pacingHealthPct = window.expectedPct > 0 ? roundOneDecimal((totals.actualPct / window.expectedPct) * 100) : 0;
+  totals.averageTicket = totals.invoicedCount > 0 ? totals.totalGross / totals.invoicedCount : 0;
+
+  return {
+    rows: visible,
+    totals,
+    selectedBranch: wanted && DEFAULT_OPERATIONAL_BRANCHES.includes(wanted) ? wanted : 'all',
+    branches: DEFAULT_OPERATIONAL_BRANCHES.slice(),
+    monthLabel: (pacing.ALL && pacing.ALL.monthLabel) || window.period.label || '',
+    expectedPct: roundOneDecimal(window.expectedPct),
+    elapsedDays: window.elapsedDays,
+    daysInMonth: window.daysInMonth,
+  };
+}
+
+app.get('/kpi', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_ADMIN, ROLE_STM), async (req, res) => {
+  try {
+    return res.render('kpi/index', await loadKpiReportPage(req.query.branch));
+  } catch (error) {
+    console.error('GET /kpi failed', error);
+    return res.status(500).send('Unable to load sales and branch metrics.');
+  }
+});
+
+app.get('/kpi/sales.csv', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_ADMIN, ROLE_STM), async (req, res) => {
+  try {
+    const data = await loadKpiReportPage(req.query.branch);
+    const csvVal = (v) => {
+      const s = String(v == null ? '' : v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const lines = [[
+      'Branch', 'MTD Labor', 'MTD Parts', 'MTD Gross', 'Month Target', '% of Target',
+      'Pacing Health %', 'Invoiced ROs', 'Average Ticket', 'Open WOs', 'Completed WOs',
+    ].join(',')];
+    data.rows.forEach((r) => lines.push([
+      r.branch, r.laborRevenue.toFixed(2), r.partsRevenue.toFixed(2), r.totalGross.toFixed(2),
+      r.monthlyTarget.toFixed(2), r.actualPct, r.pacingHealthPct, r.invoicedCount,
+      r.averageTicket.toFixed(2), r.openCount, r.completedCount,
+    ].map(csvVal).join(',')));
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="sales-branch-metrics.csv"');
+    return res.send(lines.join('\n'));
+  } catch (error) {
+    console.error('GET /kpi/sales.csv failed', error);
+    return res.status(500).send('Unable to export.');
+  }
+});
+
 app.use('/api/kpi', kpiRouter);
-app.use('/kpi', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_ADMIN, ROLE_STM), kpiRouter);
+app.use('/kpi',  requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_ADMIN, ROLE_STM), kpiRouter);
 
 async function ensureEmployeeDbLogins() {
   await ensureSeedHrAccount();

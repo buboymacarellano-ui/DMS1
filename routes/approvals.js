@@ -3,6 +3,7 @@ const store = require('../data/store');
 const workOrdersRouter = require('./workorders');
 const { isFrontlineRole } = require('../lib/frontline-roles');
 const { recordGmApproval, TYPES: GM_TXN_TYPES } = require('../lib/gm-transaction-log');
+const approvalControls = require('../lib/approval-controls');
 
 const router = express.Router();
 const APPROVER_ROLES = new Set(['admin', 'hr', 'general_manager', 'service_technical_manager']);
@@ -27,6 +28,39 @@ function requireApprover(req, res, next) {
 
 function requesterEmployeeId(user) {
   return normalize(user.receptionist_employee_id || user.technician_employee_id || user.employee_id);
+}
+
+// Applies an approved CBD request; returns an error message or ''.
+async function applyCbd(request) {
+  const employees = await store.getAll('employees');
+  const employee = employees.find(item => normalize(item.employee_id) === normalize(request.employee_id));
+  if (!employee) return 'Employee record not found.';
+  await store.update('employees', employee.id, {
+    work_location_branch_id: request.target_branch,
+    updated_at: new Date().toISOString(),
+  });
+  const users = await store.getAll('users');
+  const linkedUsers = users.filter(user => (
+    normalize(user.receptionist_employee_id || user.technician_employee_id || user.employee_id) === normalize(request.employee_id)
+  ));
+  await Promise.all(linkedUsers.map(user => store.update('users', user.id, { branch: request.target_branch })));
+  return '';
+}
+
+// Applies an approved RWO request; returns an error message or ''.
+async function applyRwo(request, actor) {
+  const removed = await workOrdersRouter.removeWorkOrder(request.work_order_id, actor);
+  return removed ? '' : 'Work order no longer exists.';
+}
+
+function autoResolvedFields() {
+  return {
+    status: 'approved',
+    resolved_at: new Date().toISOString(),
+    resolved_by: approvalControls.AUTO_APPROVER,
+    resolved_by_role: 'system',
+    auto_approved: true,
+  };
 }
 
 router.get('/', async (req, res) => {
@@ -95,7 +129,7 @@ router.post('/request/cbd', async (req, res) => {
   const employee = (await store.getAll('employees')).find(item => normalize(item.employee_id) === employeeId);
   if (!employee) return res.redirect('/approvals?error=Employee+record+not+found.');
 
-  await store.create('approval_requests', {
+  const request = await store.create('approval_requests', {
     type: 'CBD',
     status: 'pending',
     requested_by_user_id: user.id || '',
@@ -107,6 +141,12 @@ router.post('/request/cbd', async (req, res) => {
     target_branch: targetBranch,
     reason: normalize(req.body.reason),
   });
+  if (!(await approvalControls.requires(store, 'cbd_approval'))) {
+    const failure = await applyCbd(request);
+    if (failure) return res.redirect('/approvals?error=' + encodeURIComponent(failure));
+    await store.update('approval_requests', request.id, autoResolvedFields());
+    return res.redirect('/approvals?success=' + encodeURIComponent('Branch change applied (approval is off in the GM Control Panel).'));
+  }
   return res.redirect('/approvals?success=CBD+request+submitted.');
 });
 
@@ -127,7 +167,7 @@ router.post('/request/rwo', async (req, res) => {
     request.type === 'RWO' && request.status === 'pending' && request.work_order_id === workOrderId
   ));
   if (!existing) {
-    await store.create('approval_requests', {
+    const request = await store.create('approval_requests', {
       type: 'RWO',
       status: 'pending',
       requested_by_user_id: user.id || '',
@@ -138,6 +178,10 @@ router.post('/request/rwo', async (req, res) => {
       branch: normalize(workOrder.branch),
       reason: normalize(req.body.reason),
     });
+    if (!(await approvalControls.requires(store, 'rwo_approval'))) {
+      const failure = await applyRwo(request, user);
+      if (!failure) await store.update('approval_requests', request.id, autoResolvedFields());
+    }
   }
   return res.redirect('/work-orders');
 });
@@ -151,23 +195,13 @@ router.post('/:id/resolve', requireApprover, async (req, res) => {
   if (!REQUEST_TYPES.has(request.type)) return res.redirect('/approvals?error=Unknown+request+type.');
 
   if (decision === 'approved' && request.type === 'CBD') {
-    const employees = await store.getAll('employees');
-    const employee = employees.find(item => normalize(item.employee_id) === normalize(request.employee_id));
-    if (!employee) return res.redirect('/approvals?error=Employee+record+not+found.');
-    await store.update('employees', employee.id, {
-      work_location_branch_id: request.target_branch,
-      updated_at: new Date().toISOString(),
-    });
-    const users = await store.getAll('users');
-    const linkedUsers = users.filter(user => (
-      normalize(user.receptionist_employee_id || user.technician_employee_id || user.employee_id) === normalize(request.employee_id)
-    ));
-    await Promise.all(linkedUsers.map(user => store.update('users', user.id, { branch: request.target_branch })));
+    const failure = await applyCbd(request);
+    if (failure) return res.redirect('/approvals?error=' + encodeURIComponent(failure));
   }
 
   if (decision === 'approved' && request.type === 'RWO') {
-    const removed = await workOrdersRouter.removeWorkOrder(request.work_order_id, activeUser(req));
-    if (!removed) return res.redirect('/approvals?error=Work+order+no+longer+exists.');
+    const failure = await applyRwo(request, activeUser(req));
+    if (failure) return res.redirect('/approvals?error=' + encodeURIComponent(failure));
   }
 
   const resolver = activeUser(req);

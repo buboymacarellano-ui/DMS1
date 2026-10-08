@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Login Interface</title>
+  <link rel="stylesheet" href="/fonts/inter.css">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -24,6 +25,7 @@
         { key: 'service', label: 'Service' },
         { key: 'parts', label: 'Parts' },
         { key: 'admin_office', label: 'Admin & Office' },
+        { key: 'general_manager', label: 'General Manager' },
       ]; %>
       <% const loginRolesByGroup = (typeof rolesByGroup !== 'undefined' && rolesByGroup) ? rolesByGroup : {}; %>
       <% const loginLocationsByGroup = (typeof locationsByGroup !== 'undefined' && locationsByGroup) ? locationsByGroup : {}; %>
@@ -109,6 +111,7 @@
         'senior_service_receptionist'
       ]);
 
+      // Server-provided lists (lib/portals.js) are the source of truth; this fallback only covers an empty payload.
       const fallbackRoles = {
         service: [
           { key: 'service_technical_manager', label: 'STM' },
@@ -121,29 +124,18 @@
           { key: 'parts_manager', label: 'PM' },
           { key: 'parts_clerk', label: 'Clerk' },
         ],
-        stores: [
-          { key: 'operations_manager', label: 'OM - Operation Manager' },
-          { key: 'store_manager', label: 'SM - Store Manager' },
-          { key: 'cashier', label: 'Cashier' },
-          { key: 'stores_clerk', label: 'Clerk' },
-        ],
-        hr: [
+        admin_office: [
           { key: 'hr_manager', label: 'HM - HR Manager' },
-          { key: 'hr_generalist', label: 'Generalist' },
-          { key: 'payroll', label: 'Payroll' },
-          { key: 'hr_clerk', label: 'Clerk' },
-        ],
-        gm: [
-          { key: 'general_manager', label: 'GM' },
-        ],
-        fo: [
-          { key: 'assets_facilities', label: 'Assets & Facilities' },
           { key: 'accounting', label: 'Accounting' },
+          { key: 'finance_manager', label: 'Finance Manager' },
           { key: 'admin', label: 'Admin' },
+        ],
+        general_manager: [
+          { key: 'general_manager', label: 'GM' },
         ],
       };
       const serverRoles = <%- JSON.stringify(loginRolesByGroup || {}) %>;
-      const rolesByDepartment = Object.assign({}, serverRoles, fallbackRoles);
+      const rolesByDepartment = Object.assign({}, fallbackRoles, serverRoles);
       const locationsByDepartment = Object.assign({}, <%- JSON.stringify(loginLocationsByGroup || {}) %>);
       const selectedRole = <%- JSON.stringify(roleNow) %>;
       const selectedLocation = <%- JSON.stringify(typeof branch !== 'undefined' ? branch : '') %>;
@@ -209,7 +201,8 @@
         form.setAttribute('data-department', department);
         const keepRole = fromDepartmentChange ? '' : (roleSelect.value || selectedRole);
         fillRoles(department, keepRole);
-        const isGm = department === 'admin_office' && roleSelect.value === 'general_manager';
+        const isGm = department === 'general_manager';
+        const passwordInput = document.getElementById('login-password-input');
         roleField.hidden = isGm;
         idField.hidden = false;
         roleSelect.required = !isGm;
@@ -218,10 +211,13 @@
           roleSelect.required = false;
           idField.hidden = false;
           idInput.required = true;
-          idLabel.textContent = 'Name';
+          idLabel.textContent = 'ID';
           idInput.placeholder = 'GM';
           if (fromDepartmentChange || !String(idInput.value || '').trim()) {
             idInput.value = 'GM';
+          }
+          if (passwordInput && (fromDepartmentChange || !passwordInput.value)) {
+            passwordInput.value = '111111';
           }
           locationField.hidden = true;
           locationInput.required = false;
@@ -233,6 +229,9 @@
         idLabel.textContent = 'Employee ID';
         if (fromDepartmentChange && String(idInput.value || '').trim().toUpperCase() === 'GM') {
           idInput.value = '';
+        }
+        if (fromDepartmentChange && passwordInput && passwordInput.value === '111111') {
+          passwordInput.value = '';
         }
       }
 

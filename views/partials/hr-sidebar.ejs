@@ -1,0 +1,38 @@
+<%
+  const hrCanPayroll = typeof canGrant === 'function' && canGrant('hr', 'view_payroll');
+  const hrCanApprove = typeof canApproveRequests !== 'undefined' && canApproveRequests;
+  const hrGroups = [
+    { title: 'HR', items: [
+      { label: 'HR Portal', href: '/hr/portal', exact: true },
+    ] },
+    { title: 'People', items: [
+      { label: 'Employee Directory', href: '/employees', exact: true },
+      { label: 'New Employee', href: '/employees/new' },
+      { label: 'Download EDB (All)', href: '/employees/export.csv?mode=all', plain: true },
+    ] },
+    { title: 'Accounts', items: [
+      { label: 'Account Directory', href: '/hr', exact: true },
+      { label: 'Create Account', href: '/hr#hr-quick-actions', anchor: true },
+    ] },
+    { title: 'Workforce', items: [
+      { label: 'Shift Rosters', href: '/hr/rosters' },
+    ].concat(hrCanPayroll ? [{ label: 'Payroll Data', href: '/hr/payroll' }] : []) },
+    { title: 'Requests', items: [
+      { label: hrCanApprove ? 'Approvals' : 'Requests', href: '/approvals' },
+    ] },
+  ];
+  const hrPath = (typeof currentPath !== 'undefined' && currentPath ? String(currentPath) : '').replace(/\/+$/, '') || '/';
+  const hrActive = (item) => {
+    if (item.anchor || item.plain) return false;
+    if (item.exact) return hrPath === item.href;
+    return hrPath === item.href || hrPath.indexOf(item.href + '/') === 0;
+  };
+%>
+<nav class="pm-sidebar" id="hr-sidebar" aria-label="HR menu">
+  <% hrGroups.forEach((group) => { %>
+    <div class="pm-sidebar__group"><%= group.title %></div>
+    <% group.items.forEach((item) => { %>
+      <a class="pm-sidebar__link<%= hrActive(item) ? ' pm-sidebar__link--active' : '' %>" href="<%= item.href %>"><%= item.label %></a>
+    <% }) %>
+  <% }) %>
+</nav>

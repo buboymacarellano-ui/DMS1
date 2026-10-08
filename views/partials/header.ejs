@@ -4,7 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Auto Shop Manager</title>
+  <link rel="stylesheet" href="/fonts/inter.css">
   <link rel="stylesheet" href="/styles.css">
+  <script>
+    try { if (window.localStorage.getItem('ae_night_mode') === '1') document.documentElement.classList.add('night-mode'); } catch (e) {}
+    try { if (window.localStorage.getItem('dms-sidebar-hidden') === '1') document.documentElement.classList.add('sidebar-hidden'); } catch (e) {}
+  </script>
 </head>
 <% const activeRole = currentUser ? String(currentUser.role || '').toLowerCase() : ''; %>
 <%
@@ -41,11 +46,13 @@
   <% const isPmRole = activeRole === 'parts_manager' || activeRole === 'pm'; %>
   <% const isFmRole = activeRole === 'finance_manager' || activeRole === 'fm' || activeRole === 'accounting'; %>
   <% const isAfRole = activeRole === 'assets_facilities'; %>
+  <% const isHrRole = ['hr', 'hr_manager', 'hr_generalist', 'payroll', 'hr_clerk'].includes(activeRole); %>
   <% const isServicePortalRole = ['service_advisor', 'service_receptionist', 'senior_service_receptionist', 'technician', 'service_technical_manager'].includes(activeRole); %>
   <% const isFinancePortalRole = activeRole === 'admin' || isFmRole; %>
   <% const roleLabel = roleLabelMap[activeRole] || 'USER'; %>
-  <% const cleanSessionHeader = activeRole === 'general_manager' || isServicePortalRole || isFinancePortalRole || isPmRole || isAfRole; %>
-  <% const cleanHomePath = activeRole === 'general_manager' ? '/gm' : (activeRole === 'service_technical_manager' ? '/stm' : (activeRole === 'technician' ? '/technician' : (isServicePortalRole ? '/service-receptionist' : (isFinancePortalRole ? (isFmRole ? '/finance' : '/admin') : (isAfRole ? '/gm/fte' : '/parts-manager'))))); %>
+  <% const headerBranch = currentUser && typeof signedInBranch !== 'undefined' ? signedInBranch : ''; %>
+  <% const cleanSessionHeader = activeRole === 'general_manager' || isServicePortalRole || isFinancePortalRole || isPmRole || isAfRole || isHrRole; %>
+  <% const cleanHomePath = activeRole === 'general_manager' ? '/gm' : (activeRole === 'service_technical_manager' ? '/stm' : (activeRole === 'technician' ? '/technician' : (isServicePortalRole ? '/service-receptionist' : (isFinancePortalRole ? (isFmRole ? '/finance' : '/admin') : (isAfRole ? '/gm/fte' : (isHrRole ? '/hr/portal' : '/parts-manager')))))); %>
   <%
     const roleHomeByRole = {
       general_manager: '/gm',
@@ -108,8 +115,14 @@
       </div>
 
       <div class="site-header__actions" aria-label="Session actions">
+        <% if (headerBranch) { %>
+          <span class="header-branch-badge" id="signed-in-branch" aria-label="Signed-in branch: <%= headerBranch %>" title="Signed-in branch"><%= headerBranch %></span>
+        <% } %>
         <div class="site-header__session-btns">
-          <button type="button" id="fullscreen-toggle" class="btn btn-fullscreen">Full Screen</button>
+          <div class="site-header__btn-row">
+            <button type="button" id="fullscreen-toggle" class="btn btn-fullscreen">Full Screen</button>
+            <%- include('theme-toggle') %>
+          </div>
           <% if (currentUser) { %>
             <form method="post" action="/auth/logout" class="header-logout-form">
               <button type="submit" class="btn btn-fullscreen">Log Out</button>
@@ -132,6 +145,9 @@
         <% } %>
       </div>
       <nav>
+        <% if (headerBranch) { %>
+          <span class="header-branch-badge" id="signed-in-branch" aria-label="Signed-in branch: <%= headerBranch %>" title="Signed-in branch"><%= headerBranch %></span>
+        <% } %>
         <% if (activeRole === 'technician') { %>
           <a href="/technician">Technician</a>
         <% } else if (activeRole === 'service_technical_manager') { %>
@@ -161,7 +177,9 @@
               Approvals<% if (pendingApprovalCount > 0) { %> <span class="approval-nav__count"><%= pendingApprovalCount %></span><% } %>
             </a>
           <% } else if (currentUser) { %>
-            <a href="/approvals" class="approval-nav" title="Submit or view approval requests">Requests</a>
+            <a href="/approvals<%= typeof myTickets !== 'undefined' && myTickets.length ? '#my-tickets' : '' %>" class="approval-nav<%= typeof myTickets !== 'undefined' && myTickets.length ? ' approval-nav--pending' : '' %>" title="Submit or view approval requests and decided tickets">
+              Requests<% if (typeof myTickets !== 'undefined' && myTickets.length) { %> <span class="approval-nav__count"><%= myTickets.length %></span><% } %>
+            </a>
           <% } %>
         <% } %>
         <% if (typeof canCreatePo !== 'undefined' && canCreatePo) { %>
@@ -179,6 +197,7 @@
         <% if (!['hr', 'hr_manager', 'hr_generalist', 'payroll', 'hr_clerk'].includes(activeRole)) { %>
           <button type="button" id="fullscreen-toggle" class="btn btn-fullscreen">Full Screen</button>
         <% } %>
+        <%- include('theme-toggle') %>
         <% if (currentUser) { %>
           <form method="post" action="/auth/logout" class="header-logout-form">
             <button type="submit" class="btn btn-fullscreen">Log Out</button>
@@ -187,7 +206,25 @@
       </nav>
     <% } %>
   </header>
-  <main class="container">
+  <% const sidebarEligible = !!currentUser && pathNow.indexOf('/auth') !== 0; %>
+  <% const showPmSidebar = sidebarEligible && isPmRole; %>
+  <% const isFrontlineSvcRole = ['service_advisor', 'service_receptionist', 'senior_service_receptionist'].includes(activeRole); %>
+  <% const showGmSidebar = sidebarEligible && activeRole === 'general_manager'; %>
+  <% const showStmSidebar = sidebarEligible && !showGmSidebar && !showPmSidebar && activeRole === 'service_technical_manager'; %>
+  <% const showHrSidebar = sidebarEligible && !showGmSidebar && (isHrRole || (activeRole === 'admin' && /^\/hr(\/|$)/.test(pathNow))); %>
+  <% const showFinanceSidebar = sidebarEligible && !showGmSidebar && (isFmRole || (activeRole === 'admin' && /^\/finance(\/|$)/.test(pathNow))); %>
+  <% const showAdminSidebar = sidebarEligible && activeRole === 'admin' && !showFinanceSidebar && !showHrSidebar; %>
+  <% const showServiceSidebar = sidebarEligible && !showPmSidebar && !showGmSidebar && !showStmSidebar && !showAdminSidebar && !showFinanceSidebar && !showHrSidebar && (isFrontlineSvcRole || /^\/service(-receptionist)?(\/|$)/.test(pathNow)); %>
+  <% const anySidebar = showPmSidebar || showGmSidebar || showStmSidebar || showServiceSidebar || showAdminSidebar || showFinanceSidebar || showHrSidebar; %>
+  <% if (showPmSidebar) { %><%- include('pm-sidebar') %><% } %>
+  <% if (showGmSidebar) { %><%- include('gm-sidebar') %><% } %>
+  <% if (showStmSidebar) { %><%- include('stm-sidebar') %><% } %>
+  <% if (showAdminSidebar) { %><%- include('admin-sidebar') %><% } %>
+  <% if (showFinanceSidebar) { %><%- include('finance-sidebar') %><% } %>
+  <% if (showHrSidebar) { %><%- include('hr-sidebar') %><% } %>
+  <% if (showServiceSidebar) { %><%- include('service-sidebar') %><% } %>
+  <% if (anySidebar) { %><%- include('sidebar-toggle') %><% } %>
+  <main class="container<%= anySidebar ? ' container--pm-sidebar' : '' %>">
     <% if (typeof globalError !== 'undefined' && globalError) { %>
       <p class="error global-error-message"><%= globalError %></p>
     <% } %>

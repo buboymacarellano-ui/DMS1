@@ -1,0 +1,39 @@
+<%
+  const allTickets = Array.isArray(typeof myTickets !== 'undefined' ? myTickets : null) ? myTickets : [];
+  const maxTickets = typeof ticketLimit !== 'undefined' && ticketLimit > 0 ? ticketLimit : 0;
+  const shownTickets = maxTickets ? allTickets.slice(0, maxTickets) : allTickets;
+%>
+<% if (allTickets.length || (typeof alwaysShowTickets !== 'undefined' && alwaysShowTickets)) { %>
+<article class="dashboard-card admin-panel my-tickets-panel" id="my-tickets">
+  <div class="dashboard-card__header admin-panel-header">My Approved Tickets <span class="pm-badge"><%= allTickets.length %></span></div>
+  <p class="dashboard-note admin-note">Decisions from the General Manager and assigned approvers on requests you filed (last 30 days).</p>
+  <% if (!shownTickets.length) { %>
+    <p class="dashboard-note admin-note">No decided tickets yet.</p>
+  <% } else { %>
+    <div class="table-scroll">
+      <table class="list">
+        <thead>
+          <tr><th>Type</th><th>Ticket No.</th><th>Details</th><th>Decision</th><th>Decided By</th><th>Date and Time</th></tr>
+        </thead>
+        <tbody>
+          <% shownTickets.forEach((ticket) => { %>
+            <tr>
+              <td><strong><%= ticket.kind %></strong></td>
+              <td style="white-space:nowrap;">
+                <% if (ticket.href) { %><a href="<%= ticket.href %>"><%= ticket.number %></a><% } else { %><%= ticket.number %><% } %>
+              </td>
+              <td><%= ticket.detail %><% if (ticket.remarks) { %><br><small>Remarks: <%= ticket.remarks %></small><% } %></td>
+              <td><span class="badge <%= ticket.status === 'approved' ? 'badge-success' : 'badge-danger' %>"><%= ticket.status === 'approved' ? 'Approved' : 'Rejected' %></span></td>
+              <td><%= ticket.decided_by || '-' %></td>
+              <td style="white-space:nowrap;"><%= ticket.decided_at ? new Date(ticket.decided_at).toLocaleString('en-PH') : '-' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <% if (maxTickets && allTickets.length > maxTickets) { %>
+      <p class="dashboard-note admin-note"><a href="/approvals#my-tickets">View all <%= allTickets.length %> tickets</a></p>
+    <% } %>
+  <% } %>
+</article>
+<% } %>

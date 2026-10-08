@@ -1,24 +1,55 @@
 <%- include('../partials/header') %>
 
 <section class="dashboard-shell gm-shell">
-  <div class="dashboard-title gm-title role-dashboard-title"><span>Performance</span> <span class="role-dashboard-title__suffix">&amp; Incentives</span></div>
-  <p><a class="btn" href="/gm?date=<%= reporting.date %>">&larr; Back to GM Dashboard</a></p>
-
-  <form method="get" action="/gm/performance-incentives" class="gm-reporting-form">
-    <label for="gm-reporting-date">Reporting Date</label>
-    <input id="gm-reporting-date" type="date" name="date" value="<%= reporting.date %>" />
+  <form method="get" action="/gm/targets-incentives" class="gm-reporting-form">
+    <label for="gm-reporting-start">Start Date</label>
+    <input id="gm-reporting-start" type="date" name="start" value="<%= reporting.start %>" max="<%= reporting.date %>" />
+    <label for="gm-reporting-date">End Date</label>
+    <input id="gm-reporting-date" type="date" name="date" value="<%= reporting.date %>" min="<%= reporting.start %>" />
     <button type="submit" class="btn">Apply</button>
   </form>
 
+  <div id="targetConfigPanel" class="bg-slate-900 border border-blue-500/30 p-4 rounded-lg mb-6 gm-target-panel">
+    <div class="flex justify-between items-center mb-4 gm-target-panel__head">
+      <h4 class="text-md font-bold text-orange-400">Set Branch Gross Sales Targets for <%= branchSalesTargets.monthLabel %></h4>
+    </div>
+    <% if (typeof targetsSaved !== 'undefined' && targetsSaved) { %>
+      <p class="dashboard-note">Targets saved. Dashboard pacing now uses the new monthly peso goals.</p>
+    <% } %>
+    <form id="targetForm" method="post" action="/gm/branch-targets" class="grid grid-cols-1 md:grid-cols-4 gap-4 gm-target-form">
+      <input type="hidden" name="date" value="<%= reporting.date %>" />
+      <input type="hidden" name="start" value="<%= reporting.start %>" />
+      <input type="hidden" name="return_to" value="targets-incentives" />
+      <% targetBranches.forEach((branchName) => { %>
+        <div>
+          <label class="block text-xs font-medium text-gray-300"><%= branchName %> Target (₱)</label>
+          <input
+            type="number"
+            name="<%= branchName %>"
+            min="0"
+            step="1000"
+            value="<%= Number((branchSalesTargets.branches && branchSalesTargets.branches[branchName]) || 0) %>"
+            class="w-full bg-slate-800 border border-gray-600 rounded p-1.5 text-white text-sm"
+          />
+        </div>
+      <% }) %>
+      <div class="md:col-span-4 flex justify-end mt-2 gm-target-form__actions">
+        <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded shadow">
+          Save & Recalculate Dashboard
+        </button>
+      </div>
+    </form>
+  </div>
+
   <% const techRows = technicianPerformance.periods.find(period => period.key === 'mtd').rows; %>
   <article class="dashboard-card gm-panel gm-technician-performance">
-    <div class="dashboard-card__header gm-panel-header">Technician Performance and Incentives — MTD through <%= reporting.label %></div>
+    <div class="dashboard-card__header gm-panel-header">Technician Performance and Incentives — <%= reporting.rangeLabel %></div>
     <% if (!techRows.length) { %>
       <p class="dashboard-note">No technician activity for this period.</p>
     <% } else { %>
       <div class="table-scroll">
         <table class="list gm-table gm-technician-performance__table">
-          <thead><tr><th>ID</th><th>Technician</th><th>MTD Billable Hours</th><th>MTD Labor Hours</th><th>MTD Labor Amount</th><th>Rate%</th><th>Incentive</th></tr></thead>
+          <thead><tr><th>ID</th><th>Technician</th><th>Billable Hours</th><th>Labor Hours</th><th>Labor Amount</th><th>Rate%</th><th>Incentive</th></tr></thead>
           <tbody>
             <% techRows.forEach((row) => { %>
               <tr>
@@ -36,10 +67,10 @@
   </article>
 
   <article class="dashboard-card gm-panel gm-technician-performance">
-    <div class="dashboard-card__header gm-panel-header">Non-Technician Employee Sales and Incentives — MTD through <%= reporting.label %></div>
+    <div class="dashboard-card__header gm-panel-header">Non-Technician Employee Sales and Incentives — <%= reporting.rangeLabel %></div>
     <div class="table-scroll">
       <table class="list gm-table gm-technician-performance__table">
-        <thead><tr><th>ID</th><th>Employee</th><th>Position</th><th>MTD Total Sales</th><th>Rate%</th><th>Incentive</th></tr></thead>
+        <thead><tr><th>ID</th><th>Employee</th><th>Position</th><th>Total Sales</th><th>Rate%</th><th>Incentive</th></tr></thead>
         <tbody>
           <% employeeSalesPerformance.forEach((row) => { %>
             <tr>
@@ -55,9 +86,9 @@
   </article>
 
   <article class="dashboard-card gm-panel">
-    <div class="dashboard-card__header gm-panel-header">Current Transactions — Largest to Smallest</div>
+    <div class="dashboard-card__header gm-panel-header">Transactions — Largest to Smallest</div>
     <% if (!currentTransactions.length) { %>
-      <p class="dashboard-note">No transactions on <%= reporting.label %>.</p>
+      <p class="dashboard-note">No transactions for <%= reporting.rangeLabel %>.</p>
     <% } else { %>
       <div class="table-scroll"><table class="list gm-table">
         <thead><tr><th>Work Order #</th><th>Customer</th><th>Service Advisor</th><th>Total</th></tr></thead>

@@ -1,0 +1,124 @@
+<%- include('../partials/header') %>
+<%
+  const peso = (n) => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const pct = (n) => Number(n || 0).toFixed(1) + '%';
+  const healthLabel = { ahead: 'Ahead', 'on-pace': 'On pace', watch: 'Watch', behind: 'Behind' };
+  const csvHref = '/kpi/sales.csv' + (selectedBranch !== 'all' ? '?branch=' + encodeURIComponent(selectedBranch) : '');
+%>
+<style>
+  .kpi-page .kpi-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+  .kpi-page .kpi-sub{margin:0;color:#024e7a;font-weight:700}
+  .kpi-page .kpi-actions{display:flex;gap:10px;align-items:center}
+  .kpi-page .kpi-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+  .kpi-page .kpi-card{background:#fff;border:1px solid #94a3b8;padding:12px}
+  .kpi-page .kpi-card span{display:block;color:#475569;font-size:12px;font-weight:700;text-transform:uppercase}
+  .kpi-page .kpi-card strong{display:block;margin-top:4px;color:#0a3358;font-size:20px}
+  .kpi-page .kpi-table-wrap{overflow-x:auto;background:#fff;border:1px solid #94a3b8}
+  .kpi-page table{width:100%;border-collapse:collapse;font-size:14px}
+  .kpi-page th,.kpi-page td{padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:right;white-space:nowrap}
+  .kpi-page th:first-child,.kpi-page td:first-child{text-align:left}
+  .kpi-page thead th{background:#024e7a;color:#fff}
+  .kpi-page tfoot td{font-weight:800;background:#f1f5f9}
+  .kpi-page .kpi-bar{height:8px;background:#e2e8f0;min-width:90px}
+  .kpi-page .kpi-bar i{display:block;height:100%;background:#024e7a}
+  .kpi-page .kpi-health{font-weight:800}
+  .kpi-page .kpi-health--ahead,.kpi-page .kpi-health--on-pace{color:#15803d}
+  .kpi-page .kpi-health--watch{color:#b45309}
+  .kpi-page .kpi-health--behind{color:#b91c1c}
+  @media (max-width:900px){.kpi-page .kpi-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+
+<section class="dashboard-shell kpi-page">
+  <div class="kpi-head">
+    <div>
+      <div class="dashboard-title gm-title role-dashboard-title"><span>Sales Reports</span> <span class="role-dashboard-title__suffix">&amp; Branch Metrics</span></div>
+      <p class="kpi-sub"><%= monthLabel %> · Day <%= elapsedDays %> of <%= daysInMonth %> · Expected pace <%= pct(expectedPct) %></p>
+    </div>
+    <div class="kpi-actions">
+      <label>
+        <span class="stm-landing__sr">Branch</span>
+        <select id="kpi-branch" aria-label="Branch">
+          <option value="all"<%= selectedBranch === 'all' ? ' selected' : '' %>>All Branches</option>
+          <% branches.forEach((name) => { %>
+            <option value="<%= name %>"<%= selectedBranch === name ? ' selected' : '' %>><%= name %></option>
+          <% }) %>
+        </select>
+      </label>
+      <a class="btn" href="<%= csvHref %>">Export CSV</a>
+    </div>
+  </div>
+
+  <div class="kpi-cards">
+    <div class="kpi-card"><span>MTD Gross</span><strong><%= peso(totals.totalGross) %></strong></div>
+    <div class="kpi-card"><span>% of Target</span><strong><%= pct(totals.actualPct) %></strong></div>
+    <div class="kpi-card"><span>Pacing Health</span><strong><%= pct(totals.pacingHealthPct) %></strong></div>
+    <div class="kpi-card"><span>Average Ticket</span><strong><%= peso(totals.averageTicket) %></strong></div>
+  </div>
+
+  <div class="kpi-table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Branch</th>
+          <th>MTD Labor</th>
+          <th>MTD Parts</th>
+          <th>MTD Gross</th>
+          <th>Target</th>
+          <th>% of Target</th>
+          <th>Pacing</th>
+          <th>Invoiced ROs</th>
+          <th>Avg Ticket</th>
+          <th>Open WOs</th>
+          <th>Completed WOs</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach((r) => { %>
+          <tr>
+            <td><%= r.branch %></td>
+            <td><%= peso(r.laborRevenue) %></td>
+            <td><%= peso(r.partsRevenue) %></td>
+            <td><%= peso(r.totalGross) %></td>
+            <td><%= r.monthlyTarget > 0 ? peso(r.monthlyTarget) : '—' %></td>
+            <td>
+              <%= pct(r.actualPct) %>
+              <div class="kpi-bar"><i style="width:<%= Math.max(0, Math.min(100, r.actualPct)) %>%"></i></div>
+            </td>
+            <td class="kpi-health kpi-health--<%= r.health %>"><%= r.monthlyTarget > 0 ? pct(r.pacingHealthPct) + ' · ' + (healthLabel[r.health] || '') : '—' %></td>
+            <td><%= r.invoicedCount %></td>
+            <td><%= peso(r.averageTicket) %></td>
+            <td><%= r.openCount %></td>
+            <td><%= r.completedCount %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td>Total</td>
+          <td><%= peso(totals.laborRevenue) %></td>
+          <td><%= peso(totals.partsRevenue) %></td>
+          <td><%= peso(totals.totalGross) %></td>
+          <td><%= totals.monthlyTarget > 0 ? peso(totals.monthlyTarget) : '—' %></td>
+          <td><%= pct(totals.actualPct) %></td>
+          <td><%= totals.monthlyTarget > 0 ? pct(totals.pacingHealthPct) : '—' %></td>
+          <td><%= totals.invoicedCount %></td>
+          <td><%= peso(totals.averageTicket) %></td>
+          <td><%= totals.openCount %></td>
+          <td><%= totals.completedCount %></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</section>
+
+<script>
+  (function () {
+    var select = document.getElementById('kpi-branch');
+    if (!select) return;
+    select.addEventListener('change', function () {
+      window.location.href = '/kpi' + (select.value === 'all' ? '' : '?branch=' + encodeURIComponent(select.value));
+    });
+  })();
+</script>
+
+<%- include('../partials/footer') %>
