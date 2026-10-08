@@ -13,8 +13,10 @@
 </head>
 <% const activeRole = currentUser ? String(currentUser.role || '').toLowerCase() : ''; %>
 <%
+  const isGmRole = activeRole === 'general_manager' || activeRole === 'gm';
   const roleLabelMap = {
     general_manager: 'GM',
+    gm: 'GM',
     technician: 'TECH',
     service_technical_manager: 'STM',
     parts_manager: 'PM',
@@ -39,7 +41,7 @@
     stores_clerk: 'SCLK',
   };
 %>
-<body class="<%= ['service_advisor', 'service_receptionist', 'senior_service_receptionist'].includes(activeRole) ? 'role-frontline' : (activeRole === 'service_technical_manager' ? 'role-stm' : ((activeRole === 'parts_manager' || activeRole === 'pm') ? 'role-pm' : ((activeRole === 'finance_manager' || activeRole === 'fm' || activeRole === 'accounting') ? 'role-fm' : (activeRole === 'assets_facilities' ? 'role-fm' : (activeRole === 'general_manager' ? 'role-gm' : ''))))) %>">
+<body class="<%= ['service_advisor', 'service_receptionist', 'senior_service_receptionist'].includes(activeRole) ? 'role-frontline' : (activeRole === 'service_technical_manager' ? 'role-stm' : ((activeRole === 'parts_manager' || activeRole === 'pm') ? 'role-pm' : ((activeRole === 'finance_manager' || activeRole === 'fm' || activeRole === 'accounting') ? 'role-fm' : (activeRole === 'assets_facilities' ? 'role-fm' : (isGmRole ? 'role-gm' : ''))))) %>">
   <% const pathNow = typeof currentPath !== 'undefined' && currentPath ? String(currentPath) : ''; %>
   <% const queryScope = typeof currentQuery !== 'undefined' && currentQuery ? String(currentQuery.scope || currentQuery.location || '').toLowerCase() : ''; %>
   <% const viewingWarehouse1 = pathNow.indexOf('/parts') === 0 && queryScope.indexOf('warehouse') !== -1; %>
@@ -51,11 +53,12 @@
   <% const isFinancePortalRole = activeRole === 'admin' || isFmRole; %>
   <% const roleLabel = roleLabelMap[activeRole] || 'USER'; %>
   <% const headerBranch = currentUser && typeof signedInBranch !== 'undefined' ? signedInBranch : ''; %>
-  <% const cleanSessionHeader = activeRole === 'general_manager' || isServicePortalRole || isFinancePortalRole || isPmRole || isAfRole || isHrRole; %>
-  <% const cleanHomePath = activeRole === 'general_manager' ? '/gm' : (activeRole === 'service_technical_manager' ? '/stm' : (activeRole === 'technician' ? '/technician' : (isServicePortalRole ? '/service-receptionist' : (isFinancePortalRole ? (isFmRole ? '/finance' : '/admin') : (isAfRole ? '/gm/fte' : (isHrRole ? '/hr/portal' : '/parts-manager')))))); %>
+  <% const cleanSessionHeader = isGmRole || isServicePortalRole || isFinancePortalRole || isPmRole || isAfRole || isHrRole; %>
+  <% const cleanHomePath = isGmRole ? '/gm' : (activeRole === 'service_technical_manager' ? '/stm' : (activeRole === 'technician' ? '/technician' : (isServicePortalRole ? '/service-receptionist' : (isFinancePortalRole ? (isFmRole ? '/finance' : '/admin') : (isAfRole ? '/gm/fte' : (isHrRole ? '/hr/portal' : '/parts-manager')))))); %>
   <%
     const roleHomeByRole = {
       general_manager: '/gm',
+      gm: '/gm',
       admin: '/admin',
       hr: '/hr/portal',
       hr_manager: '/hr/portal',
@@ -113,6 +116,39 @@
           <% } %>
         </div>
       </div>
+      <% if (isGmRole) { %>
+        <%
+          const gmMenuRef = (typeof gmMenu !== 'undefined' && gmMenu) ? gmMenu : null;
+          const gmWorkspacesHref = gmMenuRef && gmMenuRef.GM_HUBS && gmMenuRef.GM_HUBS['work-spaces'] ? gmMenuRef.GM_HUBS['work-spaces'].href : '/gm/work-spaces';
+          const gmMoreHref = gmMenuRef && gmMenuRef.GM_HUBS && gmMenuRef.GM_HUBS.more ? gmMenuRef.GM_HUBS.more.href : '/gm/more';
+          const isGmHubPath = (slug, path) => (gmMenuRef && typeof gmMenuRef.hubMatchesPath === 'function')
+            ? gmMenuRef.hubMatchesPath(slug, path)
+            : (slug === 'work-spaces' ? path.indexOf('/gm/work-spaces') === 0 : path.indexOf('/gm/more') === 0);
+          const gmPending = typeof pendingApprovalCount !== 'undefined' ? Number(pendingApprovalCount || 0) : 0;
+          const gmHeaderNav = [
+            { label: 'GM Dashboard', href: '/gm', active: normalizedPath === '/gm' || normalizedPath === '/gm/aging' || normalizedPath.indexOf('/gm/aging/') === 0 },
+            { label: 'Targets & Incentives', href: '/gm/targets-incentives', active: normalizedPath.indexOf('/gm/targets-incentives') === 0 || normalizedPath.indexOf('/gm/performance-incentives') === 0 },
+            { label: 'Approvals', href: '/approvals', active: normalizedPath.indexOf('/approvals') === 0, badge: gmPending > 0 ? gmPending : 0 },
+            { label: 'Control Panel', href: '/gm/control-panel', active: normalizedPath.indexOf('/gm/control-panel') === 0 },
+            { label: 'My Record', href: '/gm/my-record', active: normalizedPath.indexOf('/gm/my-record') === 0 },
+            { label: 'Work Spaces', href: gmWorkspacesHref, active: isGmHubPath('work-spaces', normalizedPath) },
+            { label: 'More', href: gmMoreHref, active: isGmHubPath('more', normalizedPath) && !isGmHubPath('work-spaces', normalizedPath) },
+          ];
+        %>
+        <nav class="gm-billiard-nav" aria-label="GM quick navigation">
+          <% gmHeaderNav.forEach((item, idx) => { %>
+            <a
+              href="<%= item.href %>"
+              class="gm-billiard-nav__ball<%= item.active ? ' gm-billiard-nav__ball--active' : '' %>"
+              aria-current="<%= item.active ? 'page' : 'false' %>"
+            >
+              <span class="gm-billiard-nav__number"><%= idx + 1 %></span>
+              <span class="gm-billiard-nav__label"><%= item.label %></span>
+              <% if (item.badge) { %><span class="gm-billiard-nav__badge" aria-label="<%= item.badge %> pending approvals"><%= item.badge %></span><% } %>
+            </a>
+          <% }) %>
+        </nav>
+      <% } %>
 
       <div class="site-header__actions" aria-label="Session actions">
         <% if (headerBranch) { %>
@@ -209,7 +245,7 @@
   <% const sidebarEligible = !!currentUser && pathNow.indexOf('/auth') !== 0; %>
   <% const showPmSidebar = sidebarEligible && isPmRole; %>
   <% const isFrontlineSvcRole = ['service_advisor', 'service_receptionist', 'senior_service_receptionist'].includes(activeRole); %>
-  <% const showGmSidebar = sidebarEligible && activeRole === 'general_manager'; %>
+  <% const showGmSidebar = false; %>
   <% const showStmSidebar = sidebarEligible && !showGmSidebar && !showPmSidebar && activeRole === 'service_technical_manager'; %>
   <% const showHrSidebar = sidebarEligible && !showGmSidebar && (isHrRole || (activeRole === 'admin' && /^\/hr(\/|$)/.test(pathNow))); %>
   <% const showFinanceSidebar = sidebarEligible && !showGmSidebar && (isFmRole || (activeRole === 'admin' && /^\/finance(\/|$)/.test(pathNow))); %>

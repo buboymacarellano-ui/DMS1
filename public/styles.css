@@ -90,6 +90,88 @@ a:hover{color:#1e4e86}
   justify-content:flex-start;
 }
 
+.gm-billiard-nav{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  flex-wrap:wrap;
+  min-width:0;
+}
+
+.gm-billiard-nav__ball{
+  position:relative;
+  min-width:118px;
+  min-height:52px;
+  border-radius:14px;
+  border:1px solid #334155;
+  color:#fff7ed;
+  text-decoration:none;
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:8px 12px;
+  text-align:center;
+  background:linear-gradient(180deg, #f59e0b 0%, #c96a12 58%, #8a3d0a 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.22),
+    0 1px 4px rgba(2, 6, 23, .3);
+}
+
+.gm-billiard-nav__ball:hover{
+  transform:translateY(-1px) scale(1.01);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.28),
+    0 3px 8px rgba(2, 6, 23, .36);
+}
+
+.gm-billiard-nav__ball--active{
+  border-color:#fb923c;
+  background:linear-gradient(180deg, #fb923c 0%, #c2410c 60%, #7c2d12 100%);
+  color:#fff7ed;
+}
+
+.gm-billiard-nav__number{
+  position:static;
+  width:20px;
+  height:20px;
+  border-radius:999px;
+  display:grid;
+  place-items:center;
+  background:#374151;
+  color:#f9fafb;
+  font-size:11px;
+  font-weight:800;
+  border:1px solid #1f2937;
+}
+
+.gm-billiard-nav__label{
+  font-size:11px;
+  font-weight:800;
+  line-height:1.15;
+  letter-spacing:.01em;
+  text-wrap:pretty;
+}
+
+.gm-billiard-nav__badge{
+  position:absolute;
+  top:8px;
+  right:8px;
+  min-width:18px;
+  height:18px;
+  border-radius:999px;
+  padding:0 5px;
+  display:grid;
+  place-items:center;
+  background:#b91c1c;
+  color:#fff;
+  font-size:10px;
+  font-weight:800;
+  border:1px solid #7f1d1d;
+}
+
 .site-header__actions{
   display:flex;
   flex-direction:column;
@@ -147,6 +229,16 @@ html body .site-header #signed-in-branch{
   padding:5px 10px;
   font-size:11px;
   line-height:1.1;
+}
+
+@media (max-width: 1380px){
+  .gm-billiard-nav__ball{
+    min-width:104px;
+    min-height:48px;
+  }
+  .gm-billiard-nav__label{
+    font-size:10px;
+  }
 }
 
 .site-header--gm .header-user-badge--gm-lead{
@@ -6356,6 +6448,24 @@ body.role-frontline .technician-monitor__status{
   background:rgba(26, 107, 191, 0.18);
 }
 
+html body .pm-workspace #pm-panel-database a.btn[href^="/parts/history/"],
+html body .pm-workspace #pm-panel-database button[data-pm-order-grid],
+html body .pm-workspace #pm-panel-database button[data-pm-transfer-grid],
+html body .pm-workspace #pm-panel-database a.btn[href^="/parts/history/"]:hover,
+html body .pm-workspace #pm-panel-database button[data-pm-order-grid]:hover,
+html body .pm-workspace #pm-panel-database button[data-pm-transfer-grid]:hover,
+html body .pm-workspace #pm-panel-database a.btn[href^="/parts/history/"]:focus,
+html body .pm-workspace #pm-panel-database button[data-pm-order-grid]:focus,
+html body .pm-workspace #pm-panel-database button[data-pm-transfer-grid]:focus,
+html body .pm-workspace #pm-panel-database a.btn[href^="/parts/history/"]:active,
+html body .pm-workspace #pm-panel-database button[data-pm-order-grid]:active,
+html body .pm-workspace #pm-panel-database button[data-pm-transfer-grid]:active,
+html body .pm-workspace #pm-panel-database tr.pm-db-row.pm-db-row--active a.btn[href^="/parts/history/"],
+html body .pm-workspace #pm-panel-database tr.pm-db-row.pm-db-row--active button[data-pm-order-grid],
+html body .pm-workspace #pm-panel-database tr.pm-db-row.pm-db-row--active button[data-pm-transfer-grid]{
+  color:#ffffff !important;
+}
+
 .pm-database .table-scroll{
   margin-top:10px;
 }
@@ -6583,9 +6693,9 @@ body{
 .site-header,
 .site-header--gm{
   position:sticky;
-  background:linear-gradient(180deg, #858585 0%, #787878 52%, #696969 100%) !important;
-  border-bottom:1px solid #a8afb6 !important;
-  box-shadow:0 2px 0 #ccd2d8, 0 6px 14px rgba(0,0,0,0.16) !important;
+  background:linear-gradient(180deg, #334155 0%, #1f2937 56%, #111827 100%) !important;
+  border-bottom:1px solid #475569 !important;
+  box-shadow:0 2px 0 rgba(148,163,184,0.24), 0 8px 18px rgba(2,6,23,0.45) !important;
   color:#ffffff !important;
 }
 .site-header::after,
@@ -6665,6 +6775,45 @@ input[type="reset"]:hover,
   background:linear-gradient(180deg, var(--app-blue-600), var(--app-blue-900)) !important;
   border-color:var(--app-blue-300) !important;
 }
+
+/* Header-only slate controls */
+.site-header nav a,
+.site-header__nav a,
+.site-header .btn-fullscreen,
+.site-header button{
+  color:#e5e7eb !important;
+  background:linear-gradient(180deg, #475569 0%, #334155 58%, #1f2937 100%) !important;
+  border-color:#64748b !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.15), 0 2px 6px rgba(2,6,23,0.35) !important;
+}
+.site-header nav a:hover,
+.site-header__nav a:hover,
+.site-header .btn-fullscreen:hover,
+.site-header button:hover{
+  color:#f8fafc !important;
+  background:linear-gradient(180deg, #64748b 0%, #475569 58%, #334155 100%) !important;
+  border-color:#94a3b8 !important;
+}
+.site-header nav .approval-nav--pending{
+  color:#f8fafc !important;
+  background:linear-gradient(180deg, #7c2d12 0%, #9a3412 58%, #7f1d1d 100%) !important;
+  border-color:#c2410c !important;
+}
+
+/* GM header 7 cards: slate modern blue */
+.site-header .gm-billiard-nav .gm-billiard-nav__ball{
+  color:#eff6ff !important;
+  border-color:#60a5fa !important;
+  background:linear-gradient(180deg, #4f6f95 0%, #35557e 56%, #1f3f66 100%) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.2), 0 2px 6px rgba(15,23,42,0.4) !important;
+}
+.site-header .gm-billiard-nav .gm-billiard-nav__ball:hover,
+.site-header .gm-billiard-nav .gm-billiard-nav__ball.gm-billiard-nav__ball--active{
+  color:#f8fbff !important;
+  border-color:#93c5fd !important;
+  background:linear-gradient(180deg, #5d83b3 0%, #3d6599 56%, #264f82 100%) !important;
+}
+
 
 .auth-card,
 .card,
@@ -9348,7 +9497,7 @@ form.form.service-form .form-actions a,
 .site-header nav a.nav-link--active{
   background:linear-gradient(180deg, #1d4ed8, #1e3a8a) !important;
   border-color:#ffffff !important;
-  color:#111827 !important;
+  color:#ffffff !important;
   box-shadow:0 0 0 3px rgba(203,213,225,0.48), 0 8px 18px rgba(71,85,105,0.18) !important;
 }
 
@@ -9698,6 +9847,62 @@ html body :is(
   color:#fff !important;
 }
 
+/* Active controls in records/database tables: force white text for contrast */
+html body :is(
+  .table-scroll,
+  .database-table-scroll,
+  .transaction-table-wrap,
+  .pm-workspace,
+  .pm-database,
+  #parts-records
+) :is(
+  .tab-button.active,
+  .pm-nav__link--active,
+  .pm-role-btn--active,
+  .pm-sidebar__link--active,
+  .pm-steps__item--active,
+  .fte-branch-tab.is-active,
+  .fte-status-filter.is-active,
+  .gm-range-pills button.is-active,
+  .parts-scope-card--active,
+  .pm-decision-btn--active,
+  .pm-db-row--active .btn,
+  .pm-db-row--active button,
+  .pm-transaction-row--active .btn,
+  .pm-transaction-row--active button,
+  a.btn[href^="/parts/history/"],
+  button[data-pm-order-grid],
+  button[data-pm-transfer-grid]
+),
+html body :is(
+  .table-scroll,
+  .database-table-scroll,
+  .transaction-table-wrap,
+  .pm-workspace,
+  .pm-database,
+  #parts-records
+) :is(
+  .tab-button.active,
+  .pm-nav__link--active,
+  .pm-role-btn--active,
+  .pm-sidebar__link--active,
+  .pm-steps__item--active,
+  .fte-branch-tab.is-active,
+  .fte-status-filter.is-active,
+  .gm-range-pills button.is-active,
+  .parts-scope-card--active,
+  .pm-decision-btn--active,
+  .pm-db-row--active .btn,
+  .pm-db-row--active button,
+  .pm-transaction-row--active .btn,
+  .pm-transaction-row--active button,
+  a.btn[href^="/parts/history/"],
+  button[data-pm-order-grid],
+  button[data-pm-transfer-grid]
+) *{
+  color:#ffffff !important;
+}
+
 html body *,
 html body *::before,
 html body *::after{
@@ -9869,6 +10074,14 @@ html body main table.list.database-table-fit .database-header-data-width{
 .gm-status-flag, .gm-markup-badge, .gm-ws-card .gm-ws-role__tag,
 .technician-monitor__status, .dashboard-status, .stm-live-chip, .status-badge, .status-pill {
   border-radius: 0 !important;
+}
+
+/* PO records panel: keep status text white for contrast. */
+#pm-po-records .pm-po-status-badge,
+#pm-po-records .pm-po-status-badge *,
+#pm-po-status,
+#pm-po-records-status {
+  color:#ffffff !important;
 }
 
 /* Global: any red or green filled marker / placeholder / button uses white type. */
