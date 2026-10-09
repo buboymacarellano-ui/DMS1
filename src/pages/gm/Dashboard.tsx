@@ -148,7 +148,7 @@ export function setupTimelineFilters(options: {
 }
 
 export type DashboardNavigateOptions = {
-  /** Deep-link into FteDashboard with the transaction entry modal open. */
+  /** Open the transaction entry modal from the dashboard. */
   openLogModal?: boolean;
 };
 
@@ -162,7 +162,7 @@ export type DashboardProps = {
   /**
    * `gm` — manager analytics shell
    * `stm` — STM top-card workspace
-   * `sa` / `sr` — full work-order dashboards; FTE via 4th shortcut card
+   * `sa` / `sr` — full work-order dashboards; shortcut card opens the modal
    */
   variant?: 'gm' | 'stm' | 'sa' | 'sr' | 'ssr';
   assignedBranch?: string;
@@ -312,7 +312,7 @@ function marginDensityCellStyle(pct: number): React.CSSProperties {
 
 /**
  * Dashboard shell — GM dense view, STM cards, or SA/SR work-order dashboards.
- * SA/SR open FTE Tracking via the 4th top shortcut card (CebuCity-locked destination).
+ * SA/SR open the transaction modal from the shortcut cards.
  */
 export default function Dashboard({
   reportingDate = '2026-08-13',
@@ -329,7 +329,6 @@ export default function Dashboard({
   onNavigate,
   navigateHref = (view, options) => {
     const base = GM_PORTAL_PATHS[view];
-    if (view === 'fte' && options?.openLogModal) return `${base}?log=1`;
     return base;
   },
 }: DashboardProps) {
@@ -361,8 +360,6 @@ export default function Dashboard({
   const isSr = variant === 'sr';
   const isSsr = variant === 'ssr';
   const isFrontlineDash = isSa || isSr || isSsr;
-  const fteBranch = assignedBranch || 'CebuCity';
-
   const applyMetricsPayload = useCallback((payload: DashboardMetricsPayload) => {
     const cards = payload.cards || {};
     setCardMetrics((current) => ({
@@ -468,7 +465,6 @@ export default function Dashboard({
         <div className="dashboard-title gm-title role-dashboard-title">
           <span>
             {roleLabel}
-            {fteBranch ? ` ${fteBranch}` : ''}
           </span>{' '}
           <span className="role-dashboard-title__suffix">Dashboard</span>
         </div>
@@ -517,25 +513,6 @@ export default function Dashboard({
             </div>
           </article>
 
-          <article className="gm-kpi-card sa-card">
-            <div className="sa-card-title">FTE WORKSPACE</div>
-            <div className="sa-card-body">
-              <p className="sa-line">Transaction &amp; Record Center</p>
-              <p className="sa-line">
-                Real-time Branch Logging: <strong>[{fteBranch}]</strong>
-              </p>
-            </div>
-            <div className="sa-open-row">
-              <button
-                type="button"
-                className="btn"
-                aria-label="Open FTE Tracking Panel"
-                onClick={() => go('fte')}
-              >
-                OPEN PANEL
-              </button>
-            </div>
-          </article>
         </div>
 
         <article className="dashboard-card gm-panel sa-tech-panel sa-tech-panel--fill">
@@ -641,23 +618,6 @@ export default function Dashboard({
             </div>
           </article>
 
-          <article className="gm-kpi-card sa-card">
-            <div className="sa-card-title">FTE</div>
-            <div className="sa-card-body">
-              <p className="sa-line">Facility, Tool &amp; Equipment Tracking</p>
-              <p className="sa-line">Log repairs, PM, and expense issues.</p>
-            </div>
-            <div className="sa-open-row">
-              <button
-                type="button"
-                className="btn"
-                aria-label="Log FTE Issue"
-                onClick={() => go('fte', { openLogModal: true })}
-              >
-                + LOG FTE ISSUE
-              </button>
-            </div>
-          </article>
         </div>
       </section>
     );
@@ -755,14 +715,6 @@ export default function Dashboard({
             aria-label="Open DEMO DMS DX Catalog"
           >
             Catalog
-          </button>
-          <button
-            type="button"
-            className="btn gm-dense-link"
-            onClick={() => go('fte')}
-            aria-label="Open Facility, Tool and Equipment Tracking Panel"
-          >
-            FTE
           </button>
         </div>
         </div>

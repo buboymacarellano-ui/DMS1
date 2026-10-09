@@ -98,7 +98,7 @@ router.get('/', async (req, res) => {
       .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
     : [];
 
-  // My Transactions Records: footprint of GM-approved PO / Stock Transfer / FTE Request
+  // My Transactions Records: footprint of GM-approved PO / Stock Transfer / Facilities Request
   const myTransactionRecords = approver
     ? [...(gmTransactionRecords || [])].sort((a, b) => new Date(b.approved_at || 0) - new Date(a.approved_at || 0))
     : [];

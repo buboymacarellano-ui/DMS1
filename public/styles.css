@@ -2949,8 +2949,8 @@ body button {
 .gm-table th,
 .gm-matrix-table th,
 .transaction-table th,
-.fte-table th,
-.fte-ledger-table th {
+.fac-table th,
+.fac-ledger-table th {
   position: sticky;
   top: 0;
   z-index: 5;
@@ -3622,9 +3622,9 @@ body button {
 .parts-request-fields[hidden] {
   display: none;
 }
-/* FTE Tracking Panel — mirrors GM Dashboard office theme */
+/* Facility Tracking Panel — mirrors GM Dashboard office theme */
 
-.fte-shell {
+.fac-shell {
   display: grid;
   gap: 10px;
   padding: 10px 12px 14px;
@@ -3638,11 +3638,11 @@ body button {
   font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
 }
 
-.fte-shell--frontline .fte-ledger-panel {
+.fac-shell--frontline .fac-ledger-panel {
   min-height: min(70vh, 640px);
 }
 
-.fte-branch-locked-badge {
+.fac-branch-locked-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -3655,11 +3655,11 @@ body button {
   font-weight: 600;
 }
 
-.fte-branch-locked-badge strong {
+.fac-branch-locked-badge strong {
   color: #e8911a;
 }
 
-.fte-header-row {
+.fac-header-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3667,14 +3667,14 @@ body button {
   flex-wrap: wrap;
 }
 
-.fte-header-actions {
+.fac-header-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.fte-shell .dashboard-title {
+.fac-shell .dashboard-title {
   margin: 0;
   font-size: 26px;
   font-weight: 800;
@@ -3682,13 +3682,13 @@ body button {
   text-shadow: none;
 }
 
-.fte-shell .role-dashboard-title__suffix {
+.fac-shell .role-dashboard-title__suffix {
   color: var(--ink-on-dark-muted);
   font-size: inherit;
   font-weight: inherit;
 }
 
-.fte-log-btn {
+.fac-log-btn {
   background: linear-gradient(180deg, #5ea3e0, #3d87c9) !important;
   border-color: #3477b4 !important;
   color: #fff !important;
@@ -3699,7 +3699,7 @@ body button {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 6px rgba(61, 135, 201, 0.28);
 }
 
-.fte-export-btn {
+.fac-export-btn {
   background: linear-gradient(180deg, #ffffff, #eef4fa) !important;
   border: 1px solid #9fb6cc !important;
   color: #1f4668 !important;
@@ -3710,11 +3710,11 @@ body button {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 2px 6px rgba(74, 112, 150, 0.12);
 }
 
-.fte-export-btn:hover {
+.fac-export-btn:hover {
   background: linear-gradient(180deg, #f7fbff, #e5eef7) !important;
 }
 
-.fte-status-trigger {
+.fac-status-trigger {
   cursor: pointer;
   border: 1px solid #e0c07a;
   font: inherit;
@@ -3722,18 +3722,18 @@ body button {
   transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
 }
 
-.fte-status-trigger:hover {
+.fac-status-trigger:hover {
   filter: brightness(0.97);
   box-shadow: 0 0 0 2px rgba(232, 145, 26, 0.22);
   transform: translateY(-1px);
 }
 
-.fte-status-trigger:focus-visible {
+.fac-status-trigger:focus-visible {
   outline: 2px solid rgba(232, 145, 26, 0.55);
   outline-offset: 2px;
 }
 
-.fte-approve-btn {
+.fac-approve-btn {
   background: linear-gradient(180deg, #3fbf7f, #2a9d63) !important;
   border-color: #218352 !important;
   color: #fff !important;
@@ -3744,27 +3744,27 @@ body button {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 6px rgba(42, 157, 99, 0.28);
 }
 
-.fte-approve-btn:hover {
+.fac-approve-btn:hover {
   filter: brightness(1.03);
 }
 
-.fte-ledger-panel {
+.fac-ledger-panel {
   grid-column: 1 / -1;
   min-height: 220px;
 }
 
-.fte-branch-workspace {
+.fac-branch-workspace {
   grid-column: 1 / -1;
 }
 
-.fte-branch-tabs {
+.fac-branch-tabs {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 8px;
   margin-bottom: 10px;
 }
 
-.fte-branch-tab {
+.fac-branch-tab {
   display: grid;
   gap: 4px;
   text-align: left;
@@ -3778,40 +3778,40 @@ body button {
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
 }
 
-.fte-branch-tab strong {
+.fac-branch-tab strong {
   font-size: 13px;
   letter-spacing: 0.3px;
 }
 
-.fte-branch-tab span {
+.fac-branch-tab span {
   font-size: 11px;
   font-weight: 700;
   color: #64748b;
 }
 
-.fte-branch-tab:hover:not(:disabled) {
+.fac-branch-tab:hover:not(:disabled) {
   border-color: #3d87c9;
   transform: translateY(-1px);
 }
 
-.fte-branch-tab.is-active {
+.fac-branch-tab.is-active {
   border-color: #3477b4;
   background: linear-gradient(180deg, #e8f3fc, #d7eaf8);
   box-shadow: 0 0 0 2px rgba(61, 135, 201, 0.18);
 }
 
-.fte-branch-tab:disabled {
+.fac-branch-tab:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-.fte-status-filter-row {
+.fac-status-filter-row {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.fte-status-filter {
+.fac-status-filter {
   border: 1px solid #c9dae9;
   background: #fff;
   color: #355872;
@@ -3822,42 +3822,42 @@ body button {
   cursor: pointer;
 }
 
-.fte-status-filter.is-active {
+.fac-status-filter.is-active {
   background: #1f4668;
   border-color: #1f4668;
   color: #fff;
 }
 
-.fte-access-denied {
+.fac-access-denied {
   grid-column: 1 / -1;
   border-color: #e0a0a8;
   background: linear-gradient(180deg, #fff8f8, #fff);
 }
 
-.fte-access-denied p {
+.fac-access-denied p {
   margin: 0 0 8px;
   color: #4f6780;
   font-weight: 600;
 }
 
-.fte-access-denied__meta {
+.fac-access-denied__meta {
   color: #8a1f2a !important;
 }
 
-.fte-ledger-header {
+.fac-ledger-header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
 }
 
-.fte-ledger-header small {
+.fac-ledger-header small {
   color: #64748b;
   font-size: 12px;
   font-weight: 700;
 }
 
-.fte-ledger-scroll {
+.fac-ledger-scroll {
   min-height: 0;
   max-height: min(72vh, calc(100vh - 220px));
   overflow: auto;
@@ -3866,63 +3866,63 @@ body button {
   background: #122844;
 }
 
-.fte-ledger-table {
+.fac-ledger-table {
   min-width: 2200px;
   table-layout: auto;
   border: 0;
   border-radius: 0;
 }
 
-.fte-ledger-table th,
-.fte-ledger-table td {
+.fac-ledger-table th,
+.fac-ledger-table td {
   white-space: nowrap;
 }
 
-.fte-ledger-table td:nth-child(9) {
+.fac-ledger-table td:nth-child(9) {
   max-width: 260px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.fte-ledger-table tbody tr.fte-ledger-row {
+.fac-ledger-table tbody tr.fac-ledger-row {
   transition: background-color 0.18s ease, color 0.18s ease;
 }
 
-.fte-ledger-table tbody tr.fte-ledger-row td {
+.fac-ledger-table tbody tr.fac-ledger-row td {
   transition: background-color 0.18s ease, color 0.18s ease;
   color: var(--ink-on-dark);
 }
 
-.fte-ledger-table tbody tr.fte-ledger-row--pending td,
-.fte-ledger-table tbody tr.bg-amber-50 td {
+.fac-ledger-table tbody tr.fac-ledger-row--pending td,
+.fac-ledger-table tbody tr.bg-amber-50 td {
   background: #fff4cc !important;
   color: var(--ink-on-light) !important;
 }
 
-.fte-ledger-table tbody tr.fte-ledger-row--pending:hover td,
-.fte-ledger-table tbody tr.hover\:bg-amber-100\/80:hover td {
+.fac-ledger-table tbody tr.fac-ledger-row--pending:hover td,
+.fac-ledger-table tbody tr.hover\:bg-amber-100\/80:hover td {
   background: #ffe8a3 !important;
   color: var(--ink-on-light) !important;
 }
 
-.fte-ledger-table tbody tr.fte-ledger-row--rejected td,
-.fte-ledger-table tbody tr.bg-red-50\/50 td {
+.fac-ledger-table tbody tr.fac-ledger-row--rejected td,
+.fac-ledger-table tbody tr.bg-red-50\/50 td {
   background: #fde8e8 !important;
   color: var(--ink-on-light) !important;
 }
 
-.fte-ledger-table tbody tr.fte-ledger-row--rejected:hover td,
-.fte-ledger-table tbody tr.hover\:bg-red-100\/50:hover td {
+.fac-ledger-table tbody tr.fac-ledger-row--rejected:hover td,
+.fac-ledger-table tbody tr.hover\:bg-red-100\/50:hover td {
   background: #f8d0d0 !important;
   color: var(--ink-on-light) !important;
 }
 
-.fte-ledger-table tbody tr.fte-ledger-row--default:hover td {
+.fac-ledger-table tbody tr.fac-ledger-row--default:hover td {
   background: #eef6fd !important;
   color: var(--ink-on-light) !important;
 }
 
-.fte-modal-backdrop {
+.fac-modal-backdrop {
   position: fixed;
   inset: 0;
   z-index: 4000;
@@ -3935,15 +3935,15 @@ body button {
   pointer-events: auto;
 }
 
-.fte-modal-backdrop[hidden] {
+.fac-modal-backdrop[hidden] {
   display: none !important;
 }
 
-.fte-modal-backdrop.is-open {
+.fac-modal-backdrop.is-open {
   display: flex !important;
 }
 
-.fte-modal {
+.fac-modal {
   width: min(920px, 100%);
   margin-top: 12px;
   border-radius: 14px;
@@ -3953,7 +3953,7 @@ body button {
   color: #1d3f5c;
 }
 
-.fte-modal__header {
+.fac-modal__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3962,24 +3962,24 @@ body button {
   border-bottom: 1px solid #d5e2ef;
 }
 
-.fte-modal__header h3 {
+.fac-modal__header h3 {
   margin: 0;
   font-size: 18px;
   font-weight: 800;
   color: #1f4668;
 }
 
-.fte-modal__form {
+.fac-modal__form {
   padding: 14px 16px 16px;
 }
 
-.fte-modal__grid {
+.fac-modal__grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px 12px;
 }
 
-.fte-modal__grid label {
+.fac-modal__grid label {
   display: grid;
   gap: 4px;
   font-size: 12px;
@@ -3987,9 +3987,9 @@ body button {
   color: #4f6780;
 }
 
-.fte-modal__grid input,
-.fte-modal__grid select,
-.fte-modal__grid textarea {
+.fac-modal__grid input,
+.fac-modal__grid select,
+.fac-modal__grid textarea {
   width: 100%;
   box-sizing: border-box;
   border: 1px solid #b7c9db;
@@ -4002,23 +4002,23 @@ body button {
   background: #fff;
 }
 
-.fte-modal__readonly {
+.fac-modal__readonly {
   background: #f1f5f9 !important;
   color: #355872 !important;
   font-weight: 800 !important;
 }
 
-.fte-modal__full {
+.fac-modal__full {
   grid-column: 1 / -1;
 }
 
-.fte-modal__calc-note {
+.fac-modal__calc-note {
   margin: 12px 0 0;
   font-size: 12px;
   color: #64748b;
 }
 
-.fte-modal__actions {
+.fac-modal__actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
@@ -4026,19 +4026,19 @@ body button {
 }
 
 @media (max-width: 800px) {
-  .fte-modal__grid {
+  .fac-modal__grid {
     grid-template-columns: 1fr;
   }
 }
 
-.fte-branch-select {
+.fac-branch-select {
   display: inline-flex;
   align-items: center;
   gap: 0;
   position: relative;
 }
 
-.fte-branch-select__label {
+.fac-branch-select__label {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -4050,7 +4050,7 @@ body button {
   border: 0;
 }
 
-.fte-branch-select select {
+.fac-branch-select select {
   appearance: none;
   -webkit-appearance: none;
   min-width: 168px;
@@ -4070,18 +4070,18 @@ body button {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
-.fte-branch-select select:focus {
+.fac-branch-select select:focus {
   outline: 2px solid rgba(61, 135, 201, 0.35);
   outline-offset: 1px;
 }
 
-.fte-note {
+.fac-note {
   margin: 0;
   color: #4f6780;
   font-weight: 700;
 }
 
-.fte-status-banner {
+.fac-status-banner {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -4093,24 +4093,24 @@ body button {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
-.fte-status-banner__text {
+.fac-status-banner__text {
   color: #64748b; /* slate-500 */
   font-size: 13px;
   font-weight: 600;
   line-height: 1.35;
 }
 
-.fte-status-banner__dot {
+.fac-status-banner__dot {
   width: 9px;
   height: 9px;
   border-radius: 999px;
   background: #22c55e;
   box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55);
   flex-shrink: 0;
-  animation: fte-pulse-dot 1.6s ease-out infinite;
+  animation: fac-pulse-dot 1.6s ease-out infinite;
 }
 
-@keyframes fte-pulse-dot {
+@keyframes fac-pulse-dot {
   0% {
     box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55);
     transform: scale(1);
@@ -4125,13 +4125,13 @@ body button {
   }
 }
 
-.fte-kpi-grid {
+.fac-kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
-.fte-shell .gm-kpi-card {
+.fac-shell .gm-kpi-card {
   min-height: 78px;
   padding: 10px 12px;
   border-radius: 12px;
@@ -4140,7 +4140,7 @@ body button {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 6px 14px rgba(74, 112, 150, 0.1);
 }
 
-.fte-shell .gm-kpi-label {
+.fac-shell .gm-kpi-label {
   margin: 0 0 6px;
   font-size: 11px;
   font-weight: 800;
@@ -4149,7 +4149,7 @@ body button {
   color: #4f6780;
 }
 
-.fte-shell .gm-kpi-value {
+.fac-shell .gm-kpi-value {
   margin: 0;
   font-size: 20px;
   line-height: 1.15;
@@ -4157,21 +4157,21 @@ body button {
   font-weight: 800;
 }
 
-.fte-body-grid {
+.fac-body-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   min-height: 0;
 }
 
-.fte-col {
+.fac-col {
   display: grid;
   gap: 10px;
   min-width: 0;
   grid-template-rows: minmax(180px, 1.1fr) minmax(160px, 1fr);
 }
 
-.fte-panel {
+.fac-panel {
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -4183,21 +4183,21 @@ body button {
   box-shadow: inset 0 1px 0 #fff, 0 8px 20px rgba(78, 118, 158, 0.1);
 }
 
-.fte-panel .gm-panel-header,
-.fte-panel .dashboard-card__header {
+.fac-panel .gm-panel-header,
+.fac-panel .dashboard-card__header {
   margin: 0 0 8px;
   font-size: 19px; /* 16px + 20% */
   font-weight: 800;
   color: #1f4668;
 }
 
-.fte-scroll {
+.fac-scroll {
   min-height: 0;
   flex: 1;
   overflow: auto;
 }
 
-.fte-table {
+.fac-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
@@ -4211,8 +4211,8 @@ body button {
   overflow: visible;
 }
 
-.fte-table th,
-.fte-table td {
+.fac-table th,
+.fac-table td {
   height: 34px;
   padding: 0 10px;
   border-bottom: 1px solid #e1ecf6;
@@ -4227,7 +4227,7 @@ body button {
   box-sizing: border-box;
 }
 
-.fte-table th {
+.fac-table th {
   height: 32px;
   background: linear-gradient(180deg, #e8f2fb, #d7e8f7);
   color: #1f4668;
@@ -4237,30 +4237,30 @@ body button {
   font-weight: 800;
 }
 
-.fte-table tbody tr {
+.fac-table tbody tr {
   height: 34px;
 }
 
-.fte-table tbody tr:nth-child(even) td {
+.fac-table tbody tr:nth-child(even) td {
   background: #f7fbff;
 }
 
-.fte-table .fte-pill {
+.fac-table .fac-pill {
   min-width: 88px;
 }
 
-.fte-money {
+.fac-money {
   font-weight: 800;
   color: #17324d;
 }
 
-.fte-list-feed {
+.fac-list-feed {
   display: grid;
   gap: 6px;
   align-content: start;
 }
 
-.fte-feed-item {
+.fac-feed-item {
   display: grid;
   grid-template-columns: 1.4fr 0.9fr auto auto;
   gap: 8px;
@@ -4272,26 +4272,26 @@ body button {
   font-size: 12px;
 }
 
-.fte-feed-item strong {
+.fac-feed-item strong {
   color: #1f4668;
 }
 
-.fte-feed-item span,
-.fte-feed-item small {
+.fac-feed-item span,
+.fac-feed-item small {
   color: #4f6780;
 }
 
-.fte-feed-item em {
+.fac-feed-item em {
   font-style: normal;
   font-weight: 800;
   color: #355872;
 }
 
-.fte-due-urgent {
+.fac-due-urgent {
   color: #8a1f2a !important;
 }
 
-.fte-pill {
+.fac-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4303,42 +4303,42 @@ body button {
   border: 1px solid transparent;
 }
 
-.fte-pill--critical,
-.fte-pill--fail {
+.fac-pill--critical,
+.fac-pill--fail {
   color: #8a1f2a;
   background: #f8d7db;
   border-color: #e0a0a8;
 }
 
-.fte-pill--high,
-.fte-pill--out {
+.fac-pill--high,
+.fac-pill--out {
   color: #8a5a00;
   background: #fff1d1;
   border-color: #e0c07a;
 }
 
-.fte-pill--medium,
-.fte-pill--pass,
-.fte-pill--in,
-.fte-pill--returned {
+.fac-pill--medium,
+.fac-pill--pass,
+.fac-pill--in,
+.fac-pill--returned {
   color: #1f6b45;
   background: #d9f3e5;
   border-color: #8fc9a8;
 }
 
-.fte-pill--checked-out {
+.fac-pill--checked-out {
   color: #8a5a00;
   background: #fff1d1;
   border-color: #e0c07a;
 }
 
 @media (max-width: 1200px) {
-  .fte-kpi-grid,
-  .fte-body-grid {
+  .fac-kpi-grid,
+  .fac-body-grid {
     grid-template-columns: 1fr;
   }
 
-  .fte-col {
+  .fac-col {
     grid-template-rows: auto;
   }
 }
@@ -5123,7 +5123,7 @@ body button {
   color:#f3f7fc !important;
 }
 
-.fte-shell{
+.fac-shell{
   background:
     radial-gradient(circle at 12% 0%, rgba(78,205,232,0.14), transparent 34%),
     linear-gradient(180deg, #16345a 0%, #122844 48%, #0c1c34 100%) !important;
@@ -5132,44 +5132,44 @@ body button {
   color:#f3f7fc !important;
 }
 
-.fte-shell .dashboard-title{color:#b8e64c !important;}
-.fte-shell .role-dashboard-title__suffix{color:#c9d9ec !important;}
-.fte-export-btn{
+.fac-shell .dashboard-title{color:#b8e64c !important;}
+.fac-shell .role-dashboard-title__suffix{color:#c9d9ec !important;}
+.fac-export-btn{
   background:linear-gradient(180deg, #25588c, #1a406c) !important;
   border-color:#3d6fa3 !important;
   color:#f3f7fc !important;
 }
-.fte-branch-locked-badge,
-.fte-status-banner,
-.fte-feed-item,
-.fte-modal,
-.fte-panel,
-.fte-branch-tab{
+.fac-branch-locked-badge,
+.fac-status-banner,
+.fac-feed-item,
+.fac-modal,
+.fac-panel,
+.fac-branch-tab{
   background:linear-gradient(180deg, #1a406c, #122844) !important;
   border-color:rgba(78,205,232,0.18) !important;
   color:#f3f7fc !important;
 }
-.fte-ledger-table th,
-.fte-table th{
+.fac-ledger-table th,
+.fac-table th{
   background:linear-gradient(180deg, #8fbf6a, #6f9a4c) !important;
   color:#10243d !important;
 }
-.fte-ledger-table td,
-.fte-table td,
-.fte-money,
-.fte-modal__header h3,
-.fte-modal__grid label,
-.fte-note{
+.fac-ledger-table td,
+.fac-table td,
+.fac-money,
+.fac-modal__header h3,
+.fac-modal__grid label,
+.fac-note{
   color:#f3f7fc !important;
 }
-.fte-ledger-table td,
-.fte-table td{
+.fac-ledger-table td,
+.fac-table td{
   background:rgba(16,42,74,0.92) !important;
 }
-.fte-modal__grid input,
-.fte-modal__grid select,
-.fte-modal__grid textarea,
-.fte-branch-select select{
+.fac-modal__grid input,
+.fac-modal__grid select,
+.fac-modal__grid textarea,
+.fac-branch-select select{
   background:#122844 !important;
   color:#f3f7fc !important;
   border-color:#3d6fa3 !important;
@@ -5332,8 +5332,8 @@ body button {
 }
 
 .table-scroll thead th,
-.fte-ledger-scroll thead th,
-.fte-scroll thead th,
+.fac-ledger-scroll thead th,
+.fac-scroll thead th,
 .technician-monitor__grid-wrap thead th {
   position: sticky;
   top: 0;
@@ -5415,7 +5415,7 @@ select::placeholder{
 .gm-shell,
 .sa-shell,
 .pm-shell,
-.fte-shell,
+.fac-shell,
 .branch-parts-shell,
 .dashboard-card,
 .admin-panel,
@@ -5491,8 +5491,8 @@ select::placeholder{
 .gm-table th,
 .gm-matrix-table th,
 .transaction-table th,
-.fte-table th,
-.fte-ledger-table th,
+.fac-table th,
+.fac-ledger-table th,
 .technician-monitor__grid th{
   color:var(--ink-on-light) !important;
 }
@@ -5502,8 +5502,8 @@ select::placeholder{
 .gm-table td,
 .gm-matrix-table td,
 .transaction-table td,
-.fte-table td,
-.fte-ledger-table td{
+.fac-table td,
+.fac-ledger-table td{
   color:var(--ink-on-dark) !important;
 }
 
@@ -5538,8 +5538,8 @@ button[style*="c0392b"]{
 .delete-password-dialog p,
 .customer-invoice,
 .customer-invoice *,
-.fte-access-denied,
-.fte-access-denied p,
+.fac-access-denied,
+.fac-access-denied p,
 .pm-modal .pm-modal__body,
 .pm-modal .pm-review-details dt,
 .pm-modal .pm-review-details dd{
@@ -5550,7 +5550,7 @@ button[style*="c0392b"]{
 .gm-branch-progress__value,
 .technician-monitor__card header p,
 .technician-monitor__kpis span,
-.fte-access-denied p{
+.fac-access-denied p{
   color:var(--ink-on-light-muted) !important;
 }
 
@@ -5629,7 +5629,7 @@ a:hover{
   padding:6px 12px;
 }
 
-/* ===== Global FTE fill-out form language ===== */
+/* ===== Global Facility fill-out form language ===== */
 form.form[method="post"]:not(.auth-form):not(.service-form),
 form.form[method="POST"]:not(.auth-form):not(.service-form){
   width:min(920px, 100%);
@@ -5852,7 +5852,7 @@ form.form.service-form .service-table select{
 
 .dashboard-card form.form,
 .admin-panel form.form,
-.fte-modal form{
+.fac-modal form{
   background:transparent !important;
   border:none !important;
   box-shadow:none !important;
@@ -5880,7 +5880,7 @@ form.form[style*="display: flex"]{
   align-items:flex-end;
 }
 
-.fte-modal{
+.fac-modal{
   width:min(920px, 100%) !important;
   border-radius:14px !important;
   border:1px solid rgba(91, 140, 196, 0.5) !important;
@@ -5889,32 +5889,32 @@ form.form[style*="display: flex"]{
   box-shadow:0 18px 48px rgba(4, 12, 24, 0.4) !important;
 }
 
-.fte-modal__header{
+.fac-modal__header{
   border-bottom:1px solid rgba(91, 140, 196, 0.35) !important;
 }
 
-.fte-modal__header h3,
-.fte-modal__grid label{
+.fac-modal__header h3,
+.fac-modal__grid label{
   color:#fff !important;
 }
 
-.fte-modal__grid input,
-.fte-modal__grid select,
-.fte-modal__grid textarea{
+.fac-modal__grid input,
+.fac-modal__grid select,
+.fac-modal__grid textarea{
   background:#050f1c !important;
   color:#fff !important;
   border:1px solid #3b5a8c !important;
   border-radius:6px !important;
 }
 
-.fte-modal__actions .btn.gm-dense-link,
-.fte-modal__header .btn.gm-dense-link{
+.fac-modal__actions .btn.gm-dense-link,
+.fac-modal__header .btn.gm-dense-link{
   background:#122844 !important;
   border:1px solid #5b8cc4 !important;
   color:#fff !important;
 }
 
-.fte-modal__actions .fte-log-btn{
+.fac-modal__actions .fac-log-btn{
   background:#4a90e2 !important;
   border-color:#4a90e2 !important;
   color:#fff !important;
@@ -6119,8 +6119,8 @@ body.role-frontline a:not(.btn):not(.workorder-nav-card):hover{
 body.role-frontline .list td,
 body.role-frontline .service-form .service-table td,
 body.role-frontline .transaction-table td,
-body.role-frontline .fte-table td,
-body.role-frontline .fte-ledger-table td,
+body.role-frontline .fac-table td,
+body.role-frontline .fac-ledger-table td,
 body.role-frontline .technician-monitor__grid td{
   color:#f7fbff !important;
 }
@@ -6128,8 +6128,8 @@ body.role-frontline .technician-monitor__grid td{
 body.role-frontline .list th,
 body.role-frontline .service-form .service-table th,
 body.role-frontline .transaction-table th,
-body.role-frontline .fte-table th,
-body.role-frontline .fte-ledger-table th,
+body.role-frontline .fac-table th,
+body.role-frontline .fac-ledger-table th,
 body.role-frontline .technician-monitor__grid th{
   color:#10243d !important;
 }
@@ -6832,13 +6832,13 @@ input[type="reset"]:hover,
 .login-share-panel,
 .wo-edit-services,
 .pm-modal,
-.fte-shell,
-.fte-panel,
-.fte-modal,
-.fte-feed-item,
-.fte-branch-tab,
-.fte-status-banner,
-.fte-branch-locked-badge,
+.fac-shell,
+.fac-panel,
+.fac-modal,
+.fac-feed-item,
+.fac-branch-tab,
+.fac-status-banner,
+.fac-branch-locked-badge,
 .technician-monitor__card,
 .technician-monitor__summary article,
 .technician-monitor__kpis div,
@@ -6933,8 +6933,8 @@ input[type="reset"]:hover,
 .gm-markup-row__value,
 .sa-mtd-bar__value,
 .success,
-.fte-shell .dashboard-title,
-.fte-shell .gm-kpi-value{
+.fac-shell .dashboard-title,
+.fac-shell .gm-kpi-value{
   color:#2f6db3 !important;
 }
 .gm-kpi-card--hero{
@@ -6981,8 +6981,8 @@ a:hover{
 .search-billing-form select,
 .service-form .service-table input,
 .service-form .service-table select,
-.fte-modal__grid input,
-.fte-modal__grid select,
+.fac-modal__grid input,
+.fac-modal__grid select,
 .technician-monitor__card input,
 .technician-monitor__card select,
 .technician-monitor__toolbar input,
@@ -7013,8 +7013,8 @@ form.form[method="POST"]:not(.auth-form):not(.service-form),
 .gm-table,
 .gm-matrix-table,
 .transaction-table,
-.fte-table,
-.fte-ledger-table,
+.fac-table,
+.fac-ledger-table,
 .technician-monitor__grid{
   background:#ffffff !important;
   border:1px solid #b4c0cc !important;
@@ -7026,8 +7026,8 @@ form.form[method="POST"]:not(.auth-form):not(.service-form),
 .gm-table th,
 .gm-matrix-table th,
 .transaction-table th,
-.fte-table th,
-.fte-ledger-table th,
+.fac-table th,
+.fac-ledger-table th,
 .technician-monitor__grid th,
 .wo-edit-services__table th{
   background:#5b9bd5 !important;
@@ -7040,8 +7040,8 @@ form.form[method="POST"]:not(.auth-form):not(.service-form),
 .gm-table td,
 .gm-matrix-table td,
 .transaction-table td,
-.fte-table td,
-.fte-ledger-table td,
+.fac-table td,
+.fac-ledger-table td,
 .technician-monitor__grid td,
 .wo-edit-services__table td,
 .wo-edit-services__table td small,
@@ -7054,8 +7054,8 @@ form.form[method="POST"]:not(.auth-form):not(.service-form),
 .gm-table tbody tr:nth-child(even) td,
 .gm-matrix-table tbody tr:nth-child(even) td,
 .transaction-table tbody tr:nth-child(even) td,
-.fte-table tbody tr:nth-child(even) td,
-.fte-ledger-table tbody tr:nth-child(even) td{
+.fac-table tbody tr:nth-child(even) td,
+.fac-ledger-table tbody tr:nth-child(even) td{
   background:#eef3f8 !important;
 }
 .gm-ocpd-table tbody tr td:first-child,
@@ -7111,8 +7111,8 @@ form.form[method="POST"]:not(.auth-form):not(.service-form),
 .app-back-chip,
 .dashboard-button,
 .employee-toolbar__btn,
-.fte-log-btn,
-.fte-export-btn,
+.fac-log-btn,
+.fac-export-btn,
 .auth-open-toggle,
 .sa-mtd-bar__track,
 .sa-mtd-bar__fill,
@@ -7128,33 +7128,33 @@ form.form[method="POST"]:not(.auth-form):not(.service-form),
   color:#ffffff !important;
 }
 
-.fte-export-btn,
-.fte-log-btn{
+.fac-export-btn,
+.fac-log-btn{
   background:#f3f3f3 !important;
   border:1px solid #adadad !important;
   color:#111827 !important;
   box-shadow:none !important;
 }
-.fte-shell .dashboard-title{color:#111827 !important;}
-.fte-shell .role-dashboard-title__suffix{color:#334155 !important;}
-.fte-shell .gm-kpi-card{
+.fac-shell .dashboard-title{color:#111827 !important;}
+.fac-shell .role-dashboard-title__suffix{color:#334155 !important;}
+.fac-shell .gm-kpi-card{
   background:#ffffff !important;
   border:1px solid #c5d0dc !important;
   box-shadow:none !important;
   border-radius:0 !important;
 }
-.fte-shell .gm-kpi-label{color:#334155 !important;}
-.fte-ledger-table th,
-.fte-table th{
+.fac-shell .gm-kpi-label{color:#334155 !important;}
+.fac-ledger-table th,
+.fac-table th{
   background:#5b9bd5 !important;
   color:#ffffff !important;
 }
-.fte-ledger-table td,
-.fte-table td,
-.fte-money,
-.fte-modal__header h3,
-.fte-modal__grid label,
-.fte-note{
+.fac-ledger-table td,
+.fac-table td,
+.fac-money,
+.fac-modal__header h3,
+.fac-modal__grid label,
+.fac-note{
   color:#111827 !important;
 }
 
@@ -7344,8 +7344,8 @@ form.form[method="POST"]:not(.auth-form):not(.service-form),
 .delete-password-dialog p,
 .customer-invoice,
 .customer-invoice *,
-.fte-access-denied,
-.fte-access-denied p,
+.fac-access-denied,
+.fac-access-denied p,
 .pm-modal .pm-modal__body,
 .pm-modal .pm-review-details dt,
 .pm-modal .pm-review-details dd{
@@ -7430,9 +7430,9 @@ textarea,
 .gm-range-pills,
 .gm-analytics__card,
 .sa-mtd-bar,
-.fte-shell,
-.fte-panel,
-.fte-modal,
+.fac-shell,
+.fac-panel,
+.fac-modal,
 .list,
 .transaction-table-wrap,
 .delete-password-dialog,
@@ -7573,16 +7573,16 @@ body.role-frontline a:not(.btn):not(.workorder-nav-card):hover{
 body.role-frontline .list td,
 body.role-frontline .service-form .service-table td,
 body.role-frontline .transaction-table td,
-body.role-frontline .fte-table td,
-body.role-frontline .fte-ledger-table td,
+body.role-frontline .fac-table td,
+body.role-frontline .fac-ledger-table td,
 body.role-frontline .technician-monitor__grid td{
   color:#111827 !important;
 }
 body.role-frontline .list th,
 body.role-frontline .service-form .service-table th,
 body.role-frontline .transaction-table th,
-body.role-frontline .fte-table th,
-body.role-frontline .fte-ledger-table th,
+body.role-frontline .fac-table th,
+body.role-frontline .fac-ledger-table th,
 body.role-frontline .technician-monitor__grid th{
   color:#ffffff !important;
 }
@@ -7613,7 +7613,7 @@ body.role-frontline .technician-monitor__status{
 .auth-shell .auth-card h1,
 .dashboard-card:has(> form.form),
 .admin-panel:has(> form.form),
-.fte-modal,
+.fac-modal,
 .gm-workspace-nav__btn,
 .gm-analytics__card{
   border-radius:0 !important;
@@ -7635,7 +7635,7 @@ body.role-frontline .technician-monitor__status{
 }
 .dashboard-card:has(> form.form),
 .admin-panel:has(> form.form),
-.fte-modal{
+.fac-modal{
   background:#ffffff !important;
   border:1px solid #c5d0dc !important;
   color:#111827 !important;
@@ -7687,11 +7687,11 @@ form.form.service-form .service-table select{
 .pm-status--pending,
 .gm-status-flag,
 .gm-markup-badge,
-.fte-pill,
-.fte-status-filter,
-.fte-status-banner,
-.fte-status-banner__dot,
-.fte-branch-locked-badge,
+.fac-pill,
+.fac-status-filter,
+.fac-status-banner,
+.fac-status-banner__dot,
+.fac-branch-locked-badge,
 .stm-live-chip,
 .technician-monitor__status,
 .technician-monitor__status-cell,
@@ -7709,7 +7709,7 @@ form.form.service-form .service-table select{
 .dashboard-switch,
 .dashboard-switch::after,
 .global-error-message,
-.fte-access-denied,
+.fac-access-denied,
 .pm-steps li,
 .gm-range-pills,
 .gm-range-pills a,
@@ -7722,8 +7722,8 @@ form.form.service-form .service-table select{
 .pm-status,
 .gm-status-flag,
 .gm-markup-badge,
-.fte-pill,
-.fte-status-filter,
+.fac-pill,
+.fac-status-filter,
 .technician-monitor__status,
 .tech-order-badge,
 .tech-status-btn,
@@ -7737,14 +7737,14 @@ form.form.service-form .service-table select{
 .pm-status,
 .gm-status-flag,
 .gm-markup-badge,
-.fte-pill,
-.fte-status-filter,
+.fac-pill,
+.fac-status-filter,
 .header-user-badge,
 .tech-order-badge,
 .stm-live-chip,
 .technician-monitor__status,
-.fte-branch-locked-badge,
-.fte-status-banner{
+.fac-branch-locked-badge,
+.fac-status-banner{
   background:var(--status-gray-bg) !important;
   color:var(--status-gray-ink) !important;
   border:1px solid var(--status-gray-line) !important;
@@ -7755,14 +7755,14 @@ form.form.service-form .service-table select{
 .gm-status-flag--ok,
 .gm-status-flag--pipeline,
 .gm-markup-badge--strong,
-.fte-pill--pass,
-.fte-pill--in,
-.fte-pill--returned,
+.fac-pill--pass,
+.fac-pill--in,
+.fac-pill--returned,
 .technician-monitor__status-cell--ongoing,
 .technician-monitor__status--ongoing,
 .tech-status-btn--done,
 .pm-steps__item--active,
-.fte-status-filter.is-active,
+.fac-status-filter.is-active,
 .gm-range-pills .is-active{
   background:var(--status-green-solid) !important;
   color:var(--status-on-solid) !important;
@@ -7773,9 +7773,9 @@ form.form.service-form .service-table select{
 .gm-status-flag--watch,
 .gm-markup-badge--watch,
 .gm-markup-badge--na,
-.fte-pill--medium,
-.fte-pill--checked-out,
-.fte-pill--out,
+.fac-pill--medium,
+.fac-pill--checked-out,
+.fac-pill--out,
 .technician-monitor__status-cell--idle,
 .technician-monitor__status--idle,
 .technician-monitor__status-cell--waiting-parts,
@@ -7797,13 +7797,13 @@ form.form.service-form .service-table select{
 .gm-status-flag--alert,
 .gm-markup-badge--weak,
 .gm-markup-badge--negative,
-.fte-pill--critical,
-.fte-pill--fail,
-.fte-pill--high,
+.fac-pill--critical,
+.fac-pill--fail,
+.fac-pill--high,
 .technician-monitor__status-cell--absent,
 .technician-monitor__status--absent,
 .global-error-message,
-.fte-access-denied,
+.fac-access-denied,
 .site-header nav .approval-nav--pending{
   background:var(--status-red-solid) !important;
   color:var(--status-on-solid) !important;
@@ -7812,34 +7812,34 @@ form.form.service-form .service-table select{
   animation:none !important;
 }
 
-button.fte-pill,
-button.fte-status-filter,
+button.fac-pill,
+button.fac-status-filter,
 button.tech-status-btn,
 .gm-range-pills button.is-active{
   background:var(--status-gray-bg) !important;
   color:var(--status-gray-ink) !important;
   border:1px solid var(--status-gray-line) !important;
 }
-button.fte-pill.fte-pill--pass,
-button.fte-pill.fte-pill--in,
-button.fte-pill.fte-pill--returned,
-button.fte-status-filter.is-active,
+button.fac-pill.fac-pill--pass,
+button.fac-pill.fac-pill--in,
+button.fac-pill.fac-pill--returned,
+button.fac-status-filter.is-active,
 .gm-range-pills button.is-active,
 button.tech-status-btn--done{
   background:var(--status-green-solid) !important;
   color:var(--status-on-solid) !important;
   border-color:var(--status-green-solid) !important;
 }
-button.fte-pill.fte-pill--out,
-button.fte-pill.fte-pill--medium,
-button.fte-pill.fte-pill--checked-out{
+button.fac-pill.fac-pill--out,
+button.fac-pill.fac-pill--medium,
+button.fac-pill.fac-pill--checked-out{
   background:var(--status-gray-bg) !important;
   color:var(--status-gray-ink) !important;
   border-color:var(--status-gray-line) !important;
 }
-button.fte-pill.fte-pill--critical,
-button.fte-pill.fte-pill--fail,
-button.fte-pill.fte-pill--high{
+button.fac-pill.fac-pill--critical,
+button.fac-pill.fac-pill--fail,
+button.fac-pill.fac-pill--high{
   background:var(--status-red-solid) !important;
   color:var(--status-on-solid) !important;
   border-color:var(--status-red-solid) !important;
@@ -7851,9 +7851,9 @@ button.fte-pill.fte-pill--high{
 }
 .stm-live-chip span,
 .stm-live-chip em,
-.fte-status-banner__text,
-.fte-branch-locked-badge,
-.fte-branch-locked-badge strong{
+.fac-status-banner__text,
+.fac-branch-locked-badge,
+.fac-branch-locked-badge strong{
   color:var(--status-gray-ink) !important;
 }
 .dashboard-status,
@@ -7861,17 +7861,17 @@ button.fte-pill.fte-pill--high{
   font-weight:800 !important;
 }
 .error,
-.fte-due-urgent,
-.fte-access-denied__meta{
+.fac-due-urgent,
+.fac-access-denied__meta{
   color:var(--status-red-ink) !important;
   font-weight:800 !important;
 }
 
-.fte-status-banner{
+.fac-status-banner{
   background:var(--status-gray-bg) !important;
   border:1px solid var(--status-gray-line) !important;
 }
-.fte-status-banner__dot{
+.fac-status-banner__dot{
   width:10px !important;
   height:10px !important;
   background:var(--status-green-ink) !important;
@@ -7954,12 +7954,12 @@ button.fte-pill.fte-pill--high{
   color:var(--status-gray-ink) !important;
 }
 
-.fte-ledger-row--pending td,
+.fac-ledger-row--pending td,
 .bg-amber-50 td{
   background:var(--status-gray-bg) !important;
   color:var(--status-gray-ink) !important;
 }
-.fte-ledger-row--rejected td,
+.fac-ledger-row--rejected td,
 .bg-red-50\/50 td{
   background:var(--status-red-bg) !important;
   color:var(--status-red-ink) !important;
@@ -8107,15 +8107,15 @@ body.role-gm .role-dashboard-title > .role-dashboard-title__suffix{
 body.role-gm .gm-panel-header,
 body.role-gm .gm-shell--dense .gm-panel-header,
 body.role-gm .dashboard-card__header,
-body.role-gm .fte-panel .gm-panel-header,
-body.role-gm .fte-panel .dashboard-card__header{
+body.role-gm .fac-panel .gm-panel-header,
+body.role-gm .fac-panel .dashboard-card__header{
   font-size:16px !important;
   line-height:1.2 !important;
 }
 body.role-gm .gm-kpi-label,
 body.role-gm .gm-shell--dense .gm-kpi-card--micro .gm-kpi-label,
 body.role-gm .gm-shell--dense .gm-kpi-grid--micro .gm-kpi-label,
-body.role-gm .fte-shell .gm-kpi-label{
+body.role-gm .fac-shell .gm-kpi-label{
   color:#0f172a !important;
   font-size:12px !important;
   font-weight:800 !important;
@@ -8124,7 +8124,7 @@ body.role-gm .fte-shell .gm-kpi-label{
 body.role-gm .gm-kpi-value,
 body.role-gm .gm-kpi-card--hero .gm-kpi-value,
 body.role-gm .gm-shell--dense .gm-kpi-value,
-body.role-gm .fte-shell .gm-kpi-value{
+body.role-gm .fac-shell .gm-kpi-value{
   color:#0b4f8a !important;
   font-weight:800 !important;
   text-shadow:none !important;
@@ -8181,8 +8181,8 @@ body.role-gm .gm-range-pills .is-active{
 }
 body.role-gm .gm-table th,
 body.role-gm .list th,
-body.role-gm .fte-table th,
-body.role-gm .fte-ledger-table th,
+body.role-gm .fac-table th,
+body.role-gm .fac-ledger-table th,
 body.role-gm .gm-matrix-table th{
   color:#ffffff !important;
   font-weight:800 !important;
@@ -8190,8 +8190,8 @@ body.role-gm .gm-matrix-table th{
 }
 body.role-gm .gm-table td,
 body.role-gm .list td,
-body.role-gm .fte-table td,
-body.role-gm .fte-ledger-table td,
+body.role-gm .fac-table td,
+body.role-gm .fac-ledger-table td,
 body.role-gm .gm-matrix-table td,
 body.role-gm .gm-action-table td,
 body.role-gm .gm-action-feed__item,
@@ -8231,16 +8231,16 @@ body.role-gm .gm-markup-badge{
 body.role-gm .gm-interprise-tool .dashboard-note{
   font-size:13px !important;
 }
-body.role-gm .fte-feed-item,
-body.role-gm .fte-feed-item strong,
-body.role-gm .fte-feed-item span,
-body.role-gm .fte-feed-item em,
-body.role-gm .fte-feed-item small{
+body.role-gm .fac-feed-item,
+body.role-gm .fac-feed-item strong,
+body.role-gm .fac-feed-item span,
+body.role-gm .fac-feed-item em,
+body.role-gm .fac-feed-item small{
   color:#0f172a !important;
 }
-body.role-gm .fte-feed-item span,
-body.role-gm .fte-feed-item em,
-body.role-gm .fte-feed-item small{
+body.role-gm .fac-feed-item span,
+body.role-gm .fac-feed-item em,
+body.role-gm .fac-feed-item small{
   color:#1e293b !important;
   font-weight:600 !important;
 }
@@ -8387,9 +8387,9 @@ form.form.auth-form,
 form.form.pm-form,
 .search-billing-form,
 .wo-edit-services,
-.fte-modal,
-.fte-modal__dialog,
-.fte-modal__form,
+.fac-modal,
+.fac-modal__dialog,
+.fac-modal__form,
 .pm-modal,
 .pm-modal__dialog,
 .delete-password-dialog,
@@ -8419,8 +8419,8 @@ form.form label,
 form.form.service-form > label,
 form.form.admin-form label,
 .search-billing-form label,
-.fte-modal__grid label,
-.fte-modal__form label,
+.fac-modal__grid label,
+.fac-modal__form label,
 .pm-modal label,
 .delete-password-dialog label,
 .technician-monitor__toolbar label,
@@ -8450,7 +8450,7 @@ form.form.service-form > label,
 .stm-branch-filter,
 .fm-date-filter label,
 .technician-monitor__status-form label,
-.fte-modal__grid label,
+.fac-modal__grid label,
 .pm-modal label{
   font-size:15px !important;
 }
@@ -8472,12 +8472,12 @@ form.form.service-form .service-table input,
 form.form.service-form .service-table select,
 .search-billing-form input,
 .search-billing-form select,
-.fte-modal__grid input,
-.fte-modal__grid select,
-.fte-modal__grid textarea,
-.fte-modal__form input,
-.fte-modal__form select,
-.fte-modal__form textarea,
+.fac-modal__grid input,
+.fac-modal__grid select,
+.fac-modal__grid textarea,
+.fac-modal__form input,
+.fac-modal__form select,
+.fac-modal__form textarea,
 .pm-modal input,
 .pm-modal select,
 .pm-modal textarea,
@@ -8518,7 +8518,7 @@ body.role-gm .gm-target-form input{
 }
 form.form textarea,
 form.form.service-form textarea,
-.fte-modal__grid textarea,
+.fac-modal__grid textarea,
 .pm-modal textarea{
   min-height:6.5em;
   line-height:1.4 !important;
@@ -8528,7 +8528,7 @@ form.form input:disabled,
 form.form select:disabled,
 form.form.service-form input[readonly],
 form.form.service-form input:disabled,
-.fte-modal__grid input[readonly],
+.fac-modal__grid input[readonly],
 .pm-modal input[readonly]{
   background:#e8edf3 !important;
   color:#0b1220 !important;
@@ -8537,7 +8537,7 @@ form.form.service-form input:disabled,
 form.form input::placeholder,
 form.form textarea::placeholder,
 .search-billing-form input::placeholder,
-.fte-modal__grid input::placeholder,
+.fac-modal__grid input::placeholder,
 .pm-modal input::placeholder,
 .wo-vehicle-finder__search input::placeholder,
 body.role-frontline input::placeholder,
@@ -8913,7 +8913,7 @@ form.form.create-parts-form textarea::placeholder{
   .role-dashboard-title__suffix,
   .sa-home-group__title,
   .sa-card-title,
-  .fte-header-row .dashboard-title,
+  .fac-header-row .dashboard-title,
   .gm-reporting-form label,
   .gm-reporting-form--compact label,
   .gm-target-form label,
@@ -8939,8 +8939,8 @@ form.form.create-parts-form textarea::placeholder{
   .gm-target-panel,
   .gm-interprise-tool,
   .gm-markup-card,
-  .fte-panel,
-  .fte-shell,
+  .fac-panel,
+  .fac-shell,
   .admin-panel,
   .pm-panel,
   .sa-card,
@@ -8963,8 +8963,8 @@ form.form.create-parts-form textarea::placeholder{
   .gm-target-panel,
   .gm-interprise-tool,
   .gm-markup-card,
-  .fte-panel,
-  .fte-shell,
+  .fac-panel,
+  .fac-shell,
   .admin-panel,
   .pm-panel,
   .sa-card,
@@ -8986,8 +8986,8 @@ form.form.create-parts-form textarea::placeholder{
   .gm-kpi-delta,
   .gm-kpi-card--hero .gm-kpi-value,
   .gm-shell--dense .gm-kpi-value,
-  .fte-shell .gm-kpi-label,
-  .fte-shell .gm-kpi-value,
+  .fac-shell .gm-kpi-label,
+  .fac-shell .gm-kpi-value,
   .dashboard-note,
   .admin-note,
   .muted,
@@ -9012,11 +9012,11 @@ form.form.create-parts-form textarea::placeholder{
   .gm-perf-col__value,
   .gm-action-feed__item,
   .gm-status-stats div,
-  .fte-feed-item,
-  .fte-feed-item strong,
-  .fte-feed-item span,
-  .fte-feed-item em,
-  .fte-feed-item small
+  .fac-feed-item,
+  .fac-feed-item strong,
+  .fac-feed-item span,
+  .fac-feed-item em,
+  .fac-feed-item small
 ){
   color:#024e7a !important;
 }
@@ -9031,8 +9031,8 @@ form.form.create-parts-form textarea::placeholder{
 .list th,
 .gm-table th,
 .gm-matrix-table th,
-.fte-table th,
-.fte-ledger-table th,
+.fac-table th,
+.fac-ledger-table th,
 .transaction-table th,
 .service-form .service-table th,
 .technician-monitor__grid th{
@@ -9068,15 +9068,15 @@ body.role-frontline form.form.create-parts-form label{
 .gm-status-flag--alert,
 .gm-markup-badge--weak,
 .gm-markup-badge--negative{color:var(--status-red-ink, #ffffff) !important;}
-.fte-pill--pass,
-.fte-pill--in,
-.fte-pill--returned{color:var(--status-green-ink, #10243d) !important;}
-.fte-pill--medium,
-.fte-pill--checked-out,
-.fte-pill--out{color:var(--status-gray-ink, #10243d) !important;}
-.fte-pill--critical,
-.fte-pill--fail,
-.fte-pill--high{color:var(--status-red-ink, #ffffff) !important;}
+.fac-pill--pass,
+.fac-pill--in,
+.fac-pill--returned{color:var(--status-green-ink, #10243d) !important;}
+.fac-pill--medium,
+.fac-pill--checked-out,
+.fac-pill--out{color:var(--status-gray-ink, #10243d) !important;}
+.fac-pill--critical,
+.fac-pill--fail,
+.fac-pill--high{color:var(--status-red-ink, #ffffff) !important;}
 
 /* Global warning pop-outs: black type on a light card */
 .gm-neg-popup__card,
@@ -9171,10 +9171,10 @@ html body table.gm-matrix-table tbody td,
 html body table.gm-matrix-table tbody td *,
 html body table.gm-action-table tbody td,
 html body table.gm-action-table tbody td *,
-html body table.fte-table tbody td,
-html body table.fte-table tbody td *,
-html body table.fte-ledger-table tbody td,
-html body table.fte-ledger-table tbody td *,
+html body table.fac-table tbody td,
+html body table.fac-table tbody td *,
+html body table.fac-ledger-table tbody td,
+html body table.fac-ledger-table tbody td *,
 html body .technician-monitor__grid tbody td,
 html body .technician-monitor__grid tbody td *,
 html body #parts-records table tbody td,
@@ -9433,8 +9433,8 @@ html body #parts-records table tbody td .btn *{
 .gm-action-panel,
 .gm-analytics__card,
 .pm-modal,
-.fte-panel,
-.fte-modal,
+.fac-panel,
+.fac-modal,
 .technician-monitor__card,
 .delete-password-dialog,
 .wo-edit-services,
@@ -9456,8 +9456,8 @@ input[type="reset"],
 .pm-btn-primary,
 .pm-btn-approve,
 .fm-mark-paid,
-.fte-export-btn,
-.fte-log-btn,
+.fac-export-btn,
+.fac-log-btn,
 .auth-open-toggle,
 .app-back-arrow,
 .app-back-chip,
@@ -9488,8 +9488,8 @@ form.form.service-form .form-actions a,
 .pm-role-btn--active,
 .pm-nav__link--active,
 .pm-steps__item--active,
-.fte-branch-tab.is-active,
-.fte-status-filter.is-active,
+.fac-branch-tab.is-active,
+.fac-status-filter.is-active,
 .gm-range-pills .is-active,
 .gm-range-pills button.is-active,
 .parts-scope-card--active,
@@ -9764,11 +9764,11 @@ button *,
 #service-portal-home .workorder-nav-card__icon,
 .pm-role-bar .pm-role-btn__label,
 .pm-role-bar .pm-role-btn__icon,
-.fte-branch-tab.is-active,
-.fte-status-filter.is-active,
+.fac-branch-tab.is-active,
+.fac-status-filter.is-active,
 .pm-steps__item--active,
-.fte-export-btn,
-.fte-log-btn,
+.fac-export-btn,
+.fac-log-btn,
 .auth-open-toggle,
 .app-back-arrow,
 .app-back-chip,
@@ -9861,8 +9861,8 @@ html body :is(
   .pm-role-btn--active,
   .pm-sidebar__link--active,
   .pm-steps__item--active,
-  .fte-branch-tab.is-active,
-  .fte-status-filter.is-active,
+  .fac-branch-tab.is-active,
+  .fac-status-filter.is-active,
   .gm-range-pills button.is-active,
   .parts-scope-card--active,
   .pm-decision-btn--active,
@@ -9887,8 +9887,8 @@ html body :is(
   .pm-role-btn--active,
   .pm-sidebar__link--active,
   .pm-steps__item--active,
-  .fte-branch-tab.is-active,
-  .fte-status-filter.is-active,
+  .fac-branch-tab.is-active,
+  .fac-status-filter.is-active,
   .gm-range-pills button.is-active,
   .parts-scope-card--active,
   .pm-decision-btn--active,
@@ -10070,7 +10070,7 @@ html body main table.list.database-table-fit .database-header-data-width{
 
 /* Status markers: square corners app-wide (colors unchanged). */
 .badge, [class*="badge-"], .pm-badge, .pm-status, .pm-po-status-badge, .pm-filter-status,
-.fte-pill, .fte-status-filter, .fte-status-banner, .fte-branch-locked-badge,
+.fac-pill, .fac-status-filter, .fac-status-banner, .fac-branch-locked-badge,
 .gm-status-flag, .gm-markup-badge, .gm-ws-card .gm-ws-role__tag,
 .technician-monitor__status, .dashboard-status, .stm-live-chip, .status-badge, .status-pill {
   border-radius: 0 !important;

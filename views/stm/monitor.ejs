@@ -16,7 +16,6 @@
   const liveRows = Array.isArray(openWorkOrders) ? openWorkOrders : [];
   const randomRows = Array.isArray(liveRandom) ? liveRandom : [];
   const approvalRows = Array.isArray(pendingApprovals) ? pendingApprovals : [];
-  const fteRows = Array.isArray(fteHistory) ? fteHistory : [];
   const v = (typeof vitals !== 'undefined' && vitals) ? vitals : {};
   const branchList = Array.isArray(branches) ? branches : [];
 %>
@@ -260,48 +259,6 @@
               <td><%= row.advisor %></td>
               <td><%= row.customer %></td>
               <td><%= row.vehicle %></td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <section class="stm-section dashboard-card gm-panel" aria-label="FTE maintenance">
-    <div class="stm-section__title-row">
-      <div>
-        <h3 class="sa-home-group__title">6. FTE maintenance activities</h3>
-        <p class="dashboard-note">Create logs, watch open jobs, and keep saved history. Open the FTE workspace to add a new activity.</p>
-      </div>
-      <a class="btn" href="/gm/fte?log=1">Log FTE activity</a>
-    </div>
-    <p class="dashboard-note">Open / pending FTE records: <strong><%= typeof fteOpenCount !== 'undefined' ? fteOpenCount : 0 %></strong></p>
-    <div class="table-scroll stm-table-scroll">
-      <table class="list gm-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Branch</th>
-            <th>Asset</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Total</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% if (!fteRows.length) { %>
-            <tr><td colspan="7" style="text-align:center;">No FTE history saved yet.</td></tr>
-          <% } %>
-          <% fteRows.forEach((row) => { %>
-            <tr>
-              <td><%= row.Transaction_Date || '—' %></td>
-              <td><%= row.Branch_Name || '—' %></td>
-              <td><%= row.Asset_Name || '—' %></td>
-              <td><%= row.Transaction_Type || '—' %></td>
-              <td><%= row.Description || '—' %></td>
-              <td><%= fmtMoney(row.total) %></td>
-              <td><%= row.Status || '—' %></td>
             </tr>
           <% }) %>
         </tbody>

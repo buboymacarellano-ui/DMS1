@@ -54,7 +54,7 @@
   <% const roleLabel = roleLabelMap[activeRole] || 'USER'; %>
   <% const headerBranch = currentUser && typeof signedInBranch !== 'undefined' ? signedInBranch : ''; %>
   <% const cleanSessionHeader = isGmRole || isServicePortalRole || isFinancePortalRole || isPmRole || isAfRole || isHrRole; %>
-  <% const cleanHomePath = isGmRole ? '/gm' : (activeRole === 'service_technical_manager' ? '/stm' : (activeRole === 'technician' ? '/technician' : (isServicePortalRole ? '/service-receptionist' : (isFinancePortalRole ? (isFmRole ? '/finance' : '/admin') : (isAfRole ? '/gm/fte' : (isHrRole ? '/hr/portal' : '/parts-manager')))))); %>
+  <% const cleanHomePath = isGmRole ? '/gm' : (activeRole === 'service_technical_manager' ? '/stm' : (activeRole === 'technician' ? '/technician' : (isServicePortalRole ? '/service-receptionist' : (isFinancePortalRole ? (isFmRole ? '/finance' : '/admin') : (isAfRole ? '/admin' : (isHrRole ? '/hr/portal' : '/parts-manager')))))); %>
   <%
     const roleHomeByRole = {
       general_manager: '/gm',
@@ -73,7 +73,7 @@
       finance_manager: '/finance',
       fm: '/finance',
       accounting: '/finance',
-      assets_facilities: '/gm/fte',
+      assets_facilities: '/admin',
       service_receptionist: '/service-receptionist',
       senior_service_receptionist: '/service-receptionist',
       service_advisor: '/service-receptionist',
@@ -189,10 +189,8 @@
         <% } else if (activeRole === 'service_technical_manager') { %>
           <a href="/stm">STM Dashboard</a>
           <a href="/service">Service Portal</a>
-          <a href="/gm/fte" class="<%= pathNow === '/gm/fte' ? 'nav-link--active' : '' %>">FTE Tracking</a>
         <% } else if (activeRole === 'admin') { %>
           <a href="/admin">Finance Office</a>
-          <a href="/gm/fte" class="<%= pathNow === '/gm/fte' ? 'nav-link--active' : '' %>">Assets &amp; Facilities</a>
           <a href="/finance">Accounting</a>
           <a href="/admin/gates/removed-records">Removed Records</a>
         <% } else if (['hr', 'hr_manager', 'hr_generalist', 'payroll', 'hr_clerk'].includes(activeRole)) { %>

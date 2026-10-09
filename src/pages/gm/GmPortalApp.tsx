@@ -1,8 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import Dashboard, { type DashboardNavigateOptions } from './Dashboard';
 import DmsCatalog from './DmsCatalog';
-import FteDashboard from './FteDashboard';
-import { FTE_MOCK_DASHBOARD } from './fteMockData';
 import { GM_PORTAL_PATHS, resolveGmViewFromPath, type GmPortalView } from './gmRoutes';
 
 export type GmPortalAppProps = {
@@ -34,7 +32,7 @@ function normalizePortalRole(role: string): string {
 
 /**
  * Lightweight portal view router (no react-router dependency).
- * Switches between Dashboard (GM / STM / SA / SR), FteDashboard, and DmsCatalog.
+ * Switches between Dashboard (GM / STM / SA / SR) and DmsCatalog.
  */
 export default function GmPortalApp({
   initialView,
@@ -64,18 +62,6 @@ export default function GmPortalApp({
   );
   const [openLogModal, setOpenLogModal] = useState(() => readOpenLogFlag());
 
-  const fteRole = useMemo(() => {
-    if (roleKey === 'GENERALMANAGER' || roleKey === 'GM') return 'GM';
-    if (isStm) return 'STM';
-    if (isSa) return 'SA';
-    if (isSsr) return 'SSR';
-    if (isSr) return 'SR';
-    return currentUserRole;
-  }, [currentUserRole, isSa, isSr, isSsr, isStm, roleKey]);
-
-  // SA/SR FTE focus branch is CebuCity.
-  const scopedBranch = isFrontline ? 'CebuCity' : isStm ? currentUserBranch || 'CebuCity' : 'ALL';
-
   const handleNavigate = useCallback(
     (next: GmPortalView, options?: DashboardNavigateOptions) => {
       const shouldOpenLog = Boolean(options?.openLogModal);
@@ -83,27 +69,13 @@ export default function GmPortalApp({
       setView(next);
       if (typeof window !== 'undefined' && window.history?.pushState) {
         let path = homePath;
-        if (next === 'fte') path = shouldOpenLog ? `${GM_PORTAL_PATHS.fte}?log=1` : GM_PORTAL_PATHS.fte;
-        else if (next === 'incentives') path = GM_PORTAL_PATHS.incentives;
+        if (next === 'incentives') path = GM_PORTAL_PATHS.incentives;
         else if (next === 'catalog') path = GM_PORTAL_PATHS.catalog;
         window.history.pushState({ gmView: next, openLogModal: shouldOpenLog }, '', path);
       }
     },
     [homePath]
   );
-
-  if (view === 'fte') {
-    return (
-      <FteDashboard
-        {...FTE_MOCK_DASHBOARD}
-        currentUserRole={fteRole}
-        currentUserBranch={scopedBranch}
-        initialModalOpen={openLogModal}
-        onBack={() => handleNavigate('dashboard')}
-        onLogIssue={() => undefined}
-      />
-    );
-  }
 
   if (view === 'catalog') {
     return <DmsCatalog onBack={() => handleNavigate('dashboard')} />;
