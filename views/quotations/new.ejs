@@ -1,0 +1,390 @@
+<%- include('../partials/header') %>
+
+<h2 class="wo-new-title">Create Quotation</h2>
+
+<% const vehicleTypeOptions = ['small', 'medium', 'Large', 'CompactSuv', 'VanSuvPickUp', 'Truck', 'Walk-In', 'Equipment', 'Facility', 'Tools']; %>
+<% const vehicleCatalogData = (typeof vehicleCatalog !== 'undefined' && vehicleCatalog) ? vehicleCatalog : { brandOptions: [], modelsByBrand: {} }; %>
+<% const formPrefill = (typeof prefill !== 'undefined' && prefill) ? prefill : {}; %>
+<% const selectedBrand = String(formPrefill.car_brand || '').trim(); %>
+<% const selectedModel = String(formPrefill.car_model || '').trim(); %>
+<% const selectedBrandModels = Array.isArray(vehicleCatalogData.modelsByBrand[selectedBrand]) ? vehicleCatalogData.modelsByBrand[selectedBrand] : []; %>
+<% const branchOptionsSafe = Array.isArray(typeof branchOptions !== 'undefined' ? branchOptions : []) ? branchOptions : []; %>
+<% const selectedBranch = String(formPrefill.branch || '').trim(); %>
+
+<% if (typeof vehicleTypeError !== 'undefined' && vehicleTypeError) { %>
+  <p class="error"><%= vehicleTypeError %></p>
+<% } %>
+
+<form method="post" action="/quotations" id="quotation-form" class="form wo-new-form">
+  <label class="wo-new-branch">Branch
+    <select name="branch" id="branch-select">
+      <option value="">-- select branch --</option>
+      <% branchOptionsSafe.forEach(branchName => { %>
+        <option value="<%= branchName %>" <%= selectedBranch === branchName ? 'selected' : '' %>><%= branchName %></option>
+      <% }) %>
+      <% if (selectedBranch && !branchOptionsSafe.includes(selectedBranch)) { %>
+        <option value="<%= selectedBranch %>" selected><%= selectedBranch %></option>
+      <% } %>
+    </select>
+  </label>
+
+  <label class="wo-new-c1 wo-new-r1">Customer Name
+    <input id="customer-entry" name="customer_entry" list="customer-suggestions" placeholder="Type to search existing or enter new customer name" value="<%= formPrefill.customer_entry || '' %>" />
+    <input type="hidden" id="customer-id" name="customer_id" value="<%= formPrefill.customer_id || '' %>" />
+    <datalist id="customer-suggestions">
+      <% customers.forEach(c => { %>
+        <option value="<%= c.name %>" data-id="<%= c.id %>" data-phone="<%= c.phone || '' %>"></option>
+      <% }) %>
+    </datalist>
+  </label>
+  <label class="wo-new-c1 wo-new-r2">CP#-Viber
+    <input id="telephone-number" name="telephone_number" value="<%= formPrefill.telephone_number || '' %>">
+  </label>
+  <label class="wo-new-c1 wo-new-r3">Customer Type
+    <select id="customer-type" name="customer_type">
+      <% const selectedCustomerType = String(formPrefill.customer_type || 'Walk-In').trim() === 'Service' ? 'Service' : 'Walk-In'; %>
+      <option value="Walk-In" <%= selectedCustomerType === 'Walk-In' ? 'selected' : '' %>>Walk-In</option>
+      <option value="Service" <%= selectedCustomerType === 'Service' ? 'selected' : '' %>>Service</option>
+    </select>
+  </label>
+
+  <label class="wo-new-c3 wo-new-r0">Plate Number
+    <input id="plate-number" name="plate_number" list="plate-suggestions" value="<%= formPrefill.plate_number || '' %>">
+  </label>
+  <label class="wo-new-c3 wo-new-r1">Car Brand
+    <select id="car-brand" name="car_brand">
+      <option value="">-- select brand --</option>
+      <% vehicleCatalogData.brandOptions.forEach(brand => { %>
+        <option value="<%= brand %>" <%= selectedBrand === brand ? 'selected' : '' %>><%= brand %></option>
+      <% }) %>
+      <% if (selectedBrand && !vehicleCatalogData.brandOptions.includes(selectedBrand)) { %>
+        <option value="<%= selectedBrand %>" selected><%= selectedBrand %></option>
+      <% } %>
+    </select>
+  </label>
+  <label class="wo-new-c3 wo-new-r2">Model
+    <select id="car-model" name="car_model">
+      <option value="">-- select model --</option>
+      <% selectedBrandModels.forEach(entry => { %>
+        <option value="<%= entry.model %>" data-vehicle-type="<%= entry.vehicleTypeUi || entry.vehicleType || '' %>" <%= selectedModel === entry.model ? 'selected' : '' %>><%= entry.model %></option>
+      <% }) %>
+    </select>
+  </label>
+  <label class="wo-new-c3 wo-new-r3">Unit Type
+    <select id="vehicle-type" name="vehicle_type">
+      <option value="">-- select unit type --</option>
+      <% vehicleTypeOptions.forEach(type => { %>
+        <% const prefillVehicleType = String(formPrefill.vehicle_type || '').toLowerCase(); %>
+        <% const typeKey = String(type).toLowerCase(); %>
+        <option value="<%= type %>" <%= prefillVehicleType && (prefillVehicleType === typeKey || (prefillVehicleType === 'compactsuv' && type === 'CompactSuv') || ((prefillVehicleType === 'suvvanpickup' || prefillVehicleType === 'vansuvpickup' || prefillVehicleType === 'vansuv' || prefillVehicleType === 'pickup') && type === 'VanSuvPickUp') || (prefillVehicleType === 'largeunit' && type === 'Large')) ? 'selected' : '' %>><%= type %></option>
+      <% }) %>
+    </select>
+  </label>
+  <label class="wo-new-c3 wo-new-r4">Odometer
+    <input id="odometer-input" name="odometer" type="number" min="0" step="1" value="<%= formPrefill.odometer || '' %>">
+  </label>
+
+  <input type="hidden" id="car-year" name="car_year" value="<%= formPrefill.car_year || '' %>">
+  <input type="hidden" id="vehicle-id" name="vehicle_id" value="<%= formPrefill.vehicle_id || '' %>" />
+  <datalist id="plate-suggestions">
+    <% vehicles.filter(v => v.license_plate).forEach(v => { %>
+      <option value="<%= v.license_plate %>" data-id="<%= v.id %>" data-make="<%= v.make || '' %>" data-model="<%= v.model || '' %>" data-year="<%= v.year || '' %>" data-vehicle-type="<%= v.vehicle_type || '' %>"></option>
+    <% }) %>
+  </datalist>
+
+  <label class="wo-new-span">Creator <input name="service_advisor" value="<%= currentUser && currentUser.username ? currentUser.username : '' %>" readonly></label>
+</form>
+
+<%- include('_service-module') %>
+
+<h3 style="margin-top:24px;">Quotation Customers</h3>
+<div class="table-scroll">
+<table class="list">
+  <thead><tr><th>#</th><th>Date</th><th>Customer</th><th>CP#-Viber</th><th>Type</th><th>Vehicle</th><th>Plate</th><th>Odometer</th><th>Branch</th><th>Service Work / Reason</th><th>Service Required</th><th>Labor</th><th>Parts</th><th>Part Number</th><th>Parts Total</th><th>Total</th><th>Created By</th><th></th></tr></thead>
+  <tbody>
+    <% const quotationRows = (typeof quotations !== 'undefined' && Array.isArray(quotations)) ? quotations : []; %>
+    <% const peso = (n) => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); %>
+    <% if (!quotationRows.length) { %>
+      <tr><td colspan="18">No quotations yet.</td></tr>
+    <% } %>
+    <% quotationRows.forEach((q, i) => {
+         const svc = Array.isArray(q.service_items) ? q.service_items : [];
+         const laborTotal = svc.reduce((sum, s) => sum + (Number(s.labor_price) || 0) * (Number(s.service_qty) || 1), 0);
+         const partsTotal = svc.reduce((sum, s) => sum + (Number(s.parts_price) || 0) * (Number(s.parts_qty) || 0), 0);
+         const lines = (key) => svc.map(s => s[key]).filter(Boolean);
+    %>
+      <tr>
+        <td><%= i + 1 %></td>
+        <td><%= q.created_at ? String(q.created_at).slice(0, 10) : '—' %></td>
+        <td><%= q.customer_name || '—' %></td>
+        <td><%= q.telephone_number || '—' %></td>
+        <td><%= q.customer_type || '—' %></td>
+        <td><%= [q.car_brand, q.car_model, q.car_year].filter(Boolean).join(' ') || '—' %></td>
+        <td><%= q.plate_number || '—' %></td>
+        <td><%= q.odometer || '—' %></td>
+        <td><%= q.branch || '—' %></td>
+        <% ['reason', 'description'].forEach(key => { %>
+          <td style="white-space:pre-line"><%= lines(key).join('\n') || '—' %></td>
+        <% }) %>
+        <td><%= svc.length ? peso(laborTotal) : '—' %></td>
+        <% ['parts', 'part_number'].forEach(key => { %>
+          <td style="white-space:pre-line"><%= lines(key).join('\n') || '—' %></td>
+        <% }) %>
+        <td><%= svc.length ? peso(partsTotal) : '—' %></td>
+        <td><%= peso(q.grand_total) %></td>
+        <td><%= q.created_by || '—' %></td>
+        <td class="actions"><a class="btn" href="/quotations/<%= q.id %>">View</a></td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+</div>
+
+<script src="/js/vehicle-type-catalog.js"></script>
+<script>
+  const vehicleCatalog = <%- JSON.stringify(vehicleCatalogData || { brandOptions: [], modelsByBrand: {} }) %>;
+  const knownVehicles = <%- JSON.stringify((vehicles || []).map(v => ({
+    id: v.id || '',
+    customer_id: v.customer_id || '',
+    make: v.make || '',
+    model: v.model || '',
+    year: v.year || '',
+    license_plate: v.license_plate || '',
+    vehicle_type: v.vehicle_type || '',
+  }))) %>;
+
+  function toUiVehicleType(value) {
+    return window.DmsVehicleType ? window.DmsVehicleType.toUiVehicleType(value) : '';
+  }
+
+  function setIfBlank(input, value) {
+    if (!input) return;
+    if (String(input.value || '').trim()) return;
+    if (!String(value || '').trim()) return;
+    input.value = value;
+  }
+
+  function normalizeUiVehicleType(value) {
+    return toUiVehicleType(value);
+  }
+
+  function catalogBrandName(brand) {
+    return window.DmsVehicleType ? window.DmsVehicleType.findBrandName(vehicleCatalog, brand) : '';
+  }
+
+  function getModelEntry(brand, model) {
+    return window.DmsVehicleType ? window.DmsVehicleType.findModelEntry(vehicleCatalog, brand, model) : null;
+  }
+
+  function lookupCatalogUnitType(brand, model) {
+    return window.DmsVehicleType ? window.DmsVehicleType.lookupUnitType(vehicleCatalog, brand, model) : null;
+  }
+
+  function applyCatalogBrand(brandInput, incomingBrand) {
+    if (!brandInput) return '';
+    const catalogBrand = catalogBrandName(incomingBrand || brandInput.value || '');
+    if (catalogBrand) brandInput.value = catalogBrand;
+    return brandInput.value || '';
+  }
+
+  function rebuildModelOptions(modelSelect, brand, preferredModel = '') {
+    if (!modelSelect) return;
+
+    const brandName = catalogBrandName(brand) || String(brand || '').trim();
+    const models = Array.isArray(vehicleCatalog.modelsByBrand && vehicleCatalog.modelsByBrand[brandName])
+      ? vehicleCatalog.modelsByBrand[brandName]
+      : [];
+    const fallbackModel = String(preferredModel || '').trim();
+    const selectedModel = String(modelSelect.value || fallbackModel || '').trim();
+    const catalogModel = getModelEntry(brandName, fallbackModel || selectedModel);
+
+    modelSelect.innerHTML = '';
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = '-- select model --';
+    modelSelect.appendChild(placeholder);
+
+    models.forEach(entry => {
+      const option = document.createElement('option');
+      option.value = entry.model;
+      option.textContent = entry.model;
+      option.dataset.vehicleType = entry.vehicleTypeUi || entry.vehicleType || '';
+      modelSelect.appendChild(option);
+    });
+
+    if (catalogModel) {
+      modelSelect.value = catalogModel.model;
+      return;
+    }
+
+    if (selectedModel && !models.some(entry => entry.model === selectedModel)) {
+      const customOption = document.createElement('option');
+      customOption.value = selectedModel;
+      customOption.textContent = selectedModel;
+      customOption.dataset.vehicleType = '';
+      modelSelect.appendChild(customOption);
+      modelSelect.value = selectedModel;
+      return;
+    }
+
+    modelSelect.value = models.some(entry => entry.model === selectedModel) ? selectedModel : '';
+  }
+
+  function syncVehicleTypeFromModel() {
+    const brandInput = document.getElementById('car-brand');
+    const modelInput = document.getElementById('car-model');
+    const vehicleTypeInput = document.getElementById('vehicle-type');
+    if (!brandInput || !modelInput || !vehicleTypeInput) return;
+
+    const match = lookupCatalogUnitType(brandInput.value || '', modelInput.value || '');
+    if (match && match.vehicleTypeUi) {
+      vehicleTypeInput.value = match.vehicleTypeUi;
+      return;
+    }
+
+    const selectedOption = modelInput.options && modelInput.selectedIndex >= 0 ? modelInput.options[modelInput.selectedIndex] : null;
+    vehicleTypeInput.value = normalizeUiVehicleType((selectedOption && selectedOption.dataset && selectedOption.dataset.vehicleType) || '') || '';
+  }
+
+  function pickVehicleForCustomer(customerId) {
+    const normalizedCustomerId = String(customerId || '').trim();
+    if (!normalizedCustomerId) return null;
+
+    const candidates = knownVehicles.filter(v => String(v.customer_id || '').trim() === normalizedCustomerId);
+    if (!candidates.length) return null;
+
+    // Prefer the most recently added customer vehicle that has a plate number.
+    const withPlate = candidates.filter(v => String(v.license_plate || '').trim());
+    const source = withPlate.length ? withPlate : candidates;
+    return source[source.length - 1] || null;
+  }
+
+  function bindCustomerAutoFill() {
+    const input = document.getElementById('customer-entry');
+    const list = document.getElementById('customer-suggestions');
+    const customerHidden = document.getElementById('customer-id');
+    const phoneInput = document.getElementById('telephone-number');
+    const makeInput = document.getElementById('car-brand');
+    const modelInput = document.getElementById('car-model');
+    const yearInput = document.getElementById('car-year');
+    const plateInput = document.getElementById('plate-number');
+    const vehicleTypeInput = document.getElementById('vehicle-type');
+    const vehicleHidden = document.getElementById('vehicle-id');
+    const options = Array.from(list.options || []);
+
+    function syncCustomerAndDetails() {
+      const typed = (input.value || '').trim().toLowerCase();
+      const match = options.find(opt => (opt.value || '').trim().toLowerCase() === typed);
+
+      customerHidden.value = match ? (match.dataset.id || '') : '';
+      if (!match) return;
+
+      setIfBlank(phoneInput, match.dataset.phone || '');
+
+      const matchedVehicle = pickVehicleForCustomer(match.dataset.id || '');
+      if (!matchedVehicle) return;
+
+      applyCatalogBrand(makeInput, matchedVehicle.make || makeInput.value || '');
+      rebuildModelOptions(modelInput, makeInput.value || '', matchedVehicle.model || '');
+      const catalogVehicle = lookupCatalogUnitType(makeInput.value || '', matchedVehicle.model || modelInput.value || '');
+      if (catalogVehicle && catalogVehicle.model) {
+        modelInput.value = catalogVehicle.model;
+      } else {
+        setIfBlank(modelInput, matchedVehicle.model || '');
+      }
+      setIfBlank(yearInput, matchedVehicle.year || '');
+      setIfBlank(plateInput, matchedVehicle.license_plate || '');
+
+      if (vehicleHidden && !String(vehicleHidden.value || '').trim() && matchedVehicle.id) {
+        vehicleHidden.value = matchedVehicle.id;
+      }
+
+      if (vehicleTypeInput) {
+        const uiType = (catalogVehicle && catalogVehicle.vehicleTypeUi)
+          || normalizeUiVehicleType(matchedVehicle.vehicle_type);
+        if (uiType) vehicleTypeInput.value = uiType;
+      }
+    }
+
+    input.addEventListener('input', syncCustomerAndDetails);
+    input.addEventListener('change', syncCustomerAndDetails);
+    syncCustomerAndDetails();
+  }
+
+  function bindVehicleFromPlate() {
+    const plateInput = document.getElementById('plate-number');
+    const list = document.getElementById('plate-suggestions');
+    const vehicleHidden = document.getElementById('vehicle-id');
+    const makeInput = document.getElementById('car-brand');
+    const modelInput = document.getElementById('car-model');
+    const yearInput = document.getElementById('car-year');
+    const vehicleTypeInput = document.getElementById('vehicle-type');
+    const options = Array.from(list.options || []);
+
+    function syncVehicle() {
+      const typed = (plateInput.value || '').trim().toLowerCase();
+      const match = options.find(opt => (opt.value || '').trim().toLowerCase() === typed);
+      if (match) {
+        vehicleHidden.value = match.dataset.id || '';
+        if (match.dataset.make) applyCatalogBrand(makeInput, match.dataset.make);
+        rebuildModelOptions(modelInput, makeInput.value || '', match.dataset.model || '');
+        const catalogVehicle = lookupCatalogUnitType(makeInput.value || '', match.dataset.model || '');
+        if (catalogVehicle && catalogVehicle.model) {
+          modelInput.value = catalogVehicle.model;
+        } else if (match.dataset.model) {
+          modelInput.value = match.dataset.model;
+        }
+        if (match.dataset.year) yearInput.value = match.dataset.year;
+        if (vehicleTypeInput) {
+          vehicleTypeInput.value = (catalogVehicle && catalogVehicle.vehicleTypeUi)
+            || normalizeUiVehicleType(match.dataset.vehicleType)
+            || vehicleTypeInput.value;
+        }
+      } else {
+        vehicleHidden.value = '';
+      }
+    }
+
+    plateInput.addEventListener('input', syncVehicle);
+    plateInput.addEventListener('change', syncVehicle);
+    syncVehicle();
+  }
+
+  bindCustomerAutoFill();
+  bindVehicleFromPlate();
+
+  (function bindBrandToModelSelection() {
+    const brandInput = document.getElementById('car-brand');
+    const modelInput = document.getElementById('car-model');
+    if (!brandInput || !modelInput) return;
+
+    function syncModels() {
+      applyCatalogBrand(brandInput, brandInput.value || '');
+      rebuildModelOptions(modelInput, brandInput.value || '', modelInput.value || '');
+      syncVehicleTypeFromModel();
+    }
+
+    brandInput.addEventListener('change', syncModels);
+    brandInput.addEventListener('input', syncModels);
+    modelInput.addEventListener('change', syncVehicleTypeFromModel);
+    modelInput.addEventListener('input', syncVehicleTypeFromModel);
+    syncModels();
+  })();
+
+  (function enforceVehicleTypeSelection() {
+    const vehicleTypeInput = document.getElementById('vehicle-type');
+    const form = vehicleTypeInput ? vehicleTypeInput.form : null;
+    if (!form || !vehicleTypeInput) return;
+
+    form.addEventListener('submit', event => {
+      if (!String(vehicleTypeInput.value || '').trim()) {
+        event.preventDefault();
+        window.alert('Please Select the Unit Type');
+        vehicleTypeInput.focus();
+      }
+    });
+  })();
+</script>
+
+<%- include('../partials/footer') %>

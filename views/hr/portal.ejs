@@ -1,56 +1,92 @@
 <%- include('../partials/header') %>
+<%
+  const canPayroll = canGrant('hr', 'view_payroll');
+  const maxBranch = Math.max(1, ...(byBranch || []).map((row) => row.count));
+%>
 
-<section class="dashboard-shell admin-shell sa-shell">
-  <div class="dashboard-title admin-title sa-title role-dashboard-title"><span>HR</span> <span class="role-dashboard-title__suffix">Portal</span></div>
-  <p class="dashboard-note">Employee directory, shift rosters, and payroll data. Existing HR account tools stay on the HR Dashboard.</p>
+<section class="dashboard-shell admin-shell hr-workspace">
+  <div class="dashboard-title admin-title role-dashboard-title"><span>HR</span> <span class="role-dashboard-title__suffix">Portal</span></div>
 
-  <section class="sa-home-group">
-    <h3 class="sa-home-group__title">People</h3>
-    <div class="sa-grid sa-grid--4">
-      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card sa-home-card--kpi" href="/employees">
-        <div class="workorder-nav-card__icon">&#128101;</div>
-        <div class="workorder-nav-card__body">
-          <h3>Employee Directory</h3>
-          <p><%= employeeCount || 0 %></p>
-          <span>Employee DB</span>
-        </div>
+  <div class="admin-summary-grid hr-kpis">
+    <a class="gm-kpi-card admin-summary-card hr-kpi" href="/employees">
+      <p class="gm-kpi-label">Employees</p>
+      <h2 class="gm-kpi-value"><%= employeeCount || 0 %></h2>
+      <p class="dashboard-note"><%= activeCount || 0 %> active · <%= inactiveCount || 0 %> inactive</p>
+    </a>
+    <a class="gm-kpi-card admin-summary-card hr-kpi" href="/hr">
+      <p class="gm-kpi-label">Accounts</p>
+      <h2 class="gm-kpi-value"><%= accountCount || 0 %></h2>
+      <p class="dashboard-note"><%= noPasswordCount || 0 %> without password</p>
+    </a>
+    <a class="gm-kpi-card admin-summary-card hr-kpi" href="/hr/rosters">
+      <p class="gm-kpi-label">Shift Rosters</p>
+      <h2 class="gm-kpi-value"><%= rosterCount || 0 %></h2>
+      <p class="dashboard-note">Posted shifts</p>
+    </a>
+    <% if (canPayroll) { %>
+      <a class="gm-kpi-card admin-summary-card hr-kpi" href="/hr/payroll">
+        <p class="gm-kpi-label">Payroll Data</p>
+        <h2 class="gm-kpi-value"><%= payrollCount || 0 %></h2>
+        <p class="dashboard-note">Payslip rows</p>
       </a>
-      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card sa-home-card--kpi" href="/hr">
-        <div class="workorder-nav-card__icon">&#128100;</div>
-        <div class="workorder-nav-card__body">
-          <h3>Account Directory</h3>
-          <p><%= accountCount || 0 %></p>
-          <span>Passwords · access</span>
-        </div>
-      </a>
-      <a class="workorder-nav-card workorder-nav-card--orange sa-home-card sa-home-card--kpi" href="/hr/rosters">
-        <div class="workorder-nav-card__icon">&#128197;</div>
-        <div class="workorder-nav-card__body">
-          <h3>Shift Rosters</h3>
-          <p><%= rosterCount || 0 %></p>
-          <span>Schedules</span>
-        </div>
-      </a>
-      <% if (canGrant('hr', 'view_payroll')) { %>
-        <a class="workorder-nav-card workorder-nav-card--yellow sa-home-card sa-home-card--kpi" href="/hr/payroll">
-          <div class="workorder-nav-card__icon">&#128176;</div>
-          <div class="workorder-nav-card__body">
-            <h3>Payroll Data</h3>
-            <p><%= payrollCount || 0 %></p>
-            <span>Payslips</span>
-          </div>
-        </a>
-      <% } %>
-      <a class="workorder-nav-card workorder-nav-card--green sa-home-card sa-home-card--kpi" href="/approvals">
-        <div class="workorder-nav-card__icon">&#128172;</div>
-        <div class="workorder-nav-card__body">
-          <h3><%= canApproveRequests ? 'Approvals' : 'Requests' %></h3>
-          <p><%= canApproveRequests ? (pendingApprovalCount || 0) : '-' %></p>
-          <span><%= canApproveRequests ? 'Approval requests' : 'Submit or view requests' %></span>
-        </div>
-      </a>
-    </div>
-  </section>
+    <% } %>
+    <a class="gm-kpi-card admin-summary-card hr-kpi" href="/approvals">
+      <p class="gm-kpi-label"><%= canApproveRequests ? 'Approvals' : 'Requests' %></p>
+      <h2 class="gm-kpi-value"><%= canApproveRequests ? (pendingApprovalCount || 0) : '-' %></h2>
+      <p class="dashboard-note"><%= canApproveRequests ? 'Pending approval requests' : 'Submit or view requests' %></p>
+    </a>
+  </div>
+
+  <div class="admin-grid">
+    <article class="dashboard-card admin-panel">
+      <div class="dashboard-card__header admin-panel-header">Active Headcount by Branch</div>
+      <div class="table-scroll">
+        <table class="list">
+          <thead><tr><th>Branch</th><th style="width:90px;">Active</th><th>Share</th></tr></thead>
+          <tbody>
+            <% if (!(byBranch || []).length) { %>
+              <tr><td colspan="3">No employees in Employee DB.</td></tr>
+            <% } %>
+            <% (byBranch || []).forEach((row) => { %>
+              <tr>
+                <td><%= row.label %></td>
+                <td style="text-align:right;"><%= row.count %></td>
+                <td><div class="hr-bar"><span style="width:<%= Math.round(row.count / maxBranch * 100) %>%;"></span></div></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="dashboard-card admin-panel">
+      <div class="dashboard-card__header admin-panel-header">Active Employees by Status</div>
+      <div class="table-scroll">
+        <table class="list">
+          <thead><tr><th>Employment Status</th><th style="width:90px;">Active</th></tr></thead>
+          <tbody>
+            <% if (!(byStatus || []).length) { %>
+              <tr><td colspan="2">No employees in Employee DB.</td></tr>
+            <% } %>
+            <% (byStatus || []).forEach((row) => { %>
+              <tr><td><%= row.label %></td><td style="text-align:right;"><%= row.count %></td></tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <div class="dashboard-card__header admin-panel-header" style="margin-top:14px;">Active Employees by Department</div>
+      <div class="table-scroll">
+        <table class="list">
+          <thead><tr><th>Department</th><th style="width:90px;">Active</th></tr></thead>
+          <tbody>
+            <% (byDepartment || []).forEach((row) => { %>
+              <tr><td><%= row.label %></td><td style="text-align:right;"><%= row.count %></td></tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </article>
+  </div>
 </section>
 
 <%- include('../partials/footer') %>

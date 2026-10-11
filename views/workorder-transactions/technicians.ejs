@@ -5,6 +5,16 @@
   <% const techHomeRole = String(currentUser && currentUser.role || '').toLowerCase(); %>
   <% const techHomePath = ['service_advisor', 'service_receptionist', 'senior_service_receptionist'].includes(techHomeRole) ? '/service-receptionist' : '/work-order-transactions'; %>
   <p><a class="btn" href="<%= techHomePath %>"><%= techHomePath === '/service-receptionist' ? 'Back to Dashboard' : 'Back to Work Order Transactions' %></a></p>
+
+  <div class="wo-view-toggle">
+    <span class="wo-view-toggle__label">WO Tracker</span>
+    <label class="wo-view-toggle__switch">
+      <input type="checkbox" checked onchange="window.location.href='/work-order-transactions'">
+      <span class="wo-view-toggle__slider"></span>
+    </label>
+    <span class="wo-view-toggle__label wo-view-toggle__label--active">Technician Assignment</span>
+  </div>
+
   <% if (success) { %><p class="success"><%= success %></p><% } %>
   <% if (error) { %><p class="error"><%= error %></p><% } %>
 

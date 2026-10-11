@@ -122,6 +122,11 @@
       <form method="post" action="<%= proceedAction %>" style="margin:0;">
         <button type="submit" class="btn btn--proceed"><%= previewActionLabel %></button>
       </form>
+      <% if (typeof removeAction !== 'undefined' && removeAction) { %>
+        <form method="post" action="<%= removeAction %>" style="margin:0;" onsubmit="return confirm('Remove this ticket? It will be recorded with status remove.');">
+          <button type="submit" class="btn">Remove</button>
+        </form>
+      <% } %>
       <a class="btn btn--cancel" href="<%= cancelHref || '/parts-manager?panel=approvals' %>">Cancel</a>
     <% } else { %>
       <button type="button" class="btn btn--proceed" id="pm-print-btn">Print</button>

@@ -19,29 +19,6 @@ const TECHNICIAN_STATUS_TO_WO = {
   on_other_priority: 'on-other-priority',
 };
 
-function normalizePhoneDigits(value) {
-  return String(value || '').replace(/\D/g, '');
-}
-
-function toViberNumber(value) {
-  const digits = normalizePhoneDigits(value);
-  if (!digits) return '';
-
-  if (digits.startsWith('63') && digits.length >= 12) {
-    return `+${digits}`;
-  }
-
-  if (digits.startsWith('0') && digits.length >= 11) {
-    return `+63${digits.slice(1)}`;
-  }
-
-  if (digits.length === 10 && digits.startsWith('9')) {
-    return `+63${digits}`;
-  }
-
-  return `+${digits}`;
-}
-
 function normalizeKey(value) {
   return String(value || '').trim().toLowerCase();
 }
@@ -101,58 +78,12 @@ router.get('/', async (req, res) => {
   }
   const technicianUpdates = await store.getAll('technician_updates');
   const employees = filterBySessionBranch(req, await store.getAll('employees'), (employee) => employee.work_location_branch_id);
-  const pricingRules = await store.getAll('pricing_rules');
   const technicianStats = toDashboardStats(
     buildTechnicianOperations(workOrders, vehicles, technicianUpdates, employees, customers)
   );
-  const latestWorkOrderByCustomerId = new Map();
-
-  (workOrders || []).forEach((wo) => {
-    const customerId = String(wo.customer_id || '').trim();
-    if (!customerId) return;
-
-    const createdAtMs = new Date(wo.created_at || 0).getTime();
-    const previous = latestWorkOrderByCustomerId.get(customerId);
-    if (!previous || createdAtMs > previous.createdAtMs) {
-      latestWorkOrderByCustomerId.set(customerId, {
-        createdAtMs,
-        createdAt: wo.created_at || '',
-      });
-    }
-  });
-
-  const customerContacts = (customers || [])
-    .map((customer) => {
-      const rawPhone = String(customer.phone || '').trim();
-      const viberNumber = toViberNumber(rawPhone);
-      const telDigits = normalizePhoneDigits(rawPhone);
-      const latestWorkOrder = latestWorkOrderByCustomerId.get(String(customer.id || '').trim()) || null;
-      return {
-        id: customer.id,
-        name: String(customer.name || '').trim() || 'Unknown Customer',
-        rawPhone,
-        viberNumber,
-        viberLink: viberNumber ? `viber://chat?number=${encodeURIComponent(viberNumber)}` : '',
-        callLink: telDigits ? `tel:${telDigits}` : '',
-        latestWorkOrderCreatedAt: latestWorkOrder ? latestWorkOrder.createdAt : '',
-        latestWorkOrderCreatedAtMs: latestWorkOrder ? latestWorkOrder.createdAtMs : 0,
-      };
-    })
-    .filter((entry) => entry.rawPhone)
-    .sort((a, b) => {
-      if (b.latestWorkOrderCreatedAtMs !== a.latestWorkOrderCreatedAtMs) {
-        return b.latestWorkOrderCreatedAtMs - a.latestWorkOrderCreatedAtMs;
-      }
-      return a.name.localeCompare(b.name);
-    });
 
   res.render('workorder-transactions/index', {
-    customersCount: customers.length,
-    vehiclesCount: vehicles.length,
-    workOrdersCount: workOrders.length,
-    pricingCount: pricingRules.length,
     technicianStats,
-    customerContacts,
   });
 });
 

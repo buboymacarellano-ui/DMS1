@@ -1,0 +1,158 @@
+<%- include('../partials/header') %>
+<%
+  const when = (value) => value ? new Date(value).toLocaleString('en-PH') : '-';
+  const STATUS_LABEL = { in_transit: 'In Transit', partial: 'Partially Received', not_received: 'Not Received', received: 'Received' };
+  const STATUS_COLOR = { in_transit: '#d97706', partial: '#2980b9', not_received: '#c0392b', received: '#1f8f53' };
+  const tag = (status) => `<span class="prc-tag" style="background:${STATUS_COLOR[status] || '#7f8c8d'}">${STATUS_LABEL[status] || status}</span>`;
+%>
+
+<section class="dashboard-shell gm-shell stm-shell pm-multiple-entry" id="parts-receiving"
+  data-can-receive="<%= canReceive ? '1' : '' %>" data-preload="<%= preload %>">
+  <div class="stm-head">
+    <div class="dashboard-title gm-title role-dashboard-title"><span>Parts</span> <span class="role-dashboard-title__suffix">Receiving</span></div>
+    <p class="dashboard-note stm-section__note">
+      <% if (frontline) { %>
+        Receive stock transfers sent by Warehouse 1 to <strong><%= branch || 'your branch' %></strong>. Received lines move into your branch stock.
+      <% } else { %>
+        Stock transfers sent by Warehouse 1 to all branches. Receiving is confirmed by the destination branch (view only here).
+      <% } %>
+    </p>
+  </div>
+
+  <% if (frontline && !branch) { %><p class="error" style="font-weight:700;margin:0;">Your account has no assigned branch. Please log in again or ask HR to set your branch.</p><% } %>
+  <% if (error) { %><p class="error" style="font-weight:700;margin:0;"><%= error %></p><% } %>
+  <% if (success) { %><p class="success" style="font-weight:700;margin:0;"><%= success %></p><% } %>
+
+  <article class="dashboard-card gm-panel">
+    <div class="dashboard-card__header gm-panel-header">Branch Receiving Grid</div>
+    <p class="dashboard-note">Type, paste or scan a valid stock transfer number (PTN), packing list # or transmittal # — the grid auto-fills with every item and its saved details as soon as the number is complete. Scan each part's barcode in the Scan Barcode box to mark that line Received, or set each line Received / No receive. Save records the receipt; lines marked No receive stay In Transit until they arrive.</p>
+
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin:12px 0;">
+      <label style="display:flex;flex-direction:column;font-weight:700;font-size:13px;">PTN / Packing List #
+        <input type="text" id="prc-ref" placeholder="PTN-YYYYMMDD-000001" autocomplete="off" style="min-width:240px;" />
+      </label>
+      <button type="button" class="btn" id="prc-load">Load Transfer</button>
+      <label style="display:flex;flex-direction:column;font-weight:700;font-size:13px;">Scan Barcode
+        <input type="text" id="prc-scan" placeholder="Scan part label" autocomplete="off" style="min-width:200px;" />
+      </label>
+      <% if (canReceive) { %>
+        <button type="button" class="btn" id="prc-all-received" style="background:#1f8f53;color:white;">Mark all Received</button>
+      <% } %>
+      <button type="button" class="btn" id="prc-clear" style="background:#95a5a6;color:white;">Clear</button>
+    </div>
+    <p id="prc-load-status" class="dashboard-note" role="status" aria-live="polite" style="margin:0 0 10px 0;">Load a stock transfer, or click Load on one of the transfers listed under For Receiving.</p>
+    <div id="prc-info" class="dashboard-note" style="margin:0 0 10px 0;font-weight:600;"></div>
+
+    <div class="table-scroll pm-table-wrap" style="border:1px solid #ddd;border-radius:4px;overflow-x:auto;">
+      <table class="list pm-multiple-entry__table" style="font-size:12px;min-width:1280px;width:100%;">
+        <thead>
+          <tr>
+            <th>Barcode</th>
+            <th>Part #</th>
+            <th>Part Name</th>
+            <th>Sub-ID</th>
+            <th>Generic / Description</th>
+            <th>Supplier</th>
+            <th>Txn #</th>
+            <th>Unit</th>
+            <th>Qty</th>
+            <th>Cost Price</th>
+            <th>Markup %</th>
+            <th>Retail Price</th>
+            <th>Status</th>
+            <th>Received?</th>
+          </tr>
+        </thead>
+        <tbody id="prc-body">
+          <tr class="prc-empty"><td colspan="14" style="text-align:center;color:#7f8c8d;padding:14px;">No stock transfer loaded.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap;margin-top:12px;">
+      <a class="btn" href="/parts">Cancel</a>
+      <% if (canReceive) { %><button type="button" class="btn" id="prc-save">Save</button><% } %>
+    </div>
+    <p id="prc-status" class="dashboard-note" role="status" aria-live="polite" style="margin-top:10px;"></p>
+  </article>
+
+  <article class="dashboard-card gm-panel">
+    <div class="dashboard-card__header gm-panel-header">For Receiving (<%= pending.length %>)</div>
+    <div class="table-scroll pm-table-wrap">
+      <table class="list" style="font-size:12px;width:100%;">
+        <thead>
+          <tr>
+            <th>PTN #</th><th>Packing List #</th><th>Transmittal #</th><th>Type</th><th>From</th><th>To</th>
+            <th>Sent</th><th>Lines</th><th>Received</th><th>Not Received</th><th>Status</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!pending.length) { %>
+            <tr><td colspan="12" style="text-align:center;color:#7f8c8d;">No stock transfers waiting to be received.</td></tr>
+          <% } %>
+          <% pending.forEach((g) => { %>
+            <tr>
+              <td><strong><%= g.reference %></strong></td>
+              <td><%= g.packing_list_number || '-' %></td>
+              <td><%= g.transmittal_number || '-' %></td>
+              <td><%= g.kind %></td>
+              <td><%= g.from %></td>
+              <td><%= g.to %></td>
+              <td><%= when(g.sent_at) %><%= g.sent_by ? ' · ' + g.sent_by : '' %></td>
+              <td><%= g.rows.length %></td>
+              <td><%= g.received_count %></td>
+              <td><%= g.not_received_count %></td>
+              <td><%- tag(g.status) %></td>
+              <td><button type="button" class="btn prc-load-row" data-ref="<%= g.key %>">Load</button></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="dashboard-card gm-panel">
+    <div class="dashboard-card__header gm-panel-header">Received (latest 50)</div>
+    <div class="table-scroll pm-table-wrap">
+      <table class="list" style="font-size:12px;width:100%;">
+        <thead>
+          <tr><th>PTN #</th><th>Packing List #</th><th>From</th><th>To</th><th>Lines</th><th>Received</th><th>Received By</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody>
+          <% if (!received.length) { %>
+            <tr><td colspan="9" style="text-align:center;color:#7f8c8d;">Nothing received yet.</td></tr>
+          <% } %>
+          <% received.forEach((g) => { %>
+            <tr>
+              <td><strong><%= g.reference %></strong></td>
+              <td><%= g.packing_list_number || '-' %></td>
+              <td><%= g.from %></td>
+              <td><%= g.to %></td>
+              <td><%= g.rows.length %></td>
+              <td><%= when(g.received_at) %></td>
+              <td><%= g.received_by || '-' %></td>
+              <td><%- tag(g.status) %></td>
+              <td><button type="button" class="btn prc-load-row" data-ref="<%= g.key %>">View</button></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+
+<style>
+  .prc-tag { display:inline-block; padding:2px 8px; font-size:11px; font-weight:700; color:#fff; }
+  .prc-facts { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:6px 16px; padding:10px 12px; background:#f4f8fb; border:1px solid #d6e2ec; }
+  .prc-facts div { display:flex; flex-direction:column; }
+  .prc-facts span { font-size:11px; font-weight:600; color:#6b7c8c; text-transform:uppercase; }
+  .prc-facts strong { font-size:13px; color:#10202f; }
+  #prc-scan { border-color:#2980b9; background:#eef6fc; }
+  .pm-multiple-entry__table .pm-decision-btn { background:#ecf0f1; color:#2c3e50; border:1px solid #bdc3c7; padding:3px 8px; font-size:11px; }
+  .pm-multiple-entry__table .pm-decision-btn[data-decision="received"].pm-decision-btn--active { background:#1f8f53 !important; background-image:none !important; color:#fff !important; border-color:#1f8f53 !important; }
+  .pm-multiple-entry__table .pm-decision-btn[data-decision="no_receive"].pm-decision-btn--active { background:#c0392b !important; background-image:none !important; color:#fff !important; border-color:#c0392b !important; }
+  .pm-multiple-entry__table tr.prc-row--scanned td { background:#fef9c3 !important; }
+  .pm-multiple-entry__table input[readonly] { background:#f7f9fa; border:1px solid #e1e5e8; width:100%; box-sizing:border-box; }
+</style>
+<script src="/js/parts-receiving.js"></script>
+<%- include('../partials/footer') %>

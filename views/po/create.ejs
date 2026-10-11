@@ -1,0 +1,98 @@
+<%- include('../partials/header') %>
+<% const o = order || {}; %>
+
+<section class="dashboard-shell admin-shell">
+  <div class="dashboard-title admin-title role-dashboard-title">Create PO</div>
+
+  <form id="po-form" class="form" novalidate
+    data-id="<%= o.id || '' %>"
+    data-lines="<%= JSON.stringify(o.lines || []) %>">
+    <p id="po-form-error" class="error" role="alert" hidden></p>
+
+    <article class="dashboard-card admin-panel">
+      <div class="dashboard-card__header admin-panel-header">PO Header</div>
+      <div class="po-header-grid">
+        <label>PO Number
+          <input value="<%= o.po_number || 'Auto-generated on save' %>" readonly>
+        </label>
+        <label>PO Date *
+          <input type="date" name="po_date" value="<%= o.po_date || today %>" required>
+          <small class="error" data-error-for="po_date"></small>
+        </label>
+        <label>Supplier / Vendor *
+          <input name="supplier" list="po-suppliers" value="<%= o.supplier || '' %>" required autocomplete="off">
+          <datalist id="po-suppliers"><% suppliers.forEach((s) => { %><option value="<%= s %>"><% }) %></datalist>
+          <small class="error" data-error-for="supplier"></small>
+        </label>
+        <label>Department *
+          <select name="department" required>
+            <option value="">Select department</option>
+            <% departments.forEach((d) => { %>
+              <option value="<%= d.key %>" <%= (o.department || defaultDepartment) === d.key ? 'selected' : '' %>><%= d.label %></option>
+            <% }) %>
+          </select>
+          <small class="error" data-error-for="department"></small>
+        </label>
+        <label>Requestor *
+          <input name="requestor" value="<%= o.requestor || defaultRequestor %>" required>
+          <small class="error" data-error-for="requestor"></small>
+        </label>
+        <label>Delivery Date *
+          <input type="date" name="delivery_date" value="<%= o.delivery_date || '' %>" required>
+          <small class="error" data-error-for="delivery_date"></small>
+        </label>
+        <label>Payment Terms *
+          <select name="payment_terms" required>
+            <option value="">Select terms</option>
+            <% paymentTerms.forEach((t) => { %><option <%= o.payment_terms === t ? 'selected' : '' %>><%= t %></option><% }) %>
+          </select>
+          <small class="error" data-error-for="payment_terms"></small>
+        </label>
+        <label>Currency *
+          <select name="currency" required>
+            <% currencies.forEach((c) => { %><option <%= (o.currency || 'PHP') === c ? 'selected' : '' %>><%= c %></option><% }) %>
+          </select>
+          <small class="error" data-error-for="currency"></small>
+        </label>
+        <label>Reference / PR No.
+          <input name="reference_no" value="<%= o.reference_no || '' %>">
+        </label>
+      </div>
+      <label>Remarks / Notes
+        <textarea name="remarks" rows="2"><%= o.remarks || '' %></textarea>
+      </label>
+    </article>
+
+    <article class="dashboard-card admin-panel">
+      <div class="dashboard-card__header admin-panel-header">Line Items</div>
+      <p class="dashboard-note admin-note">Keyboard: Tab to move, Enter in the last column adds a row, Ctrl+D duplicates the row, Ctrl+Backspace removes it. Typing an item code suggests existing parts.</p>
+      <div class="table-scroll">
+        <table class="list po-grid" id="po-grid">
+          <thead>
+            <tr><th>#</th><th>Item Code</th><th>Description</th><th>UOM</th><th>Qty</th><th>Unit Price</th><th>Disc %</th><th>Tax %</th><th>Line Total</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="po-lines"></tbody>
+        </table>
+      </div>
+      <datalist id="po-items"></datalist>
+      <p id="po-lines-error" class="error" role="alert" hidden></p>
+      <p id="po-dup-warning" class="dashboard-note admin-note" hidden>Note: the same item code appears on more than one line (allowed).</p>
+      <button type="button" class="btn" id="po-add-line">Add Line</button>
+
+      <dl class="po-totals">
+        <div><dt>Subtotal</dt><dd id="po-subtotal">0.00</dd></div>
+        <div><dt>Tax</dt><dd id="po-tax">0.00</dd></div>
+        <div><dt>Grand Total</dt><dd id="po-grand">0.00</dd></div>
+      </dl>
+    </article>
+
+    <div class="po-actions">
+      <button type="button" class="btn btn-secondary" data-action="draft">Save as Draft</button>
+      <button type="button" class="btn" data-action="submit">Submit for Approval</button>
+      <a class="btn btn-secondary" href="/po">Cancel</a>
+    </div>
+  </form>
+</section>
+
+<script src="/js/po-create.js"></script>
+<%- include('../partials/footer') %>

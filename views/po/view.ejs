@@ -1,0 +1,81 @@
+<%- include('../partials/header') %>
+
+<section class="dashboard-shell admin-shell">
+  <div class="dashboard-title admin-title role-dashboard-title">PO <%= order.po_number %></div>
+  <% if (error) { %><p class="error"><%= error %></p><% } %>
+  <% if (success) { %><p class="success"><%= success %></p><% } %>
+
+  <article class="dashboard-card admin-panel">
+    <div class="dashboard-card__header admin-panel-header">
+      <%= STATUS_LABELS[order.status] || order.status %>
+      <% if (canEdit) { %><a class="btn" href="/po/create?id=<%= order.id %>">Edit Draft</a><% } %>
+    </div>
+    <div class="po-header-grid">
+      <div><strong>Date</strong><br><%= order.po_date %></div>
+      <div><strong>Supplier</strong><br><%= order.supplier %></div>
+      <div><strong>Department</strong><br><%= order.department %></div>
+      <div><strong>Requestor</strong><br><%= order.requestor %></div>
+      <div><strong>Delivery Date</strong><br><%= order.delivery_date %></div>
+      <div><strong>Payment Terms</strong><br><%= order.payment_terms %></div>
+      <div><strong>Currency</strong><br><%= order.currency %></div>
+      <div><strong>Reference / PR No.</strong><br><%= order.reference_no || '-' %></div>
+    </div>
+    <p><strong>Remarks:</strong> <%= order.remarks || '-' %></p>
+    <% if (order.status === 'pending_approval' && order.approval_chain && order.approval_chain[order.current_level_index || 0]) { %>
+      <p><strong>Assigned approver(s), level <%= order.approval_chain[order.current_level_index || 0].level %> of <%= order.approval_chain.length %>:</strong>
+        <%= order.approval_chain[order.current_level_index || 0].approvers.map((a) => a.name || a.user_id).join(', ') %></p>
+    <% } %>
+  </article>
+
+  <article class="dashboard-card admin-panel">
+    <div class="dashboard-card__header admin-panel-header">Line Items</div>
+    <div class="table-scroll">
+      <table class="list">
+        <thead><tr><th>#</th><th>Item Code</th><th>Description</th><th>UOM</th><th>Qty</th><th>Unit Price</th><th>Disc %</th><th>Tax %</th><th>Line Total</th></tr></thead>
+        <tbody>
+          <% (order.lines || []).forEach((line, i) => { %>
+            <tr>
+              <td><%= i + 1 %></td><td><%= line.item_code %></td><td><%= line.description %></td><td><%= line.uom %></td>
+              <td><%= line.qty %></td><td><%= Number(line.unit_price).toFixed(2) %></td>
+              <td><%= line.discount_pct %></td><td><%= line.tax_pct %></td><td><%= Number(line.line_total).toFixed(2) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <p>Subtotal: <%= Number(order.subtotal || 0).toFixed(2) %> | Tax: <%= Number(order.tax_total || 0).toFixed(2) %> |
+      <strong>Grand Total: <%= order.currency %> <%= Number(order.grand_total || 0).toFixed(2) %></strong></p>
+  </article>
+
+  <% if (canAct) { %>
+    <article class="dashboard-card admin-panel">
+      <div class="dashboard-card__header admin-panel-header">Your Decision</div>
+      <form method="post" class="form">
+        <label>Remarks (required to reject)<textarea name="remarks" rows="2"></textarea></label>
+        <button type="submit" class="btn" formaction="/po/<%= order.id %>/approve">Approve</button>
+        <button type="submit" class="btn btn-secondary" formaction="/po/<%= order.id %>/reject">Reject</button>
+      </form>
+    </article>
+  <% } %>
+
+  <article class="dashboard-card admin-panel">
+    <div class="dashboard-card__header admin-panel-header">Status History</div>
+    <div class="table-scroll">
+      <table class="list">
+        <thead><tr><th>When</th><th>Action</th><th>By</th><th>Remarks</th></tr></thead>
+        <tbody>
+          <% (order.history || []).forEach((h) => { %>
+            <tr>
+              <td><%= h.at %></td>
+              <td><%= h.action %><%= h.assigned_approvers ? ' → ' + h.assigned_approvers.join(', ') : '' %></td>
+              <td><%= h.by %></td>
+              <td><%= h.remarks || '' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+
+<%- include('../partials/footer') %>

@@ -15,7 +15,17 @@
 
   <article class="dashboard-card gm-panel">
     <div class="dashboard-card__header gm-panel-header">Warehouse 1 Receiving Grid</div>
-    <p class="dashboard-note">Fill the rows below. Click inside the Barcode box and scan the parts label with the barcode reader to assign it to that row. Save creates restock transactions inside Parts-DB-All with auto PTN, date, editor, and Warehouse 1 location.</p>
+    <p class="dashboard-note">Fill the rows below. Click inside the Barcode box and scan the parts label with the barcode reader to assign it to that row. A barcode saved before auto-fills the row's part details (including Part #). Save creates New transactions for the first receipt of a part number system-wide, and Stock for later receipts, inside Parts-DB-All with auto PTN, date, editor, and Warehouse 1 location.</p>
+
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin:12px 0;">
+      <label style="display:flex;flex-direction:column;font-weight:700;font-size:13px;">PO Number
+        <input type="text" id="pm-multiple-po" placeholder="PO-YYYYMMDD-000001" autocomplete="off" style="min-width:240px;" />
+      </label>
+      <button type="button" class="btn" id="pm-multiple-po-load">Load PO</button>
+      <button type="button" class="btn" id="pm-multiple-po-all-received" style="background:#1f8f53;color:white;">Mark all Received</button>
+      <button type="button" class="btn" id="pm-multiple-po-clear" style="background:#95a5a6;color:white;">Clear PO</button>
+    </div>
+    <p id="pm-multiple-po-status" class="dashboard-note" role="status" aria-live="polite" style="margin:0 0 10px 0;">Enter a purchased PO number to auto-fill every line. Mark each line Received or No receive, then Save to record it.</p>
 
     <div class="table-scroll pm-table-wrap" style="border:1px solid #ddd;border-radius:4px;overflow-x:auto;">
       <table class="list pm-multiple-entry__table" style="font-size:12px;min-width:1280px;width:100%;">
@@ -33,6 +43,7 @@
             <th>Cost Price</th>
             <th>Markup %</th>
             <th>Retail Price</th>
+            <th>Received?</th>
             <th></th>
           </tr>
         </thead>
@@ -51,6 +62,9 @@
 
 <style>
   .pm-multiple-entry__table .pm-barcode-input { border-color: #2980b9; background: #eef6fc; }
+  .pm-multiple-entry__table .pm-decision-btn { background:#ecf0f1; color:#2c3e50; border:1px solid #bdc3c7; padding:3px 8px; font-size:11px; }
+  .pm-multiple-entry__table .pm-decision-btn[data-decision="received"].pm-decision-btn--active { background:#1f8f53 !important; background-image:none !important; color:#fff !important; border-color:#1f8f53 !important; }
+  .pm-multiple-entry__table .pm-decision-btn[data-decision="no_receive"].pm-decision-btn--active { background:#c0392b !important; background-image:none !important; color:#fff !important; border-color:#c0392b !important; }
   .pm-multiple-entry__table .pm-barcode-input:focus { border-color: #2980b9; box-shadow: 0 0 0 2px rgba(41,128,185,0.25); background: #fff; }
 </style>
 <script>

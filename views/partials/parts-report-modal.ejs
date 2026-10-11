@@ -26,6 +26,9 @@
           <% if (includeWholeDb) { %>
           <option value="whole-database">7. Download Whole Database CSV</option>
           <% } %>
+          <option value="stock">Stock</option>
+          <option value="new">New</option>
+          <option value="removed">Removed</option>
         </select>
       </label>
       <p id="report-type-hint" class="dashboard-note admin-note">Choose a report to reveal the matching criteria.</p>
@@ -35,7 +38,7 @@
           <input id="report-part-number" name="partNumber" list="report-part-options" placeholder="Enter or select a part number" autocomplete="off" />
         </label>
       </div>
-      <div class="report-criteria" data-for="date-range audit" hidden>
+      <div class="report-criteria" data-for="date-range audit stock new removed" hidden>
         <label>Month
           <input id="report-month" name="month" type="month" />
         </label>
@@ -53,7 +56,7 @@
           <input id="report-supplier" name="supplier" list="report-supplier-options" placeholder="Type or select supplier" autocomplete="off" />
         </label>
       </div>
-      <div class="report-criteria" data-for="warehouse" hidden>
+      <div class="report-criteria" data-for="warehouse stock new removed" hidden>
         <label>Warehouse / Location
           <input id="report-warehouse" name="warehouse" list="report-warehouse-options" placeholder="Type or select warehouse" autocomplete="off" />
         </label>

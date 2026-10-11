@@ -162,6 +162,8 @@
     <div class="dashboard-title gm-title role-dashboard-title"><span>Technician</span> <span class="role-dashboard-title__suffix">Dashboard</span></div>
     <p class="dashboard-note">Logged in as <strong><%= technicianName %></strong><%= technicianEmployeeId ? (' (ID: ' + technicianEmployeeId + ')') : '' %>.</p>
 
+    <%- include('../partials/my-tickets', { ticketLimit: 10 }) %>
+
     <div class="tech-kpi-grid">
       <article class="tech-kpi-card">
         <p>Labor Today</p>

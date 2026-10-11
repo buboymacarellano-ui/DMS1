@@ -1,0 +1,116 @@
+<% const stockApi = typeof stockUrl !== 'undefined' ? stockUrl : ''; %>
+<div class="workorder-nav-card sa-home-card" id="db-health-card" style="border-left:4px solid #27ae60;<%= stockApi ? 'max-width:360px;' : '' %>">
+  <div class="workorder-nav-card__icon" id="db-health-icon">&mdash;</div>
+  <div class="workorder-nav-card__body">
+    <strong>Database Health</strong>
+    <div id="db-health-percent">&mdash;</div>
+    <div id="db-health-message">&mdash;</div>
+    <% if (stockApi) { %><div id="db-health-stock" style="font-weight:700;"></div><% } %>
+    <small>Response: <span id="db-health-time">&mdash;</span> ms</small><br>
+    <small>Updated: <span id="db-health-updated">&mdash;</span></small>
+  </div>
+</div>
+
+<% if (stockApi) { %>
+<section id="parts-stock-grid" class="dashboard-card admin-panel" style="display:none;margin:12px 0;">
+  <div class="dashboard-card__header admin-panel-header">
+    <span>Low / Zero Stock Parts</span>
+    <span id="parts-stock-grid-summary" class="pm-badge"></span>
+  </div>
+  <div class="table-scroll" style="max-height:260px;overflow:auto;">
+    <table class="list" style="font-size:12px;">
+      <thead style="position:sticky;top:0;"><tr><th>Part Number</th><th>Part Name</th><th>Sub-ID</th><th>Supplier</th><th style="text-align:right;">On-Hand</th><th>Status</th></tr></thead>
+      <tbody id="parts-stock-grid-body"></tbody>
+    </table>
+  </div>
+</section>
+<% } %>
+
+<script>
+(function () {
+  var STOCK_URL = <%- JSON.stringify(stockApi) %>;
+  var COLORS = { healthy: '#27ae60', degraded: '#f39c12', error: '#e74c3c' };
+  var ICONS = { healthy: '✓', degraded: '⚠', error: '✕' };
+  var RANK = { healthy: 0, degraded: 1, error: 2 };
+  var dbStatus = 'error';
+  var stockStatus = 'healthy';
+  function set(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; }
+  var TINTS = {
+    healthy: { bg: '', text: '' },
+    degraded: { bg: '#fff1d6', text: '#9a6700' },
+    error: { bg: '#fdd9d7', text: '#b42318' }
+  };
+  function paint() {
+    var st = RANK[stockStatus] > RANK[dbStatus] ? stockStatus : dbStatus;
+    var tint = TINTS[st];
+    var card = document.getElementById('db-health-card');
+    card.style.borderLeft = '8px solid ' + COLORS[st];
+    card.style.border = st === 'healthy' ? '' : '2px solid ' + COLORS[st];
+    card.style.borderLeft = '8px solid ' + COLORS[st];
+    card.style.background = tint.bg;
+    card.style.color = tint.text;
+    Array.prototype.forEach.call(card.querySelectorAll('strong, div, small'), function (el) { el.style.color = tint.text; });
+    var icon = document.getElementById('db-health-icon');
+    set('db-health-icon', ICONS[st]);
+    icon.style.color = COLORS[st];
+    icon.style.fontWeight = '800';
+    var grid = document.getElementById('parts-stock-grid');
+    if (grid) {
+      grid.style.border = '2px solid ' + COLORS[stockStatus === 'healthy' ? 'degraded' : stockStatus];
+      grid.style.background = TINTS[stockStatus === 'healthy' ? 'degraded' : stockStatus].bg;
+      var head = grid.querySelector('.admin-panel-header');
+      head.style.background = COLORS[stockStatus === 'healthy' ? 'degraded' : stockStatus];
+      head.style.color = '#fff';
+    }
+  }
+  function render(d) {
+    dbStatus = d && COLORS[d.status] ? d.status : 'error';
+    set('db-health-percent', d && d.healthPercentage != null ? d.healthPercentage + '%' : '—');
+    set('db-health-message', d && d.message ? d.message : '—');
+    set('db-health-time', d && d.responseTime != null ? d.responseTime : '—');
+    set('db-health-updated', d && d.timestamp
+      ? new Date(d.timestamp).toLocaleString('en-PH', { timeZone: 'Asia/Manila' }) : '—');
+    paint();
+  }
+  function cell(tr, text, style) {
+    var td = document.createElement('td');
+    td.textContent = text == null ? '' : text;
+    if (style) td.style.cssText = style;
+    tr.appendChild(td);
+  }
+  function renderStock(d) {
+    stockStatus = d && COLORS[d.status] ? d.status : 'healthy';
+    var items = (d && d.items) || [];
+    var body = document.getElementById('parts-stock-grid-body');
+    body.textContent = '';
+    items.forEach(function (it) {
+      var tr = document.createElement('tr');
+      var out = it.level === 'out';
+      tr.style.background = out ? '#fdd9d7' : '#fff1d6';
+      tr.style.color = out ? '#b42318' : '#9a6700';
+      cell(tr, it.part_number);
+      cell(tr, it.part_name);
+      cell(tr, it.sub_id);
+      cell(tr, it.supplier);
+      cell(tr, it.on_hand, 'text-align:right;font-weight:700;');
+      cell(tr, out ? 'OUT OF STOCK' : 'LOW STOCK', 'font-weight:800;');
+      body.appendChild(tr);
+    });
+    document.getElementById('parts-stock-grid').style.display = items.length ? '' : 'none';
+    set('parts-stock-grid-summary', d ? d.outCount + ' out · ' + d.lowCount + ' low (≤ ' + d.threshold + ')' : '');
+    var line = document.getElementById('db-health-stock');
+    line.textContent = items.length ? d.outCount + ' out of stock · ' + d.lowCount + ' low' : 'Stock levels OK';
+    line.style.color = COLORS[stockStatus];
+    paint();
+  }
+  function getJson(url) {
+    return fetch(url, { credentials: 'same-origin' }).then(function (r) { return r.json(); });
+  }
+  function refresh() {
+    getJson('/api/health/database').then(render).catch(function () { render(null); });
+    if (STOCK_URL) getJson(STOCK_URL).then(renderStock).catch(function () {});
+  }
+  refresh();
+  setInterval(refresh, 30000);
+})();
+</script>

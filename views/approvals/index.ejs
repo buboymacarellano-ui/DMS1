@@ -1,10 +1,12 @@
 <%- include('../partials/header') %>
 
 <section class="dashboard-shell admin-shell">
-  <div class="dashboard-title admin-title role-dashboard-title"><%= approver ? 'Approval Center' : 'Approval Requests' %></div>
+  <% if (!approver) { %><div class="dashboard-title admin-title role-dashboard-title">Approval Requests</div><% } %>
 
   <% if (error) { %><p class="error"><%= error %></p><% } %>
-  <% if (success) { %><p class="success"><%= success %></p><% } %>
+  <% if (success && !approver) { %><p class="success"><%= success %></p><% } %>
+
+  <%- include('../partials/my-tickets') %>
 
   <% if (!approver) { %>
     <article class="dashboard-card admin-panel">
@@ -25,8 +27,9 @@
     </article>
   <% } %>
 
+  <% if (!approver) { %>
   <article class="dashboard-card admin-panel">
-    <div class="dashboard-card__header admin-panel-header"><%= approver ? 'Requests From Subordinates' : 'My Requests' %></div>
+    <div class="dashboard-card__header admin-panel-header">My Requests</div>
     <% if (!requests.length) { %>
       <p class="dashboard-note admin-note">No approval requests.</p>
     <% } else { %>
@@ -67,13 +70,60 @@
       </div>
     <% } %>
   </article>
+  <% } %>
 
-  <% if (approver) { %>
-    <article class="dashboard-card admin-panel" id="pending-stock-transfers">
-      <div class="dashboard-card__header admin-panel-header">Pending Stock Transfers for GM Approval <span class="pm-badge pm-badge--alert"><%= (pendingStockTransfers || []).length %></span></div>
-      <% if (!(pendingStockTransfers || []).length) { %>
-        <p class="dashboard-note admin-note">No pending stock transfers.</p>
-      <% } else { %>
+  <% if (approver) {
+    const pendingRequests = (requests || []).filter(request => request.status === 'pending');
+    const pendingTotal = pendingRequests.length + (pendingStockTransfers || []).length + (pendingPOs || []).length;
+  %>
+    <% if (!pendingTotal) { %>
+      <article class="dashboard-card admin-panel">
+        <div class="dashboard-card__header admin-panel-header">Pending Approvals</div>
+        <p class="dashboard-note admin-note">No requests are waiting for approval.</p>
+      </article>
+    <% } %>
+
+    <% if (pendingRequests.length) { %>
+      <article class="dashboard-card admin-panel" id="pending-requests">
+        <div class="dashboard-card__header admin-panel-header">RWO / CBD Requests Pending Approval <span class="pm-badge pm-badge--alert"><%= pendingRequests.length %></span></div>
+        <div class="table-scroll">
+          <table class="list">
+            <thead><tr><th>Type</th><th>Requested By</th><th>Details</th><th>Reason</th><th>Requested</th><th></th></tr></thead>
+            <tbody>
+              <% pendingRequests.forEach(request => { %>
+                <tr>
+                  <td><strong><%= request.type %></strong></td>
+                  <td><%= request.requested_by %><br><small><%= request.requested_by_role %></small></td>
+                  <td>
+                    <% if (request.type === 'CBD') { %>
+                      <%= request.employee_name || request.employee_id %>: <%= request.current_branch || '-' %> to <%= request.target_branch %>
+                    <% } else { %>
+                      WO <%= request.work_order_number %> | <%= request.branch || '-' %>
+                    <% } %>
+                  </td>
+                  <td><%= request.reason || '-' %></td>
+                  <td><%= new Date(request.created_at).toLocaleString('en-PH') %></td>
+                  <td class="action-buttons">
+                    <form method="post" action="/approvals/<%= request.id %>/resolve" style="display:inline">
+                      <input type="hidden" name="decision" value="approved">
+                      <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                    </form>
+                    <form method="post" action="/approvals/<%= request.id %>/resolve" style="display:inline">
+                      <input type="hidden" name="decision" value="rejected">
+                      <button type="submit" class="btn btn-sm btn-danger">Reject</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    <% } %>
+
+    <% if ((pendingStockTransfers || []).length) { %>
+      <article class="dashboard-card admin-panel" id="pending-stock-transfers">
+        <div class="dashboard-card__header admin-panel-header">Stock Transfers Pending Approval <span class="pm-badge pm-badge--alert"><%= pendingStockTransfers.length %></span></div>
         <div class="table-scroll">
           <table class="list">
             <thead><tr><th>PTN</th><th>Route</th><th>Lines</th><th>Created</th><th>Status</th><th></th></tr></thead>
@@ -88,8 +138,8 @@
                   <td class="action-buttons">
                     <a class="btn btn-sm" href="/parts-manager/transfers/<%= encodeURIComponent(transfer.id) %>/preview">Review</a>
                     <a class="btn btn-sm btn-success" href="/parts-manager/transfers/<%= encodeURIComponent(transfer.id) %>/preview">Approve</a>
-                    <form method="post" action="/parts-manager/transfers/<%= encodeURIComponent(transfer.id) %>/remove" style="display:inline" onsubmit="return confirm('Remove this pending stock transfer?');">
-                      <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+                    <form method="post" action="/parts-manager/transfers/<%= encodeURIComponent(transfer.id) %>/remove" style="display:inline"                     onsubmit="return confirm('Reject this pending stock transfer? It will be kept in My Record as rejected.');">
+                                          <button type="submit" class="btn btn-sm btn-danger">Reject</button>
                     </form>
                   </td>
                 </tr>
@@ -97,8 +147,8 @@
             </tbody>
           </table>
         </div>
-      <% } %>
-    </article>
+      </article>
+    <% } %>
   <% } %>
 
   <% if (approver && (pendingPOs && pendingPOs.length > 0)) { %>
@@ -184,43 +234,6 @@
       </div>
     </article>
   <% } %>
-
-  <% if (approver) { %>
-    <article class="dashboard-card admin-panel" id="my-transactions-records">
-      <div class="dashboard-card__header admin-panel-header">My Transactions Records</div>
-      <p class="dashboard-note admin-note">Footprint of GM-approved PO, Stock Transfer, and FTE Request transactions.</p>
-      <% if (!(myTransactionRecords || []).length) { %>
-        <p class="dashboard-note admin-note">No approved transactions yet.</p>
-      <% } else { %>
-        <div class="table-scroll">
-          <table class="list">
-            <thead>
-              <tr>
-                <th>Transaction Number</th>
-                <th>Requested Date</th>
-                <th>Type</th>
-                <th>Requester Name</th>
-                <th>Amount</th>
-                <th>Approved Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% myTransactionRecords.forEach(row => { %>
-                <tr>
-                  <td><strong><%= row.transaction_number || row.id %></strong></td>
-                  <td><%= row.requested_at ? new Date(row.requested_at).toLocaleString('en-PH') : '-' %></td>
-                  <td><span class="badge badge-warning"><%= row.type %></span></td>
-                  <td><%= row.requester_name || '-' %></td>
-                  <td><%= '₱' + Number(row.amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
-                  <td><%= row.approved_at ? new Date(row.approved_at).toLocaleString('en-PH') : '-' %></td>
-                </tr>
-              <% }) %>
-            </tbody>
-          </table>
-        </div>
-      <% } %>
-    </article>
-  <% } %>
 </section>
 
 
@@ -228,6 +241,8 @@
   .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
   .modal.active { display: flex; justify-content: center; align-items: center; }
   .modal-content { background-color: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; }
+  #poDetailsModal .modal-content { max-width: 900px; }
+  .po-lines tfoot td { background-color: #f5f5f5; }
   .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
   .modal-close { cursor: pointer; font-size: 28px; font-weight: bold; }
   .po-details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
@@ -240,7 +255,7 @@
   .po-lines th { background-color: #f5f5f5; }
   .btn-group { display: flex; gap: 10px; margin-top: 20px; }
   .btn-group button { flex: 1; }
-  .badge-warning { background-color: #ffc107; color: #000; padding: 3px 8px; border-radius: 3px; font-size: 0.85em; }
+  .badge-warning { background-color: #ffc107; color: #000; padding: 3px 8px; border-radius: 0; font-size: 0.85em; }
   .action-buttons { white-space: nowrap; }
   .action-buttons form { display: inline; margin-right: 5px; }
   .btn-sm { padding: 4px 8px; font-size: 0.85em; margin: 2px; }
@@ -331,35 +346,59 @@
       
       // Add line items table
       if (po.lines && po.lines.length > 0) {
+        const toNum = (value) => { const n = Number(value); return Number.isFinite(n) ? n : 0; };
+        const peso = (value) => '₱' + toNum(value).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const esc = (value) => String(value == null ? '' : value).replace(/[&<>'"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
+        let grandTotal = 0;
         html += `
           <div class="po-lines">
             <h4>Line Items</h4>
             <table>
               <thead>
                 <tr>
+                  <th>#</th>
                   <th>Part #</th>
                   <th>Description</th>
-                  <th>Qty</th>
+                  <th style="text-align:right;">Qty</th>
                   <th>Unit</th>
+                  <th style="text-align:right;">Unit Price</th>
+                  <th style="text-align:right;">Line Total</th>
+                  <th>Remarks</th>
                 </tr>
               </thead>
               <tbody>
         `;
         
-        po.lines.forEach(line => {
+        po.lines.forEach((line, index) => {
+          const qty = toNum(line.qty);
+          const unitPrice = toNum(line.cost_price != null && line.cost_price !== '' ? line.cost_price : line.unit_price);
+          const lineTotal = qty * unitPrice;
+          grandTotal += lineTotal;
           html += `
             <tr>
-              <td>${line.part_number || '-'}</td>
-              <td>${line.part_name || '-'}</td>
-              <td>${line.qty || 0}</td>
-              <td>${line.unit || '-'}</td>
+              <td>${index + 1}</td>
+              <td>${esc(line.part_number || '-')}</td>
+              <td>${esc(line.part_name || line.description || '-')}</td>
+              <td style="text-align:right;">${qty}</td>
+              <td>${esc(line.unit || line.uom || '-')}</td>
+              <td style="text-align:right;white-space:nowrap;">${peso(unitPrice)}</td>
+              <td style="text-align:right;white-space:nowrap;">${peso(lineTotal)}</td>
+              <td>${esc(line.notes || line.remarks || '-')}</td>
             </tr>
           `;
         });
         
         html += `
               </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="6" style="text-align:right;font-weight:700;">PO Grand Total</td>
+                  <td style="text-align:right;font-weight:700;white-space:nowrap;">${peso(grandTotal)}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
             </table>
+            ${po.notes ? `<p style="margin-top:10px;"><strong>PO Remarks:</strong> ${esc(po.notes)}</p>` : ''}
           </div>
         `;
       }

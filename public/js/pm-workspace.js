@@ -3,7 +3,7 @@
   if (!root) return;
 
   const panels = Array.from(root.querySelectorAll('[data-pm-section]'));
-  const buttons = Array.from(root.querySelectorAll('[data-pm-panel]'));
+  const buttons = Array.from(document.querySelectorAll('#pm-sidebar [data-pm-panel]'));
   const editForm = document.getElementById('pm-edit-form');
   const editDeleteForm = document.getElementById('pm-edit-delete-form');
   const editCancelBtn = document.getElementById('pm-edit-cancel-btn');
@@ -25,13 +25,48 @@
   const transactionStatus = document.getElementById('pm-transaction-action-status');
   let selectedTransactionRow = null;
 
+  // Grids persist in localStorage until the user pushes an action (create PO / file transfer) or clears them.
+  const GRID_KEYS = { order: 'pmOrderingGrid:v1', transfer: 'pmTransferGrid:v1' };
+  function loadGrid(key) {
+    try {
+      const data = JSON.parse(localStorage.getItem(key) || '[]');
+      return Array.isArray(data) ? data : [];
+    } catch (e) { return []; }
+  }
+  function saveGrid(key, rows) {
+    try {
+      if (rows && rows.length) localStorage.setItem(key, JSON.stringify(rows));
+      else localStorage.removeItem(key);
+    } catch (e) { /* storage unavailable */ }
+  }
+  window.orderingGridItems = loadGrid(GRID_KEYS.order);
+
+  function gridToast(message) {
+    let el = document.getElementById('pm-grid-toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'pm-grid-toast';
+      el.style.cssText = 'position:fixed;right:20px;bottom:20px;background:#2c3e50;color:#fff;padding:10px 16px;border-radius:4px;font-size:13px;z-index:4000;box-shadow:0 2px 8px rgba(0,0,0,.3);transition:opacity .3s;';
+      document.body.appendChild(el);
+    }
+    el.textContent = message;
+    el.style.opacity = '1';
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.style.opacity = '0'; }, 2200);
+  }
+
   function openPanel(name) {
     const target = String(name || '').trim();
     panels.forEach((panel) => {
-      panel.hidden = panel.getAttribute('data-pm-section') !== target;
+      panel.hidden = !(panel.getAttribute('data-pm-section') || '').split(/\s+/).includes(target);
+    });
+    const single = target.indexOf('proc-') === 0;
+    root.classList.toggle('pm-proc-single', single);
+    root.querySelectorAll('[data-pm-process]').forEach((el) => {
+      el.hidden = single && el.getAttribute('data-pm-process') !== target;
     });
     buttons.forEach((btn) => {
-      btn.classList.toggle('pm-role-btn--active', btn.getAttribute('data-pm-panel') === target);
+      btn.classList.toggle('pm-sidebar__link--active', btn.getAttribute('data-pm-panel') === target);
     });
     if (target) {
       const url = new URL(window.location.href);
@@ -39,7 +74,7 @@
       window.history.replaceState({}, '', url);
       
       // Refresh ordering grid when opening the ordering panel
-      if (target === 'ordering' && typeof window.updateOrderingGridDisplay === 'function') {
+      if ((target === 'ordering' || target === 'order-grid') && typeof window.updateOrderingGridDisplay === 'function') {
         setTimeout(() => window.updateOrderingGridDisplay(), 50);
       }
     }
@@ -51,23 +86,17 @@
     }[char]));
   }
 
+  window.pmOpenPanel = openPanel;
+
   buttons.forEach((btn) => {
     btn.addEventListener('click', () => {
       const name = btn.getAttribute('data-pm-panel');
-      const current = new URL(window.location.href).searchParams.get('panel');
-      if (current === name && !document.getElementById('pm-panel-' + name).hidden) {
-        openPanel('');
-        const url = new URL(window.location.href);
-        url.searchParams.delete('panel');
-        window.history.replaceState({}, '', url);
-        return;
-      }
       openPanel(name);
     });
   });
 
   const initial = root.getAttribute('data-open-panel') || new URL(window.location.href).searchParams.get('panel') || '';
-  if (initial) openPanel(initial);
+  openPanel(initial || 'edit');
 
   if (csvFile && csvText) {
     csvFile.addEventListener('change', () => {
@@ -257,6 +286,13 @@
     document.getElementById('pm-edit-markup').value = part.markup != null ? part.markup : '';
     document.getElementById('pm-edit-retail').value = part.retail_price != null ? part.retail_price : '';
     document.getElementById('pm-edit-sold-to').value = part.sold_to || '';
+    document.getElementById('pm-edit-receiving-receipt').value = part.receiving_receipt_number || '';
+    const barcodeInput = document.getElementById('pm-edit-barcode');
+    if (barcodeInput) {
+      barcodeInput.value = part.barcode || '';
+      barcodeInput.dataset.lookedUp = String(part.barcode || '').trim().toUpperCase();
+    }
+    setBarcodeStatus('', false);
     editForm.action = '/parts-manager/parts/' + encodeURIComponent(part.id) + '/edit';
     if (editDeleteForm) editDeleteForm.action = '/parts-manager/parts/' + encodeURIComponent(part.id) + '/delete';
     if (editRemoveBtn) editRemoveBtn.disabled = false;
@@ -281,14 +317,52 @@
   }
 
   root.addEventListener('click', (event) => {
-    const editBtn = event.target.closest('[data-pm-edit]');
+    const orderBtn = event.target.closest('[data-pm-order-grid]');
+    if (orderBtn) {
+      event.preventDefault();
+      const partNumber = orderBtn.getAttribute('data-part-number');
+      if (!partNumber) return;
+      const location = orderBtn.getAttribute('data-location') || '';
+      if (!window.orderingGridItems) window.orderingGridItems = [];
+      const existing = window.orderingGridItems.find((item) => item.part_number === partNumber && (item.location || '') === location);
+      if (existing) {
+        existing.order_qty = (Number(existing.order_qty) || 0) + 1;
+      } else {
+        window.orderingGridItems.push({
+          id: 'item_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11),
+          part_number: partNumber,
+          part_name: orderBtn.getAttribute('data-part-name') || '',
+          supplier: orderBtn.getAttribute('data-supplier') || '',
+          location,
+          current_stock: Number(orderBtn.getAttribute('data-on-hand')) || 0,
+          order_qty: 1,
+        });
+      }
+      if (typeof window.updateOrderingGridDisplay === 'function') window.updateOrderingGridDisplay();
+      else saveGrid(GRID_KEYS.order, window.orderingGridItems);
+      gridToast('Added ' + partNumber + ' to Ordering Grid (' + window.orderingGridItems.length + ' item(s) queued)');
+      return;
+    }
+    const transferBtn = event.target.closest('[data-pm-transfer-grid]');
+    if (transferBtn) {
+      event.preventDefault();
+      if (typeof window.addToStockTransferGrid !== 'function') return;
+      window.addToStockTransferGrid({
+        source: transferBtn.getAttribute('data-location') || 'Warehouse 1',
+        part_number: transferBtn.getAttribute('data-part-number') || '',
+        part_name: transferBtn.getAttribute('data-part-name') || '',
+        sub_id: transferBtn.getAttribute('data-sub-id') || '',
+        unit: transferBtn.getAttribute('data-unit') || '',
+      });
+      return;
+    }    const editBtn = event.target.closest('[data-pm-edit]');
     if (editBtn) {
       event.preventDefault();
       loadPart(editBtn.getAttribute('data-pm-edit'));
       return;
     }
     const row = event.target.closest('.pm-db-row');
-    if (row && !event.target.closest('a, button, form')) {
+    if (row && !row.closest('#pm-panel-database') && !event.target.closest('a, button, form')) {
       if (row.getAttribute('data-sold') === '1') {
         window.alert('A part that has been sold cannot be edited or erased.');
         return;
@@ -309,12 +383,120 @@
     if (el) el.addEventListener('input', computeRetail);
   });
 
+  function setBarcodeStatus(message, isError) {
+    const el = document.getElementById('pm-edit-barcode-status');
+    if (!el) return;
+    el.textContent = message || '';
+    el.style.color = isError ? '#c0392b' : '';
+  }
+
+  // Scanning a barcode that was saved before fills the part details from the latest matching record.
+  async function lookupEditBarcode() {
+    const input = document.getElementById('pm-edit-barcode');
+    if (!input) return;
+    const code = String(input.value || '').trim();
+    const key = code.toUpperCase();
+    if (!code) { setBarcodeStatus('', false); input.dataset.lookedUp = ''; return; }
+    if (input.dataset.lookedUp === key) return;
+    input.dataset.lookedUp = key;
+    setBarcodeStatus('Looking up barcode...', false);
+    try {
+      const res = await fetch('/parts-manager/api/parts/find-by-barcode/' + encodeURIComponent(code), {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+      });
+      if (res.status === 404) {
+        setBarcodeStatus('New barcode — fill in the part details; it will be saved with this entry.', false);
+        document.getElementById('pm-edit-part-number').focus();
+        return;
+      }
+      const part = await res.json().catch(() => ({}));
+      if (!res.ok || !part.found) throw new Error(part.error || 'Barcode lookup failed.');
+      const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = value == null ? '' : value; };
+      set('pm-edit-part-number', part.part_number);
+      set('pm-edit-part-name', part.part_name);
+      set('pm-edit-sub-id', part.sub_id);
+      set('pm-edit-generic', part.generic);
+      set('pm-edit-supplier', part.supplier);
+      set('pm-edit-unit', part.unit);
+      set('pm-edit-cost', part.cost_price || '');
+      set('pm-edit-markup', part.markup || '');
+      set('pm-edit-retail', part.retail_price || '');
+      setBarcodeStatus('Barcode found: ' + part.part_number + ' — ' + part.part_name + '. Enter the Qty and Receipt #.', false);
+      document.getElementById('pm-edit-qty').focus();
+    } catch (error) {
+      input.dataset.lookedUp = '';
+      setBarcodeStatus(String(error.message || error), true);
+    }
+  }
+
+  const editBarcodeInput = document.getElementById('pm-edit-barcode');
+  if (editBarcodeInput) {
+    // Barcode scanners type the code then send Enter; don't let that submit the form.
+    editBarcodeInput.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      lookupEditBarcode();
+    });
+    editBarcodeInput.addEventListener('change', lookupEditBarcode);
+  }
+
+  const editDateInput = document.getElementById('pm-edit-date');
+  if (editDateInput && !editDateInput.value) editDateInput.value = new Date().toISOString().slice(0, 10);
+
+  async function saveNewReceivingEntry() {
+    const val = (id) => String((document.getElementById(id) || {}).value || '').trim();
+    const entry = {
+      barcode: val('pm-edit-barcode'),
+      transaction_date: val('pm-edit-date'),
+      present_location: val('pm-edit-location'),
+      part_number: val('pm-edit-part-number'),
+      part_name: val('pm-edit-part-name'),
+      sub_id: val('pm-edit-sub-id'),
+      generic: val('pm-edit-generic'),
+      supplier: val('pm-edit-supplier'),
+      receiving_receipt_number: val('pm-edit-receiving-receipt'),
+      unit: val('pm-edit-unit'),
+      qty: val('pm-edit-qty'),
+      cost_price: val('pm-edit-cost'),
+      markup: val('pm-edit-markup'),
+      retail_price: val('pm-edit-retail'),
+    };
+    if (!(Number(entry.qty) > 0)) {
+      window.alert('Qty must be greater than 0.');
+      return;
+    }
+    const saveBtn = document.getElementById('pm-edit-save-btn');
+    if (saveBtn) saveBtn.disabled = true;
+    try {
+      const res = await fetch('/parts-manager/api/parts/receiving-entry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ entries: [entry] }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok || !payload.ok || !payload.created) {
+        throw new Error((payload.errors && payload.errors.join('\n')) || payload.error || 'Could not save receiving entry.');
+      }
+      const record = payload.records[0] || {};
+      const url = new URL(window.location.href);
+      url.searchParams.set('panel', 'edit');
+      url.searchParams.delete('error');
+      url.searchParams.set('success', (record.transaction_type === 'new' ? 'New' : 'Stock') + ' received: ' + entry.part_number + ' (' + (record.transaction_number || 'new entry') + ') at ' + (record.present_location || entry.present_location) + '.');
+      window.location.href = url.toString();
+    } catch (error) {
+      window.alert(error.message || error);
+      if (saveBtn) saveBtn.disabled = false;
+    }
+  }
+
   if (editForm) {
     editForm.addEventListener('submit', (event) => {
       const id = document.getElementById('pm-edit-id').value;
       if (!id) {
         event.preventDefault();
-        window.alert('Select a parts row from the database below first.');
+        saveNewReceivingEntry();
       }
     });
   }
@@ -377,7 +559,59 @@
     }
     const receiveBtn = event.target.closest('[data-pm-receive-po]');
     if (receiveBtn) {
+      if (!window.confirm('Receive every line still to receive on this PO? Stock will be added for all of them.')) return;
       postJson('/parts-manager/api/purchase-orders/' + encodeURIComponent(receiveBtn.getAttribute('data-pm-receive-po')) + '/receive');
+      return;
+    }
+    const toggleLinesBtn = event.target.closest('[data-pm-toggle-po-lines]');
+    if (toggleLinesBtn) {
+      const id = toggleLinesBtn.getAttribute('data-pm-toggle-po-lines');
+      const linesRow = Array.from(root.querySelectorAll('[data-pm-po-lines-for]')).find((el) => el.getAttribute('data-pm-po-lines-for') === id);
+      if (linesRow) linesRow.hidden = !linesRow.hidden;
+      return;
+    }
+    const removeLinesBtn = event.target.closest('[data-pm-remove-po-lines]');
+    if (removeLinesBtn) {
+      const id = removeLinesBtn.getAttribute('data-pm-remove-po-lines');
+      const box = removeLinesBtn.closest('.pm-po-lines-box');
+      const picked = Array.from(box.querySelectorAll('[data-pm-po-line]:checked')).map((el) => Number(el.getAttribute('data-pm-po-line')));
+      if (!picked.length) {
+        window.alert('Tick the lines confirmed as not arriving first.');
+        return;
+      }
+      if (!window.confirm('Remove ' + picked.length + ' line(s) from this PO? The PO closes once every remaining line is received.')) return;
+      removeLinesBtn.disabled = true;
+      fetch('/parts-manager/api/purchase-orders/' + encodeURIComponent(id) + '/remove-lines', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ lines: picked }),
+      }).then(async (res) => {
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok || !payload.ok) throw new Error(payload.error || 'Could not remove the lines.');
+        const url = new URL(window.location.href);
+        url.searchParams.set('panel', 'proc-po-records');
+        url.searchParams.delete('error');
+        url.searchParams.set('success', payload.message);
+        window.location.href = url.toString();
+      }).catch((error) => {
+        window.alert(error.message || error);
+        removeLinesBtn.disabled = false;
+      });
+      return;
+    }
+    const copyBtn = event.target.closest('[data-pm-copy-po]');
+    if (copyBtn) {
+      const number = copyBtn.getAttribute('data-pm-copy-po');
+      const done = () => {
+        copyBtn.textContent = 'Copied';
+        setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(number).then(done, () => window.prompt('Copy the PO number:', number));
+      } else {
+        window.prompt('Copy the PO number:', number);
+      }
     }
   });
 
@@ -663,17 +897,60 @@
     const transferGridCancel = document.getElementById('pm-health-stock-transfer-cancel');
     const transferGridStatus = document.getElementById('pm-health-stock-transfer-status');
     const locations = JSON.parse(decodeURIComponent(root.getAttribute('data-transfer-locations') || '%5B%5D'));
-    let stagedRows = [];
+    let stagedRows = loadGrid(GRID_KEYS.transfer);
 
     if (!transferGridBody || !transferGridSubmit || !transferGridCancel) return;
+    const fillDest = document.getElementById('pm-health-transfer-fill-dest');
+    const splitLabel = document.getElementById('pm-health-transfer-split');
+    const resultBox = document.getElementById('pm-health-transfer-result');
+    if (fillDest) {
+      fillDest.innerHTML = '<option value="">—</option>' + locations.map((location) => `<option value="${escapeHtml(location)}">${escapeHtml(location)}</option>`).join('');
+      fillDest.addEventListener('change', () => {
+        const value = fillDest.value;
+        if (!value) return;
+        stagedRows.forEach((row) => { if (!row.destination && row.source !== value) row.destination = value; });
+        fillDest.value = '';
+        renderTransferGrid();
+      });
+    }
+
+    // One PTN per source -> destination pair.
+    function splitGroups() {
+      const groups = new Map();
+      stagedRows.forEach((item, index) => {
+        const key = item.destination ? item.source + '|' + item.destination : '|unassigned';
+        if (!groups.has(key)) groups.set(key, { source: item.source, destination: item.destination, indexes: [] });
+        groups.get(key).indexes.push(index);
+      });
+      return Array.from(groups.values()).sort((a, b) => (!a.destination) - (!b.destination) || String(a.destination).localeCompare(String(b.destination)));
+    }
 
     function renderTransferGrid() {
+      saveGrid(GRID_KEYS.transfer, stagedRows);
       transferGridSubmit.disabled = stagedRows.length === 0;
       if (!stagedRows.length) {
         transferGridBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:16px;color:#666;">Select critical rows in Health Monitoring first.</td></tr>';
+        if (splitLabel) splitLabel.textContent = '';
         return;
       }
-      transferGridBody.innerHTML = stagedRows.map((item, index) => `
+      const groups = splitGroups();
+      const ready = groups.filter((g) => g.destination);
+      const unassigned = groups.find((g) => !g.destination);
+      if (splitLabel) {
+        splitLabel.textContent = `${stagedRows.length} line(s) → ${ready.length} PTN(s)`
+          + (ready.length ? ' [' + ready.map((g) => g.destination + ': ' + g.indexes.length).join(', ') + ']' : '')
+          + (unassigned ? ` — ${unassigned.indexes.length} line(s) still need a destination` : '');
+      }
+      transferGridSubmit.textContent = ready.length > 1 ? `File ${ready.length} Stock Transfer Requests (${ready.length} PTNs)` : 'File Stock Transfer Request';
+      let ptn = 0;
+      transferGridBody.innerHTML = groups.map((group) => {
+        const header = group.destination
+          ? `PTN ${++ptn} of ${ready.length} — ${escapeHtml(group.source)} → ${escapeHtml(group.destination)} (${group.indexes.length} line${group.indexes.length === 1 ? '' : 's'}, qty ${group.indexes.reduce((s, i) => s + (Number(stagedRows[i].qty) || 0), 0)})`
+          : `No destination yet (${group.indexes.length} line${group.indexes.length === 1 ? '' : 's'}) — choose a destination branch`;
+        const head = `<tr class="pm-transfer-split-head"><td colspan="6" style="background:${group.destination ? '#f4ecf7' : '#fdecea'};font-weight:700;color:${group.destination ? '#6c3483' : '#c0392b'};">${header}</td></tr>`;
+        return head + group.indexes.map((index) => {
+          const item = stagedRows[index];
+          return `
         <tr data-transfer-index="${index}">
           <td>${escapeHtml(item.source)}</td>
           <td><select class="pm-health-transfer-destination" data-index="${index}">
@@ -684,14 +961,22 @@
           <td>${escapeHtml(item.part_name || '—')}</td>
           <td><input type="number" class="pm-health-transfer-qty" data-index="${index}" value="${item.qty}" min="1" step="1" style="width:70px;" /></td>
           <td><button type="button" class="btn pm-health-transfer-remove" data-index="${index}">Remove</button></td>
-        </tr>`).join('');
+        </tr>`;
+        }).join('');
+      }).join('');
     }
 
     transferGridBody.addEventListener('change', (event) => {
       const index = Number(event.target.dataset.index);
       if (!Number.isInteger(index) || !stagedRows[index]) return;
-      if (event.target.classList.contains('pm-health-transfer-destination')) stagedRows[index].destination = event.target.value;
+      if (event.target.classList.contains('pm-health-transfer-destination')) {
+        stagedRows[index].destination = event.target.value;
+        renderTransferGrid();
+        return;
+      }
       if (event.target.classList.contains('pm-health-transfer-qty')) stagedRows[index].qty = Math.max(1, Number(event.target.value) || 1);
+      saveGrid(GRID_KEYS.transfer, stagedRows);
+      renderTransferGrid();
     });
 
     transferGridBody.addEventListener('click', (event) => {
@@ -712,29 +997,66 @@
         transferGridStatus.textContent = 'Choose a different destination and valid quantity for every row.';
         return;
       }
+      const groups = splitGroups();
+      if (!window.confirm(`File ${groups.length} stock transfer request(s)?\n\n` + groups.map((g, i) => `PTN ${i + 1}: ${g.source} → ${g.destination} (${g.indexes.length} line(s))`).join('\n'))) return;
       transferGridSubmit.disabled = true;
-      transferGridStatus.textContent = 'Filing pending transfer requests...';
+      transferGridStatus.textContent = `Filing ${groups.length} stock transfer request(s)...`;
       try {
-        const groups = new Map();
-        stagedRows.forEach((item) => {
-          const key = item.source + '|' + item.destination;
-          if (!groups.has(key)) groups.set(key, { from_branch: item.source, to_branch: item.destination, lines: [] });
-          groups.get(key).lines.push({ part_number: item.part_number, part_name: item.part_name, sub_id: item.sub_id, qty: item.qty, unit: item.unit || '' });
+        const lines = stagedRows.map((item) => ({ from_branch: item.source, to_branch: item.destination, part_number: item.part_number, part_name: item.part_name, sub_id: item.sub_id, qty: item.qty, unit: item.unit || '' }));
+        const response = await fetch('/parts-manager/transfers/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ lines }),
+          credentials: 'same-origin',
         });
-        for (const group of groups.values()) {
-          const body = new URLSearchParams({ from_branch: group.from_branch, to_branch: group.to_branch, lines: JSON.stringify(group.lines) });
-          const response = await fetch('/parts-manager/transfer', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body, credentials: 'same-origin' });
-          if (!response.ok) throw new Error('A transfer request could not be filed.');
+        const json = await response.json().catch(() => ({}));
+        if (!response.ok || !json.ok) throw new Error(json.error || 'Transfer filing failed.');
+        stagedRows = [];
+        saveGrid(GRID_KEYS.transfer, stagedRows);
+        renderTransferGrid();
+        transferGridStatus.textContent = '';
+        if (resultBox) {
+          resultBox.style.display = '';
+          resultBox.innerHTML = `<strong>${escapeHtml(json.message)}</strong><table class="list" style="margin-top:8px;font-size:12px;"><thead><tr><th>PTN #</th><th>Packing List</th><th>Transmittal</th><th>Route</th><th>Lines</th><th>Qty</th><th>Status</th></tr></thead><tbody>`
+            + json.transfers.map((t) => `<tr><td><strong>${escapeHtml(t.transaction_number)}</strong></td>`
+              + `<td><a href="/parts-manager/print/packing/${encodeURIComponent(t.id)}" target="_blank" rel="noopener">${escapeHtml(t.packing_list_number)}</a></td>`
+              + `<td><a href="/parts-manager/print/transmittal/${encodeURIComponent(t.id)}" target="_blank" rel="noopener">${escapeHtml(t.transmittal_number)}</a></td>`
+              + `<td>${escapeHtml(t.from_branch)} → ${escapeHtml(t.to_branch)}</td><td>${t.lines}</td><td>${t.qty}</td><td>${t.auto_approved ? 'Auto-approved' : 'Pending GM approval'}</td></tr>`).join('')
+            + '</tbody></table><a class="btn" href="/parts-manager?panel=approvals#pending-transfers" style="margin-top:8px;display:inline-block;">Go to Approvals</a>';
         }
-        window.location.href = '/parts-manager?panel=approvals#pending-transfers';
       } catch (error) {
         transferGridStatus.textContent = error.message || 'Transfer filing failed.';
         transferGridSubmit.disabled = false;
       }
     });
 
+    // Accumulates only while every staged row shares the same source branch; a different branch starts a new batch.
+    window.addToStockTransferGrid = function (item) {
+      const source = item.source || 'Warehouse 1';
+      if (stagedRows.length && stagedRows[0].source !== source) {
+        const ok = window.confirm('The Stock Transfer Grid holds parts from ' + stagedRows[0].source + '. Parts from ' + source + ' cannot be combined with it.\n\nClear the grid and start a new transfer from ' + source + '?');
+        if (!ok) return false;
+        stagedRows = [];
+      }
+      const existing = stagedRows.find((row) => row.part_number === item.part_number && row.sub_id === (item.sub_id || ''));
+      if (existing) {
+        existing.qty += 1;
+      } else {
+        stagedRows.push({ source, part_number: item.part_number, part_name: item.part_name || '', sub_id: item.sub_id || '', qty: 1, unit: item.unit || '', destination: '' });
+      }
+      renderTransferGrid();
+      gridToast('Added ' + item.part_number + ' to Stock Transfer Grid (' + stagedRows.length + ' item(s) queued)');
+      return true;
+    };
+    renderTransferGrid();
     window.stageHealthRowsForStockTransfer = function (items) {
-      stagedRows = (items || []).map((item) => ({ source: item.source_location || 'Warehouse 1', part_number: item.part_number, part_name: item.part_name, sub_id: item.sub_id || '', qty: Math.max(1, Number(item.suggested_qty || 1)), unit: item.unit || '', destination: item.location || '' }));
+      if (resultBox) resultBox.style.display = 'none';
+      stagedRows = (items || []).map((item) => {
+        const source = item.source_location || 'Warehouse 1';
+        const location = String(item.location || '').trim();
+        const destination = locations.includes(location) && location !== source ? location : '';
+        return { source, part_number: item.part_number, part_name: item.part_name, sub_id: item.sub_id || '', qty: Math.max(1, Number(item.suggested_qty || 1)), unit: item.unit || '', destination };
+      });
       renderTransferGrid();
       openPanel('health-transfer');
     };
@@ -752,6 +1074,7 @@
     if (!tbody) return;
 
     countDisplay.textContent = items.length;
+    saveGrid(GRID_KEYS.order, items);
 
     if (items.length === 0) {
       tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px;color:#999;">No items in ordering queue. Transfer items from Health Monitor panel.</td></tr>';
@@ -786,6 +1109,7 @@
         const newQty = parseInt(e.target.value) || 0;
         const item = items.find((i) => i.id === orderId);
         if (item) item.order_qty = newQty;
+        saveGrid(GRID_KEYS.order, items);
       });
     });
 
@@ -969,7 +1293,7 @@
     const totalValue = items.reduce((sum, item) => sum + (item.order_qty * 100), 0); // Placeholder, use actual pricing
 
     const poHTML = `
-      <div style="background:white;border-radius:6px;max-width:800px;margin:20px auto;padding:40px;box-shadow:0 8px 32px rgba(0,0,0,0.2);font-family:Arial,sans-serif;">
+      <div style="background:white;border-radius:6px;max-width:800px;margin:20px auto;padding:40px;box-shadow:0 8px 32px rgba(0,0,0,0.2);font-family:'Inter','Segoe UI',Roboto,Arial,sans-serif;">
         <!-- PO Header -->
         <div style="border-bottom:3px solid #1a6bbf;padding-bottom:20px;margin-bottom:30px;">
           <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;">
@@ -981,7 +1305,7 @@
               </div>
             </div>
             <div style="text-align:right;font-size:13px;color:#555;">
-              <div><strong>Status:</strong> <span style="background:#fff3cd;color:#856404;padding:4px 8px;border-radius:3px;display:inline-block;">PENDING APPROVAL</span></div>
+              <div><strong>Status:</strong> <span style="background:#fff3cd;color:#856404;padding:4px 8px;border-radius:0;display:inline-block;">PENDING APPROVAL</span></div>
               <div style="margin-top:8px;">Transaction #: <strong>${po.transaction_number || 'N/A'}</strong></div>
             </div>
           </div>
@@ -1270,7 +1594,7 @@
               </div>
               <div>
                 <div style="font-weight:bold;color:#666;font-size:0.9em;">Status</div>
-                <div style="font-size:1em;"><span style="background:#27ae60;color:white;padding:3px 8px;border-radius:3px;font-size:0.9em;">✓ ${po.status || 'N/A'}</span></div>
+                <div style="font-size:1em;"><span style="background:#27ae60;color:white;padding:3px 8px;border-radius:0;font-size:0.9em;">✓ ${po.status || 'N/A'}</span></div>
               </div>
               <div>
                 <div style="font-weight:bold;color:#666;font-size:0.9em;">Supplier</div>

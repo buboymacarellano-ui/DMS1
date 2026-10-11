@@ -14,28 +14,16 @@
   <% } %>
 
   <div class="admin-summary-grid">
-    <article class="gm-kpi-card admin-summary-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-      <p class="gm-kpi-label" style="margin:0;">Assets &amp; Facilities</p>
-      <a class="btn" href="/gm/fte" style="white-space:nowrap;">Open</a>
-    </article>
-    <article class="gm-kpi-card admin-summary-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-      <p class="gm-kpi-label" style="margin:0;">Accounting</p>
-      <a class="btn" href="/finance" style="white-space:nowrap;">Open</a>
-    </article>
-    <% (adminGates || []).forEach((gate) => { %>
-      <article class="gm-kpi-card admin-summary-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-        <p class="gm-kpi-label" style="margin:0;"><%= gate.label %></p>
-        <a class="btn" href="/admin/gates/<%= gate.slug %>" style="white-space:nowrap;">Open</a>
+    <% (summary || []).forEach((item) => { %>
+      <article class="gm-kpi-card admin-summary-card">
+        <p class="gm-kpi-label"><%= item.label %></p>
+        <p class="gm-kpi-value"><%= item.value %></p>
       </article>
     <% }) %>
-    <article class="gm-kpi-card admin-summary-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-      <p class="gm-kpi-label" style="margin:0;">Employee DB</p>
-      <a class="btn" href="/employees" style="white-space:nowrap;">Open</a>
-    </article>
   </div>
 
   <div class="admin-grid">
-    <article class="dashboard-card admin-panel">
+    <article class="dashboard-card admin-panel" id="admin-delete-password">
       <div class="dashboard-card__header admin-panel-header">Delete &amp; Remove Password</div>
       <p class="dashboard-note admin-note">
         Protection: <strong><%= deletePasswordEnabled ? 'ON' : 'OFF' %></strong> | Password: <strong><%= deletePasswordConfigured ? 'Configured' : 'Not Configured' %></strong>
@@ -61,7 +49,7 @@
       </form>
     </article>
 
-    <article class="dashboard-card admin-panel">
+    <article class="dashboard-card admin-panel" id="admin-import">
       <div class="dashboard-card__header admin-panel-header">Import Transactions JSON</div>
       <p class="dashboard-note admin-note">Upload a JSON file or paste raw JSON. Accepted shapes: an array of records or an object containing <strong>transaction_records</strong>.</p>
       <form method="post" action="/admin/import-transactions" class="form admin-form" id="transaction-import-form">
@@ -108,7 +96,7 @@
       </form>
     </article>
 
-    <article class="dashboard-card admin-panel">
+    <article class="dashboard-card admin-panel" id="admin-collect-edit">
       <div class="dashboard-card__header admin-panel-header">Collection Editor</div>
       <p class="dashboard-note admin-note">Edit one collection at a time and save it back into the local data store.</p>
       <form method="get" action="/admin" class="admin-inline-form">
@@ -125,22 +113,24 @@
         <input type="hidden" name="collection_name" value="<%= selectedCollection %>" />
         <label>
           <%= selectedCollection %> JSON
-          <textarea name="collection_json" rows="18" spellcheck="false" required><%= collectionJson %></textarea>
+          <textarea name="collection_json" id="collection-json-textarea" rows="18" spellcheck="false" placeholder="Click “Load collection” to fetch the current data before editing." required></textarea>
         </label>
+        <button type="button" id="load-collection-btn" data-url="/admin/data/collection/<%= encodeURIComponent(selectedCollection) %>">Load collection</button>
         <button type="submit">Save Collection</button>
       </form>
     </article>
   </div>
 
-  <article class="dashboard-card admin-panel">
+  <article class="dashboard-card admin-panel" id="admin-database">
     <div class="dashboard-card__header admin-panel-header">Full Database Editor</div>
     <p class="dashboard-note admin-note">Use this only when you want to replace the complete local database structure in <strong>data/data.json</strong>.</p>
     <form method="post" action="/admin/save-database" class="form admin-form">
       <input type="hidden" name="selected_collection" value="<%= selectedCollection %>" />
       <label>
         Entire data.json Structure
-        <textarea name="database_json" rows="26" spellcheck="false" required><%= databaseJson %></textarea>
+        <textarea name="database_json" id="database-json-textarea" rows="26" spellcheck="false" placeholder="Click “Load full database” to fetch the current data before editing." required></textarea>
       </label>
+      <button type="button" id="load-database-btn" data-url="/admin/data/database">Load full database</button>
       <button type="submit">Save Full Database</button>
     </form>
   </article>
@@ -170,6 +160,32 @@
 
     bindFileInput('import-json-file', 'import-json-textarea', 'Unable to read the selected JSON file.');
     bindFileInput('import-csv-file', 'import-csv-textarea', 'Unable to read the selected CSV file.');
+  })();
+
+  (function initAdminLazyEditors() {
+    function bindLoader(buttonId, textareaId) {
+      const button = document.getElementById(buttonId);
+      const textarea = document.getElementById(textareaId);
+      if (!button || !textarea) return;
+      const label = button.textContent;
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        button.textContent = 'Loading...';
+        try {
+          const response = await fetch(button.dataset.url, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+          if (!response.ok) throw new Error('HTTP ' + response.status);
+          textarea.value = await response.text();
+        } catch (error) {
+          window.alert('Unable to load data: ' + error.message);
+        } finally {
+          button.disabled = false;
+          button.textContent = label;
+        }
+      });
+    }
+
+    bindLoader('load-collection-btn', 'collection-json-textarea');
+    bindLoader('load-database-btn', 'database-json-textarea');
   })();
 </script>
 

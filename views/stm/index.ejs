@@ -48,34 +48,6 @@
   </div>
 
   <div class="stm-landing__grid">
-    <aside class="stm-landing__nav" aria-label="STM portal menu">
-      <section class="stm-landing-nav-group">
-        <h3 class="stm-landing-nav-group__title">🛠️ Quick Actions</h3>
-        <a class="stm-landing-nav-btn stm-landing-nav-btn--primary" href="/work-orders/new">+ New Work Order</a>
-        <a class="stm-landing-nav-btn" href="/customers">Customer Lookup</a>
-      </section>
-
-      <section class="stm-landing-nav-group">
-        <h3 class="stm-landing-nav-group__title">📋 Advisor Tools</h3>
-        <a href="/work-orders">Active Estimates</a>
-        <a href="/approvals">Pending Approvals<% if (approvalCount > 0) { %> (<%= approvalCount %>)<% } %></a>
-      </section>
-
-      <section class="stm-landing-nav-group">
-        <h3 class="stm-landing-nav-group__title">⚙️ Workshop Mgmt</h3>
-        <a href="/work-orders">Dispatch Board</a>
-        <a href="/work-order-transactions/technicians">Tech Activities</a>
-        <a href="/parts">Inventory / Parts</a>
-        <a class="stm-landing-nav-btn stm-landing-nav-btn--monitor" href="/stm/monitor">STM Monitor</a>
-      </section>
-
-      <section class="stm-landing-nav-group">
-        <h3 class="stm-landing-nav-group__title">📊 Analytics</h3>
-        <a href="/kpi">Sales Reports</a>
-        <a href="/kpi">Branch Metrics</a>
-      </section>
-    </aside>
-
     <div class="stm-landing__main">
       <p class="stm-landing__welcome">Welcome back, <%= managerName %>. Here is your workshop status today:</p>
 

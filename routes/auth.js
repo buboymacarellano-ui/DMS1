@@ -366,6 +366,9 @@ router.post('/login', async (req, res) => {
   if (!String(req.body.access_level || '').trim() && department !== portals.PORTAL_GM) {
     return renderLogin(400, 'Role is required.');
   }
+  if (!portals.isRoleEnabled(req.body.access_level)) {
+    return renderLogin(403, 'This role is not enabled in the current setup.');
+  }
 
   if (department === portals.PORTAL_GM || accessLevel === ROLE_GENERAL_MANAGER) {
     if (!loginInputRaw) {
@@ -381,7 +384,7 @@ router.post('/login', async (req, res) => {
     if (!password) {
       return renderLogin(400, 'Password is required.');
     }
-    const gmPassword = Buffer.from('123456');
+    const gmPassword = Buffer.from('111111');
     const givenPassword = Buffer.from(password);
     const passwordOk = givenPassword.length === gmPassword.length
       && crypto.timingSafeEqual(givenPassword, gmPassword);

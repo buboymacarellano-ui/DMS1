@@ -50,6 +50,22 @@ Override the path with `DMS_SQLITE_PATH`.
 
 **`data/data.json` is a first-boot seed only.** It never overwrites an existing database. Page refresh, app restart, and redeploy all keep the same records as long as the SQLite file stays on its persistent disk.
 
+## Parts database reports
+
+In Parts Manager > Database > Create Report, the Stock, New, and Removed selections
+use the same operation categories as the database table. Stock lists restock receipts,
+New lists first receipts, and Removed lists saved part-removal snapshots and removed
+transfer items (not current stock). Each supports optional month/date and location
+filters, opens a printable report, and can be saved as PDF or downloaded with
+Save as Excel (.xlsx). Excel downloads retain the report criteria and session
+location restrictions; reports with multiple sections use separate worksheets.
+Quantities and prices are numeric cells; identifiers remain text. Frontline users remain
+restricted to their authorized location. Switching report types excludes hidden
+criteria from the generated request.
+
+Excel generation uses ExcelJS. Its transitive UUID dependency is overridden to
+the patched CommonJS-compatible 11.x release.
+
 ## Access control
 
 `lib/portals.js` is the authority for who can do what, on a role → department → portal → grants model. Six portals: `service`, `parts`, `stores`, `hr`, `gm`, `fo`. Roughly 20 roles, each mapped to a grant set per portal.

@@ -102,8 +102,8 @@
   </article>
 
   <article class="dashboard-card admin-panel" style="max-width:700px;">
-    <div class="dashboard-card__header admin-panel-header">Restock Same Part Number</div>
-    <p class="dashboard-note admin-note">Writes an immutable <strong>restock</strong> audit row and adds the quantity to the active on-hand stock for this Part Number.</p>
+    <div class="dashboard-card__header admin-panel-header">Stock Same Part Number</div>
+    <p class="dashboard-note admin-note">Writes an immutable <strong>Stock</strong> audit row and adds the quantity to the active on-hand stock for this Part Number.</p>
 
     <form method="post" action="/parts/<%= part.id %>/restock" class="form admin-form">
       <label>Transaction Date
@@ -111,7 +111,7 @@
       </label>
 
       <label>Transaction Type
-        <input type="text" value="Restock" readonly />
+        <input type="text" value="Stock" readonly />
       </label>
 
       <label>Part Number
@@ -149,7 +149,7 @@
       </label>
 
       <div style="display:flex;gap:10px;margin-top:8px;">
-        <button type="submit" style="background:#1f8f53;">Save Restock</button>
+        <button type="submit" style="background:#1f8f53;">Save Stock</button>
         <a class="btn" href="/parts">Back to Parts DB</a>
       </div>
     </form>

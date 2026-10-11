@@ -5,6 +5,7 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
+    "test": "node --test test/*.test.js",
     "start:admin": "node app-admin.js",
     "start:gm": "node app-gm.js",
     "migrate:sqlite": "node scripts/migrate-json-to-sqlite.js",
@@ -44,6 +45,7 @@
   "dependencies": {
     "csv-parser": "^3.2.1",
     "ejs": "^3.1.9",
+    "exceljs": "^4.4.0",
     "express": "^4.18.2",
     "express-rate-limit": "^8.6.1",
     "express-session": "^1.19.0",
@@ -51,5 +53,10 @@
   },
   "devDependencies": {
     "nodemon": "^2.0.22"
+  },
+  "overrides": {
+    "exceljs": {
+      "uuid": "^11.1.1"
+    }
   }
 }

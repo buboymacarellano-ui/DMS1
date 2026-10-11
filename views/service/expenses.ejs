@@ -1,0 +1,141 @@
+<%- include('../partials/header') %>
+
+<%
+  const peso = (n) => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const p = prefill || {};
+  const val = (key, fallback) => (p[key] != null && p[key] !== '' ? p[key] : (fallback || ''));
+%>
+
+<h2 class="wo-new-title">Log Expenses</h2>
+
+<% if (formError) { %>
+  <p class="error"><%= formError %></p>
+<% } %>
+
+<form method="post" action="/expenses" class="form expense-log-form" id="expense-log-form">
+  <label>Log Date
+    <input type="date" name="log_date" value="<%= val('log_date', today) %>" required>
+  </label>
+  <label>Expenses Type
+    <select name="expense_type" required>
+      <option value="">-- select --</option>
+      <% expenseTypes.forEach(type => { %>
+        <option value="<%= type %>" <%= val('expense_type') === type ? 'selected' : '' %>><%= type %></option>
+      <% }) %>
+    </select>
+  </label>
+  <label>Category / Account
+    <select name="category" required>
+      <option value="">-- select --</option>
+      <% expenseCategories.forEach(category => { %>
+        <option value="<%= category %>" <%= val('category') === category ? 'selected' : '' %>><%= category %></option>
+      <% }) %>
+    </select>
+  </label>
+  <label>Business Purpose / Notes
+    <input type="text" name="business_purpose" value="<%= val('business_purpose') %>">
+  </label>
+  <label>Vendor / Supplier
+    <input type="text" name="vendor" value="<%= val('vendor') %>">
+  </label>
+  <label>Specifics
+    <input type="text" name="specifics" value="<%= val('specifics') %>">
+  </label>
+  <label>Unit
+    <input type="text" name="unit" value="<%= val('unit') %>">
+  </label>
+  <label>Unit Price
+    <input type="number" name="unit_price" id="expense-unit-price" min="0" step="0.01" value="<%= val('unit_price') %>">
+  </label>
+  <label>QTY
+    <input type="number" name="qty" id="expense-qty" min="0" step="0.01" value="<%= val('qty') %>">
+  </label>
+  <label>Total
+    <input type="text" id="expense-total" value="" readonly tabindex="-1">
+  </label>
+  <label>Reference Receipt
+    <input type="text" name="reference_receipt" value="<%= val('reference_receipt') %>">
+  </label>
+  <label>Petty Cash Out
+    <input type="number" name="petty_cash_out" min="0" step="0.01" value="<%= val('petty_cash_out') %>">
+  </label>
+  <label>Petty Cash In
+    <input type="number" name="petty_cash_in" min="0" step="0.01" value="<%= val('petty_cash_in') %>">
+  </label>
+  <label>Received By
+    <input type="text" name="received_by" value="<%= val('received_by') %>">
+  </label>
+  <label>Note
+    <input type="text" name="note" value="<%= val('note') %>">
+  </label>
+  <div>
+    <button type="submit" class="btn">Add Expense</button>
+  </div>
+</form>
+
+<div class="table-scroll">
+  <table class="list expense-log-table">
+    <thead>
+      <tr>
+        <th>Log Date</th>
+        <th>Expenses Type</th>
+        <th>Category / Account</th>
+        <th>Business Purpose / Notes</th>
+        <th>Vendor / Supplier</th>
+        <th>Specifics</th>
+        <th>Unit</th>
+        <th>Unit Price</th>
+        <th>QTY</th>
+        <th>Total</th>
+        <th>Reference Receipt</th>
+        <th>Petty Cash Out</th>
+        <th>Petty Cash In</th>
+        <th>Received By</th>
+        <th>Note</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!expenses.length) { %>
+        <tr><td colspan="16">No expenses logged yet.</td></tr>
+      <% } %>
+      <% expenses.forEach(row => { %>
+        <tr>
+          <td><%= row.log_date || '—' %></td>
+          <td><%= row.expense_type || '—' %></td>
+          <td><%= row.category || '—' %></td>
+          <td><%= row.business_purpose || '—' %></td>
+          <td><%= row.vendor || '—' %></td>
+          <td><%= row.specifics || '—' %></td>
+          <td><%= row.unit || '—' %></td>
+          <td><%= peso(row.unit_price) %></td>
+          <td><%= row.qty %></td>
+          <td><%= peso(row.total) %></td>
+          <td><%= row.reference_receipt || '—' %></td>
+          <td><%= peso(row.petty_cash_out) %></td>
+          <td><%= peso(row.petty_cash_in) %></td>
+          <td><%= row.received_by || '—' %></td>
+          <td><%= row.note || '—' %></td>
+          <td><a class="btn" href="/expenses/<%= row.id %>">View</a></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  (function () {
+    var price = document.getElementById('expense-unit-price');
+    var qty = document.getElementById('expense-qty');
+    var total = document.getElementById('expense-total');
+    function update() {
+      var value = (Number(price.value) || 0) * (Number(qty.value) || 0);
+      total.value = value.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    price.addEventListener('input', update);
+    qty.addEventListener('input', update);
+    update();
+  })();
+</script>
+
+<%- include('../partials/footer') %>

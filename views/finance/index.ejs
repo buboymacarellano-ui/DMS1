@@ -10,10 +10,10 @@
   const dateValue = typeof reportingDate !== 'undefined' ? reportingDate : '';
 %>
 
-<section class="dashboard-shell gm-shell stm-shell fm-workspace" id="fm-workspace" data-reporting-date="<%= dateValue %>">
-  <div class="stm-head">
-    <div class="dashboard-title gm-title role-dashboard-title"><span>FM</span> <span class="role-dashboard-title__suffix">Finance Monitor</span></div>
-    <form method="get" action="/finance" class="stm-branch-filter fm-date-filter">
+<section class="dashboard-shell admin-shell fm-workspace" id="fm-workspace" data-reporting-date="<%= dateValue %>">
+  <div class="fm-head">
+    <div class="dashboard-title admin-title role-dashboard-title"><span>Finance</span> <span class="role-dashboard-title__suffix">Dashboard</span></div>
+    <form method="get" action="/finance" class="fm-date-filter">
       <span>Reporting Date</span>
       <input type="date" name="date" value="<%= dateValue %>" aria-label="Reporting date" />
       <button type="submit" class="btn">Apply</button>
@@ -22,28 +22,28 @@
   </div>
 
   <section class="fm-metrics" aria-label="Core finance balances">
-    <article class="gm-kpi-card fm-metric" data-metric="grossRevenue">
+    <article class="gm-kpi-card admin-summary-card fm-metric" data-metric="grossRevenue">
       <p class="gm-kpi-label">Gross Revenue</p>
       <h2 class="gm-kpi-value" id="fm-gross-revenue"><%= fmtMoney(m.grossRevenue) %></h2>
       <p class="dashboard-note">Collected invoices (Paid + partial receipts)</p>
     </article>
-    <article class="gm-kpi-card fm-metric" data-metric="netProfit">
+    <article class="gm-kpi-card admin-summary-card fm-metric" data-metric="netProfit">
       <p class="gm-kpi-label">Net Profit</p>
       <h2 class="gm-kpi-value" id="fm-net-profit"><%= fmtMoney(m.netProfit) %></h2>
       <p class="dashboard-note">Revenue − parts cost − labor cost</p>
     </article>
-    <article class="gm-kpi-card fm-metric" data-metric="outstandingReceivables">
+    <article class="gm-kpi-card admin-summary-card fm-metric" data-metric="outstandingReceivables">
       <p class="gm-kpi-label">Outstanding Receivables</p>
       <h2 class="gm-kpi-value" id="fm-receivables-total"><%= fmtMoney(m.outstandingReceivables) %></h2>
       <p class="dashboard-note">Unpaid / Account Receivable balances</p>
     </article>
   </section>
 
-  <section class="dashboard-card gm-panel fm-panel" aria-label="Daily payment matrix">
-    <div class="dashboard-card__header gm-panel-header">Daily Payment Matrix · <%= dateValue %></div>
+  <section class="dashboard-card admin-panel fm-panel" id="fm-payment-panel" aria-label="Daily payment matrix">
+    <div class="dashboard-card__header admin-panel-header">Daily Payment Matrix · <%= dateValue %></div>
     <p class="dashboard-note">Transactions for the reporting date, grouped by tender type.</p>
     <div class="table-scroll">
-      <table class="list gm-table" id="fm-payment-matrix">
+      <table class="list" id="fm-payment-matrix">
         <thead>
           <tr>
             <th>Payment Method</th>
@@ -75,7 +75,7 @@
     </div>
     <% if (dayRows.length) { %>
       <div class="table-scroll" style="margin-top:12px;">
-        <table class="list gm-table">
+        <table class="list">
           <thead>
             <tr>
               <th>Invoice</th>
@@ -103,11 +103,11 @@
     <% } %>
   </section>
 
-  <section class="dashboard-card gm-panel fm-panel" aria-label="Accounts receivable">
-    <div class="dashboard-card__header gm-panel-header">Accounts Receivable</div>
+  <section class="dashboard-card admin-panel fm-panel" id="fm-receivables-panel" aria-label="Accounts receivable">
+    <div class="dashboard-card__header admin-panel-header">Accounts Receivable</div>
     <p class="dashboard-note">Unpaid invoices. Mark as Paid posts Cash into Gross Revenue without reloading the page.</p>
     <div class="table-scroll">
-      <table class="list gm-table" id="fm-receivables">
+      <table class="list" id="fm-receivables">
         <thead>
           <tr>
             <th>Customer Name</th>

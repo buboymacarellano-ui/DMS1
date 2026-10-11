@@ -5,6 +5,13 @@
   <p class="dashboard-note">Work orders, seven service bays, and technician scheduling. Existing boards and metrics are unchanged.</p>
 
   <section class="sa-home-group">
+    <h3 class="sa-home-group__title">System Status</h3>
+    <div class="sa-grid sa-grid--4">
+      <%- include('../partials/db-health-card') %>
+    </div>
+  </section>
+
+  <section class="sa-home-group">
     <h3 class="sa-home-group__title">1. Work Orders</h3>
     <div class="sa-grid sa-grid--4">
       <% if (canGrant('service', 'view') || canGrant('service', 'access')) { %>
@@ -101,28 +108,19 @@
   </section>
 
   <section class="sa-home-group">
-    <h3 class="sa-home-group__title">4. Receiving</h3>
+    <h3 class="sa-home-group__title">4. Parts Receiving</h3>
     <div class="sa-grid sa-grid--4">
-      <% if (canGrant('parts', 'request')) { %>
-        <a class="workorder-nav-card workorder-nav-card--orange sa-home-card" href="/parts#approved-transfers">
-          <div class="workorder-nav-card__icon">&#128230;</div>
-          <div class="workorder-nav-card__body">
-            <h3>Parts Receiving</h3>
-            <p>Verify approved transfers</p>
-            <span>Update branch stock</span>
-          </div>
-        </a>
-      <% } %>
-      <a class="workorder-nav-card workorder-nav-card--blue sa-home-card sa-home-card--kpi" href="/receiving">
-        <div class="workorder-nav-card__icon">📦</div>
+      <a class="workorder-nav-card workorder-nav-card--orange sa-home-card sa-home-card--kpi" href="/parts/receiving">
+        <div class="workorder-nav-card__icon">&#128230;</div>
         <div class="workorder-nav-card__body">
-          <h3>Receiving Transactions</h3>
+          <h3>Parts Receiving</h3>
           <p><%= receivingCount || 0 %></p>
-          <span>Approve & restock</span>
+          <span>Stock transfers to receive</span>
         </div>
       </a>
     </div>
   </section>
 </section>
+
 
 <%- include('../partials/footer') %>

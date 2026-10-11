@@ -259,7 +259,7 @@ router.post('/parts-request', async (req, res) => {
   const branch = normalizeText(workOrder.branch);
 
   const data = await store.getRawData();
-  await store.create('parts_inventory', Object.assign(
+  const created = await store.create('parts_inventory', Object.assign(
     { transaction_number: allocatePartsTransactionNumber(data) },
     buildPartsRequestInventoryPayload({
       partNumber,
@@ -280,7 +280,10 @@ router.post('/parts-request', async (req, res) => {
     })
   ));
 
-  return res.redirect('/technician?success=Parts%20request%20sent%20to%20Parts%20Manager.');
+  const autoApproved = await require('./parts-manager').autoApprovePartsRequestIfEnabled(created.id);
+  return res.redirect(autoApproved
+    ? '/technician?success=Parts%20request%20auto-approved%20(within%20the%20GM%20Control%20Panel%20auto-approve%20range).'
+    : '/technician?success=Parts%20request%20sent%20to%20Parts%20Manager.');
 });
 
 module.exports = router;

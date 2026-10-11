@@ -1,13 +1,5 @@
 <%- include('../partials/header') %>
 
-<h2>Work Orders</h2>
-<div class="wo-create-actions">
-  <a class="btn" href="/work-orders/new">+ Create Work Order</a>
-  <a class="btn" href="/parts/create">+ Create Parts</a>
-  <a class="btn" href="/pricing/new">+ Create Labor Charge</a>
-  <a class="btn" href="/work-order-transactions/technicians">Technician Assignment</a>
-</div>
-
 <%
   const vehicleSearchEntries = [];
   function toViberNumber(value) {
@@ -21,9 +13,12 @@
 %>
 
 <div class="wo-vehicle-finder" id="wo-vehicle-finder">
-  <div class="wo-vehicle-finder__cell wo-vehicle-finder__cell--spacer"></div>
-  <div class="wo-vehicle-finder__cell wo-vehicle-finder__cell--spacer"></div>
-  <div class="wo-vehicle-finder__cell wo-vehicle-finder__cell--spacer"></div>
+  <div class="wo-vehicle-finder__cell wo-create-actions">
+    <a class="btn" href="/work-orders/new">+ Create Work Order</a>
+    <a class="btn" href="/parts/create">+ Create Parts</a>
+    <a class="btn" href="/pricing/new">+ Create Labor Charge</a>
+    <a class="btn" href="/work-order-transactions/technicians">Technician Assignment</a>
+  </div>
   <div class="wo-vehicle-finder__cell wo-vehicle-finder__search">
     <input
       id="wo-vehicle-search"
@@ -44,7 +39,7 @@
 
 <div class="table-scroll">
 <table class="list">
-  <thead><tr><th>#</th><th>Customer</th><th>Telephone Number</th><th>Vehicle</th><th>Technician</th><th>Status</th><th></th></tr></thead>
+  <thead><tr><th>#</th><th>Customer</th><th>Telephone Number</th><th>Vehicle</th><th>Technician</th><th>Status</th><th>Running Bill</th><th></th></tr></thead>
   <tbody>
     <% work_orders.forEach((w, i) => { 
          const cust = customers.find(c => c.id === w.customer_id) || {};
@@ -103,20 +98,15 @@
           <% } else { %>—<% } %>
         </td>
         <td><%= (typeof formatWorkOrderStatusLabel === 'function' ? formatWorkOrderStatusLabel(w.status) : (w.status || 'Open')) %></td>
+        <td>₱<%= runningBill.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
         <td class="actions">
           <a href="/work-orders/<%= w.id %>/edit">Edit Entry</a>
           <a href="/work-orders/<%= w.id %>/service">Services</a>
           <a href="/work-orders/<%= w.id %>/technician-print" target="_blank">Print WO</a>
           <a href="/work-orders/<%= w.id %>/billing">Billing</a>
-          <span>₱<%= runningBill.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></span>
           <% if (canApproveRemoval) { %>
             <form method="post" action="/work-orders/<%= w.id %>/delete" onsubmit="return confirm('Remove this work order?');" style="display:inline">
               <button type="submit">Remove</button>
-            </form>
-          <% } else { %>
-            <form method="post" action="/approvals/request/rwo" onsubmit="return confirm('Submit a Remove Work Order approval request?');" style="display:inline">
-              <input type="hidden" name="work_order_id" value="<%= w.id %>">
-              <button type="submit">Request Removal</button>
             </form>
           <% } %>
         </td>

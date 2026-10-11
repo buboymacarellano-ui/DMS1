@@ -1,0 +1,19 @@
+<%
+  const sidebarPath = typeof currentPath !== 'undefined' && currentPath ? String(currentPath) : '';
+  const workspacePage = sidebarPath === '/parts-manager' || sidebarPath === '/parts-manager/';
+  const sidebarQuery = typeof currentQuery !== 'undefined' && currentQuery ? currentQuery : {};
+  const activePanel = workspacePage ? String(sidebarQuery.panel || 'edit') : ((sidebarPath.indexOf('/parts-manager/multiple-entry') === 0 ? 'edit' : (sidebarPath.indexOf('/parts/') === 0 || sidebarPath === '/parts' ? 'database' : '')));
+%>
+<nav class="pm-sidebar" id="pm-sidebar" aria-label="Parts Manager menu">
+  <a class="pm-sidebar__link<%= activePanel === 'edit' ? ' pm-sidebar__link--active' : '' %>" href="/parts-manager?panel=edit" data-pm-panel="edit">Parts Receiving</a>
+  <a class="pm-sidebar__link<%= activePanel === 'database' ? ' pm-sidebar__link--active' : '' %>" href="/parts-manager?panel=database" data-pm-panel="database">Parts-DB-All</a>
+  <a class="pm-sidebar__link<%= activePanel === 'proc-branch-requests' ? ' pm-sidebar__link--active' : '' %>" href="/parts-manager?panel=proc-branch-requests" data-pm-panel="proc-branch-requests">Branch / location requests</a>
+  <a class="pm-sidebar__link<%= activePanel === 'proc-transaction-records' ? ' pm-sidebar__link--active' : '' %>" href="/parts-manager?panel=proc-transaction-records" data-pm-panel="proc-transaction-records">Transaction records</a>
+  <a class="pm-sidebar__link<%= activePanel === 'proc-transfer-lists' ? ' pm-sidebar__link--active' : '' %>" href="/parts-manager?panel=proc-transfer-lists" data-pm-panel="proc-transfer-lists">Stock Transfer Records</a>
+  <a class="pm-sidebar__link<%= activePanel === 'proc-purchasing' ? ' pm-sidebar__link--active' : '' %>" href="/parts-manager?panel=proc-purchasing" data-pm-panel="proc-purchasing">Purchase</a>
+  <a class="pm-sidebar__link<%= activePanel === 'proc-po-records' ? ' pm-sidebar__link--active' : '' %>" href="/parts-manager?panel=proc-po-records" data-pm-panel="proc-po-records">PO Records</a>
+  <a class="pm-sidebar__link<%= activePanel === 'health' ? ' pm-sidebar__link--active' : '' %>" href="/parts-manager?panel=health" data-pm-panel="health">DB Health Monitor</a>
+  <a class="pm-sidebar__link<%= activePanel === 'health-transfer' ? ' pm-sidebar__link--active' : '' %>" href="/parts-manager?panel=health-transfer" data-pm-panel="health-transfer">Stock Transfer Grid</a>
+  <a class="pm-sidebar__link<%= activePanel === 'vitals' ? ' pm-sidebar__link--active' : '' %>" href="/parts-manager?panel=vitals" data-pm-panel="vitals">DB Vitals</a>
+  <a class="pm-sidebar__link<%= activePanel === 'csv' ? ' pm-sidebar__link--active' : '' %>" href="/parts-manager?panel=csv" data-pm-panel="csv">Load/Download Parts Entry CSV</a>
+</nav>

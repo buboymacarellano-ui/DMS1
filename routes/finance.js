@@ -62,8 +62,9 @@ function buildEodHtml(report) {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>EOD Cash Drawer ${escapeHtml(report.reportingDate)}</title>
+  <link rel="stylesheet" href="/fonts/inter.css">
   <style>
-    body { font-family: Arial, sans-serif; color: #10202f; margin: 24px; }
+    body { font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif; color: #10202f; margin: 24px; }
     h1 { margin: 0 0 4px; font-size: 22px; }
     .meta { margin: 0 0 16px; color: #445; font-size: 13px; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 18px; }
@@ -147,7 +148,10 @@ async function handleMarkPaid(req, res) {
 }
 
 router.get('/', async (req, res) => {
-  const data = await store.getRawData();
+  const data = {};
+  for (const name of ['work_orders', 'customers', 'vehicles', 'parts_inventory']) {
+    data[name] = await store.getAll(name);
+  }
   const reportingDate = reportingDateFrom(req);
   const dashboard = buildFinanceDashboard(data, reportingDate);
   return res.render('finance/index', {
