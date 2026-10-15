@@ -59,7 +59,7 @@
           </select>
         </label>
         <label id="login-id-field">
-          <span id="login-id-label">Employee ID</span>
+          <span id="login-id-label">Employee ID / Barcode</span>
           <input id="login-id-input" type="text" name="username" value="<%= username %>" autocomplete="username" required />
         </label>
         <label id="login-location-field" hidden>
@@ -191,7 +191,7 @@
         const isFrontline = FRONTLINE_ROLES.has(selectedRole);
         locationField.hidden = !isFrontline;
         locationInput.required = isFrontline;
-        // SA/SR/SSR no longer need to enter a correct Employee ID; location is what matters.
+        // SA/SR/SSR no longer need to enter a correct Employee ID or barcode; location is what matters.
         idInput.required = !isFrontline;
         fillLocations(department, keepValue);
       }
@@ -226,7 +226,7 @@
         }
         const keepLocation = fromDepartmentChange ? '' : (locationInput.value || selectedLocation);
         syncLocation(department, keepLocation);
-        idLabel.textContent = 'Employee ID';
+        idLabel.textContent = 'Employee ID / Barcode';
         if (fromDepartmentChange && String(idInput.value || '').trim().toUpperCase() === 'GM') {
           idInput.value = '';
         }

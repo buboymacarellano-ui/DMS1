@@ -1,0 +1,72 @@
+﻿diff --git a/routes/workorders.js b/routes/workorders.js
+--- a/routes/workorders.js
++++ b/routes/workorders.js
+@@ -15,6 +15,7 @@ const {
+ const {
+   workOrderStatusOptions,
+   formatWorkOrderStatusLabel,
++  normalizeWorkOrderStatus,
+   resolveWorkOrderLifecycleStatus,
+ } = require('../lib/work-order-status');
+ const {
+@@ -31,6 +32,7 @@ router.use((req, res, next) => {
+ 
+ const VAT_RATE = 0.12;
+ const WORK_ORDER_NUMBER_PATTERN = /^\d{7}$/;
++const MAX_ONGOING_WORK_ORDERS_PER_BRANCH = 5;
+ 
+ function normalizeText(value) {
+   return String(value || '').trim();
+@@ -720,5 +722,45 @@ function getWorkOrderSortValue(wo) {
+ 
+   return 0;
+ }
+ 
++function workOrderBranchKey(wo) {
++  const key = normalizeBranchKey(wo && wo.branch);
++  return key || 'unassigned';
++}
++
++function isOngoingWorkOrder(wo) {
++  const status = normalizeWorkOrderStatus(wo && wo.status);
++  return status !== 'closed' && status !== 'deleted';
++}
++
++async function closeExcessOngoingWorkOrders(allWorkOrders, { receptionistBranchKey } = {}) {
++  const ongoingByBranch = new Map();
++
++  (allWorkOrders || []).forEach((wo) => {
++    if (!wo || !wo.id) return;
++    if (!isOngoingWorkOrder(wo)) return;
++
++    const key = workOrderBranchKey(wo);
++    if (receptionistBranchKey && key !== receptionistBranchKey) return;
++
++    if (!ongoingByBranch.has(key)) ongoingByBranch.set(key, []);
++    ongoingByBranch.get(key).push(wo);
++  });
++
++  const closeIds = [];
++  ongoingByBranch.forEach((workOrders) => {
++    const sorted = workOrders.slice().sort((a, b) => getWorkOrderSortValue(b) - getWorkOrderSortValue(a));
++    sorted.slice(MAX_ONGOING_WORK_ORDERS_PER_BRANCH).forEach((wo) => closeIds.push(wo.id));
++  });
++
++  if (!closeIds.length) return;
++
++  await Promise.all(closeIds.map((id) => store.update('work_orders', id, { status: 'closed' })));
++
++  const closeSet = new Set(closeIds);
++  (allWorkOrders || []).forEach((wo) => {
++    if (wo && closeSet.has(wo.id)) wo.status = 'closed';
++  });
++}
++
+ router.get('/', async (req, res) => {
+@@ -725,2 +766,5 @@ router.get('/', async (req, res) => {
+-  const work_orders = filterForReceptionistBranch(req, await store.getAll('work_orders'));
++  const allWorkOrders = await store.getAll('work_orders');
++  const receptionistKey = normalizeBranchKey(receptionistBranch(req));
++  await closeExcessOngoingWorkOrders(allWorkOrders, { receptionistBranchKey: receptionistKey || '' });
++  const work_orders = filterForReceptionistBranch(req, allWorkOrders);
+   const orderedWorkOrders = work_orders

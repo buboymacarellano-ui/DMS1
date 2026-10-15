@@ -1,0 +1,63 @@
+.tech-status-btn,
+button.tech-status-btn,
+.tech-status-btn--break,
+.tech-status-btn--done,
+.tech-status-btn--parts,
+.tech-status-btn--note {
+  background: #0e7490 !important;
+  color: #fff !important;
+  border-color: #155e75 !important;
+}
+
+.btn,
+button,
+input[type="button"],
+input[type="submit"],
+.actions a,
+.actions button,
+.wo-create-actions .btn {
+  background: #0e7490 !important;
+  color: #fff !important;
+  border-color: #155e75 !important;
+  font-size: 14px !important;
+}
+
+html body table.list tbody td.actions a,
+html body table.list tbody td.actions button,
+html body .actions a,
+html body .actions button {
+  color: #fff !important;
+}
+
+.btn,
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+.actions a,
+.actions button {
+  font-size: 14px !important;
+}
+
+html body table.list tbody tr.work-order-row td.actions a,
+html body table.list tbody tr.work-order-row td.actions button {
+  background: #0e7490 !important;
+  color: #fff !important;
+  border-color: #155e75 !important;
+  font-size: 14px !important;
+}
+
+html body table.list tbody tr.work-order-row td.actions a {
+  font-size: 14px !important;
+}
+
+.btn:hover,
+button:hover,
+input[type="button"]:hover,
+input[type="submit"]:hover,
+.actions a:hover,
+.actions button:hover,
+.wo-create-actions .btn:hover {
+  background: #155e75 !important;
+  color: #fff !important;
+}

@@ -1,4 +1,4 @@
-const test = require('node:test');
+﻿const test = require('node:test');
 const assert = require('node:assert/strict');
 const store = require('../data/store');
 const router = require('../routes/parts-manager');
@@ -24,8 +24,27 @@ test('receiving routes, PO logs, filters and branch receipt use New / Restock co
       json(payload) { this.payload = payload; return this; },
       redirect(url) { this.redirectUrl = url; return this; },
     };
+
+    const receiverBarcode = 'PM-01';
+    const payload = body && typeof body === 'object' && !Array.isArray(body)
+      ? { ...body }
+      : body;
+    if (target === router && payload && typeof payload === 'object' && !Array.isArray(payload)) {
+      payload.receiver_barcode = payload.receiver_barcode || receiverBarcode;
+    }
+
     await layer.route.stack[0].handle({
-      body, params, session: { user: { role: 'parts_manager', username: 'Test PM', branch: 'Carmen' } },
+      body: payload,
+      params,
+      session: {
+        user: {
+          role: 'parts_manager',
+          username: 'Test PM',
+          branch: 'Carmen',
+          employee_id: receiverBarcode,
+          barcode: receiverBarcode,
+        },
+      },
     }, response);
     assert.equal(response.statusCode, 200, JSON.stringify(response.payload));
     return response;
@@ -99,3 +118,4 @@ test('receiving routes, PO logs, filters and branch receipt use New / Restock co
   assert.ok(locals.parts.every((row) => row.transaction_type === 'new'));
   assert.ok(saves >= 4);
 });
+

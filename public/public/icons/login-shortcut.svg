@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">A&amp;E Login</title>
+  <desc id="desc">A&amp;E login shortcut</desc>
+  <rect x="18" y="18" width="476" height="476" fill="#ffffff" stroke="#c5d0dc" stroke-width="12"/>
+  <text x="256" y="248" text-anchor="middle" fill="#1f2933" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="92" font-weight="800">A&amp;E</text>
+  <text x="256" y="318" text-anchor="middle" fill="#5b6b7c" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="36" font-weight="700">Login</text>
+</svg>

@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const store = require('../data/store');
 const {
   TYPE_TRANSFER_REQUEST,
@@ -27,6 +27,7 @@ const {
 } = require('../lib/parts-transaction-number');
 const { resolveBranchCatalog, canonicalizeBranchName, getOperationalBranches } = require('../lib/branches');
 const { isFrontlineRole } = require('../lib/frontline-roles');
+const { verifyReceiverBarcode } = require('../lib/receiver-barcode');
 const { allocateCreatePartNumber } = require('../lib/parts-catalog-number');
 const {
   WAREHOUSE_1,
@@ -162,15 +163,19 @@ function resolveActorBranch(user, employees) {
   const list = Array.isArray(employees) ? employees : [];
   const techId = String((user && user.technician_employee_id) || '').trim().toUpperCase();
   const recId = String((user && (user.employee_id || user.receptionist_employee_id)) || '').trim().toUpperCase();
+  const barcode = String((user && user.barcode) || '').trim().toUpperCase();
   const username = String((user && user.username) || '').trim().toUpperCase();
 
   const match = list.find((employee) => {
     const empId = String((employee && employee.employee_id) || '').trim().toUpperCase();
+    const empBarcode = String((employee && (employee.barcode || employee.employee_barcode)) || '').trim().toUpperCase();
     if (techId && empId === techId) return true;
     if (recId && empId === recId) return true;
+    if (barcode && (empBarcode === barcode || empId === barcode)) return true;
     const name = employeeDisplayName(employee).toUpperCase();
     const labeled = empId && name ? `${name} (${empId})` : name;
-    return Boolean(username) && (username === name || username === labeled || username === empId);
+    const barcodeLabeled = empBarcode && name ? `${name} (${empBarcode})` : name;
+    return Boolean(username) && (username === name || username === labeled || username === barcodeLabeled || username === empId || username === empBarcode);
   });
 
   return normalizePresentLocation(match && match.work_location_branch_id);
@@ -743,6 +748,10 @@ router.post('/api/receiving/save', async (req, res) => {
   const group = findReceivingGroup(scope.groups, req.body && req.body.key);
   if (!group) return res.status(404).json({ ok: false, error: 'Stock transfer not found for your branch.' });
 
+  const receiverCheck = verifyReceiverBarcode(user, req.body && req.body.receiver_barcode);
+  if (!receiverCheck.ok) return res.status(403).json({ ok: false, error: receiverCheck.error });
+  const receiverBarcode = receiverCheck.barcode;
+
   const decisions = Array.isArray(req.body.lines) ? req.body.lines : [];
   const receiver = String(user.username || '').trim();
   const stamp = new Date().toISOString();
@@ -755,7 +764,7 @@ router.post('/api/receiving/save', async (req, res) => {
     if (!line || !decision) return;
     if (line.status === 'received') return errors.push(`${line.part_number}: already received.`);
     if (decision === 'received') {
-      const result = receiveApprovedPartsTransfer(data, line.id, { receiver, branch: scope.branch });
+      const result = receiveApprovedPartsTransfer(data, line.id, { receiver, branch: scope.branch, receiver_barcode: receiverBarcode });
       if (result.ok) receivedNow += 1;
       else errors.push(`${line.part_number}: ${result.error}`);
     } else if (decision === 'no_receive') {
@@ -764,6 +773,7 @@ router.post('/api/receiving/save', async (req, res) => {
       row.receive_status = 'not_received';
       row.not_received_at = stamp;
       row.not_received_by = receiver;
+      row.not_received_by_barcode = receiverBarcode;
       notReceivedNow += 1;
     }
   });
@@ -783,8 +793,8 @@ router.post('/api/receiving/save', async (req, res) => {
     closed,
     errors,
     message: closed
-      ? `${group.reference}: ${receivedNow} line(s) received. Stock transfer is complete — stock is now at ${scope.branch}.`
-      : `${group.reference} saved (${receivedNow} received, ${notReceivedNow} not received). ${left} line(s) still to receive — the transfer stays In Transit until they arrive.`,
+      ? `${group.reference}: ${receivedNow} line(s) received. Stock transfer is complete â€” stock is now at ${scope.branch}.`
+      : `${group.reference} saved (${receivedNow} received, ${notReceivedNow} not received). ${left} line(s) still to receive â€” the transfer stays In Transit until they arrive.`,
   });
 });
 
@@ -794,11 +804,14 @@ router.post('/receive/:id', async (req, res) => {
   const data = await store.getRawData();
   const branch = resolveActorBranch(user, data.employees);
   if (!branch) return res.status(403).send('Assigned branch is required. Please log in again.');
+  const back = receivingRedirect(req);
+  const receiverCheck = verifyReceiverBarcode(user, req.body && req.body.receiver_barcode);
+  if (!receiverCheck.ok) return res.redirect(back + '?error=' + encodeURIComponent(receiverCheck.error));
   const result = receiveApprovedPartsTransfer(data, req.params.id, {
     receiver: String(user.username || '').trim(),
     branch,
+    receiver_barcode: receiverCheck.barcode,
   });
-  const back = receivingRedirect(req);
   if (!result.ok) return res.redirect(back + '?error=' + encodeURIComponent(result.error));
   await store.replaceData(data);
   return res.redirect(back + '?success=' + encodeURIComponent(
@@ -812,6 +825,8 @@ router.post('/api/receive-all/:transactionNumber', async (req, res) => {
   const data = await store.getRawData();
   const branch = resolveActorBranch(user, data.employees);
   if (!branch) return res.status(403).json({ error: 'Assigned branch is required. Please log in again.' });
+  const receiverCheckAll = verifyReceiverBarcode(user, req.body && req.body.receiver_barcode);
+  if (!receiverCheckAll.ok) return res.status(403).json({ error: receiverCheckAll.error });
   const txnNumber = String(req.params.transactionNumber || '').trim();
   if (!txnNumber) return res.status(400).json({ error: 'Transaction number is required.' });
   const pending = listInboundApprovedTransfers(data, branch)
@@ -821,6 +836,7 @@ router.post('/api/receive-all/:transactionNumber', async (req, res) => {
   const results = pending.map((item) => receiveApprovedPartsTransfer(data, item.id, {
     receiver: String(user.username || '').trim(),
     branch,
+    receiver_barcode: receiverCheckAll.barcode,
   }));
   const successful = results.filter((result) => result.ok);
   if (!successful.length) return res.status(400).json({ ok: false, error: results[0].error || 'All transfers failed to receive.' });
@@ -1453,3 +1469,8 @@ router.post('/:id/delete', async (req, res) => {
 
 module.exports = router;
 module.exports.persistCreatedPartsLedger = persistCreatedPartsLedger;
+
+
+
+
+

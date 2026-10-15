@@ -13,6 +13,8 @@ const {
   employeeDisplayName,
   employeeMatchesAccess,
   employeeBranch,
+  employeeBarcode,
+  employeeMatchesIdentifier,
   buildFrontlineOptionsByRole,
   getFrontlineLoginBranches,
   findFrontlineAccount,
@@ -107,6 +109,7 @@ function applyOpenLoginSession(req, accessLevel, loginInputRaw, selectedBranch, 
     technician_name: role === ROLE_TECHNICIAN ? username : '',
     technician_employee_id: role === ROLE_TECHNICIAN ? username : '',
     employee_id: String(loginInputRaw || '').trim(),
+    barcode: String(loginInputRaw || '').trim(),
     receptionist_employee_id: '',
     receptionist_name: isFrontlineRole(role) ? username : '',
     job_code: '',
@@ -138,9 +141,11 @@ function buildTechnicianOptions(employees) {
   return (employees || [])
     .map((employee) => {
       const employeeId = normalizeEmployeeId(employee && employee.employee_id);
+      const barcode = employeeBarcode(employee);
       const label = getTechnicianDisplayName(employee);
       return {
         employeeId,
+        barcode,
         label,
       };
     })
@@ -149,7 +154,18 @@ function buildTechnicianOptions(employees) {
 }
 
 function buildTechnicianOptionMap(technicianOptions) {
-  return new Map((technicianOptions || []).map((entry) => [normalizeEmployeeId(entry.employeeId), entry.label]));
+  const map = new Map();
+  (technicianOptions || []).forEach((entry) => {
+    if (entry.employeeId) map.set(normalizeEmployeeId(entry.employeeId), entry.label);
+    if (entry.barcode) map.set(normalizeEmployeeId(entry.barcode), entry.label);
+  });
+  return map;
+}
+
+function findEmployeeByIdentifier(employees, identifier) {
+  const candidate = normalizeEmployeeId(identifier);
+  if (!candidate) return null;
+  return (employees || []).find((employee) => employeeMatchesIdentifier(employee, candidate)) || null;
 }
 
 function getLoginBranches(employees, branchRows) {
@@ -198,7 +214,7 @@ function findStmEmployee(employees, loginInput) {
   const username = normalizeUsername(loginInput);
   return (employees || []).find((employee) => {
     if (!employeeMatchesStm(employee)) return false;
-    return normalizeEmployeeId(employee.employee_id) === employeeId
+    return employeeMatchesIdentifier(employee, employeeId)
       || normalizeUsername(employee.employee_id) === username
       || normalizeUsername([employee.first_name, employee.last_name].filter(Boolean).join('')) === username;
   }) || null;
@@ -206,7 +222,7 @@ function findStmEmployee(employees, loginInput) {
 
 function findStmAccount(users, loginInput, employee) {
   const username = normalizeUsername(loginInput);
-  const employeeId = normalizeEmployeeId(loginInput || (employee && employee.employee_id));
+  const employeeId = normalizeEmployeeId((employee && employee.employee_id) || loginInput);
   return (users || []).find((user) => {
     if (normalizeRole(user.role) !== ROLE_STM) return false;
     return normalizeUsername(user.username) === username
@@ -216,9 +232,9 @@ function findStmAccount(users, loginInput, employee) {
 
 function missingIdError(accessLevel) {
   if (accessLevel === ROLE_GENERAL_MANAGER) return 'GM username or employee ID is required.';
-  if (accessLevel === ROLE_TECHNICIAN) return 'Technician ID is required.';
+  if (accessLevel === ROLE_TECHNICIAN) return 'Technician ID / Barcode is required.';
   if (isFrontlineRole(accessLevel)) return `${frontlineIdLabel(accessLevel)} is required.`;
-  return 'Employee ID is required.';
+  return 'Employee ID / Barcode is required.';
 }
 
 function getGmAccounts(users) {
@@ -332,7 +348,6 @@ router.post('/login', async (req, res) => {
   const loginInputRaw = String(req.body.username || '').trim();
   const password = String(req.body.password || '');
   const username = normalizeUsername(loginInputRaw);
-  const technicianEmployeeIdInput = normalizeEmployeeId(loginInputRaw);
   const receptionistEmployeeIdInput = normalizeEmployeeId(loginInputRaw);
   const selectedGroup = portals.normalizeGroup(req.body.group || req.body.department) || portals.GROUP_SERVICE;
   const accessLevel = normalizeAccessLevel(req.body.access_level);
@@ -449,20 +464,23 @@ router.post('/login', async (req, res) => {
     return res.redirect(redirectForRole(req.session.user.role));
   }
 
+  const matchedEmployee = findEmployeeByIdentifier(employees, loginInputRaw);
+  const matchedEmployeeId = matchedEmployee ? normalizeEmployeeId(matchedEmployee.employee_id) : normalizeEmployeeId(loginInputRaw);
+
   function findDepartmentAccount() {
     if (accessLevel === ROLE_TECHNICIAN) {
       return users.find((user) => (
         normalizeRole(user.role) === ROLE_TECHNICIAN
-        && normalizeEmployeeId(user.technician_employee_id) === technicianEmployeeIdInput
+        && (normalizeEmployeeId(user.technician_employee_id) === matchedEmployeeId || accountEmployeeId(user) === matchedEmployeeId)
       )) || null;
     }
     if (isFrontlineRole(accessLevel)) {
-      return findFrontlineAccount(users, receptionistEmployeeIdInput, accessLevel);
+      return findFrontlineAccount(users, matchedEmployeeId, accessLevel);
     }
     if (accessLevel === ROLE_STM) {
-      return findStmAccount(users, loginInputRaw, null);
+      return findStmAccount(users, matchedEmployeeId, matchedEmployee);
     }
-    const employeeId = normalizeEmployeeId(loginInputRaw);
+    const employeeId = matchedEmployeeId;
     return (users || []).find((user) => {
       if (!portals.accountRoleMatches(user.role, accessLevel)) return false;
       return normalizeUsername(user.username) === username
@@ -489,7 +507,7 @@ router.post('/login', async (req, res) => {
   const assignedLocation = String(account.branch || account.location || '').trim();
   if (assignedLocation && !branchesMatch(selectedBranch, assignedLocation)
     && portals.canonicalizeLocation(department, selectedBranch) !== portals.canonicalizeLocation(department, assignedLocation)) {
-    return renderLogin(403, 'Selected location must match this employee ID in Employee DB.');
+    return renderLogin(403, 'Selected location must match this employee ID / barcode in Employee DB.');
   }
 
   const accountRole = normalizeRole(account.role || accessLevel);
@@ -558,7 +576,9 @@ router.post('/register', async (req, res) => {
   const confirmPassword = String(req.body.confirm_password || '');
   const employees = await store.getAll('employees');
   const frontlineByRole = buildFrontlineOptionsByRole(employees);
-  const employee = employees.find((item) => normalizeEmployeeId(item.employee_id) === employeeId);
+  const employee = findEmployeeByIdentifier(employees, employeeId);
+  const canonicalEmployeeId = employee ? normalizeEmployeeId(employee.employee_id) : employeeId;
+  const employeeBarcodeValue = employee ? employeeBarcode(employee) : '';
   const username = employee ? normalizeUsername(getTechnicianDisplayName(employee)) : '';
 
   function renderRegister(status, error) {
@@ -585,10 +605,10 @@ router.post('/register', async (req, res) => {
   const users = await store.getAll('users');
   const exists = users.some((user) => (
     isFrontlineRole(user.role)
-    && accountEmployeeId(user) === employeeId
+    && accountEmployeeId(user) === canonicalEmployeeId
   ));
   if (exists) {
-    return renderRegister(409, 'This employee ID already has a login account.');
+    return renderRegister(409, 'This employee ID / barcode already has a login account.');
   }
 
   const salt = crypto.randomBytes(16).toString('hex');
@@ -600,8 +620,9 @@ router.post('/register', async (req, res) => {
   await store.create('users', {
     username,
     role: accessLevel,
-    employee_id: employeeId,
-    receptionist_employee_id: employeeId,
+    employee_id: canonicalEmployeeId,
+    barcode: employeeBarcodeValue,
+    receptionist_employee_id: canonicalEmployeeId,
     receptionist_name: displayName,
     receptionist_job_code: jobCode,
     job_code: jobCode,
@@ -1029,6 +1050,9 @@ router.post('/register-technician', async (req, res) => {
   const technicianOptions = buildTechnicianOptions(employees);
   const technicianOptionMap = buildTechnicianOptionMap(technicianOptions);
   const technicianLabel = technicianOptionMap.get(technicianEmployeeId) || technicianName;
+  const technicianEmployee = findEmployeeByIdentifier(employees, technicianEmployeeId);
+  const canonicalTechnicianId = technicianEmployee ? normalizeEmployeeId(technicianEmployee.employee_id) : technicianEmployeeId;
+  const technicianBarcode = technicianEmployee ? employeeBarcode(technicianEmployee) : '';
 
   if (!username || !password || !technicianEmployeeId) {
     return res.status(400).render('auth/register-technician', {
@@ -1089,7 +1113,8 @@ router.post('/register-technician', async (req, res) => {
     username,
     role: ROLE_TECHNICIAN,
     technician_name: technicianLabel,
-    technician_employee_id: technicianEmployeeId,
+    technician_employee_id: canonicalTechnicianId,
+    barcode: technicianBarcode,
     password_salt: salt,
     password_hash: passwordHash,
   });

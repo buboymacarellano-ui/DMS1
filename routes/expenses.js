@@ -1,6 +1,6 @@
 const express = require('express');
 const store = require('../data/store');
-const { frontlineSessionBranch } = require('../lib/frontline-roles');
+const { frontlineSessionBranch, employeeMatchesIdentifier, employeeDisplayName } = require('../lib/frontline-roles');
 const { canonicalizeBranchName, normalizeBranchKey } = require('../lib/branches');
 const router = express.Router();
 
@@ -59,6 +59,10 @@ router.post('/', async (req, res) => {
   const expenseType = text(body.expense_type);
   const category = text(body.category);
   const logDate = text(body.log_date);
+  const employees = await store.getAll('employees');
+  const receivedByEmployee = (body.received_by || '').trim()
+    ? employees.find((employee) => employeeMatchesIdentifier(employee, body.received_by))
+    : null;
 
   let formError = '';
   if (!/^\d{4}-\d{2}-\d{2}$/.test(logDate)) formError = 'Log Date is required.';
@@ -85,7 +89,7 @@ router.post('/', async (req, res) => {
     reference_receipt: text(body.reference_receipt),
     petty_cash_out: money(body.petty_cash_out),
     petty_cash_in: money(body.petty_cash_in),
-    received_by: text(body.received_by),
+    received_by: receivedByEmployee ? employeeDisplayName(receivedByEmployee) : text(body.received_by),
     note: text(body.note),
     branch: canonicalizeBranchName(sessionBranch(req) || text(user.branch) || ''),
     created_by: text(user.username),

@@ -132,11 +132,25 @@
     background: #e4e6e9;
   }
 
-  .tech-status-btn--break { background: #e4e6e9; color: #16181c; }
-  .tech-status-btn--done { background: #d8f0e0; color: #0a3d22; border-color: #7eae92; }
-  .tech-status-btn--parts { background: #e4e6e9; color: #16181c; }
+  .tech-status-btn--break { background: #0e7490 !important; color: #fff !important; border-color: #155e75 !important; }
+  .tech-status-btn--done { background: #0e7490 !important; color: #fff !important; border-color: #155e75 !important; }
+  .tech-status-btn--parts { background: #0e7490 !important; color: #fff !important; border-color: #155e75 !important; }
 
-  .tech-status-btn--note { background: #e4e6e9; color: #16181c; }
+  .tech-status-btn--note { background: #0e7490 !important; color: #fff !important; border-color: #155e75 !important; }
+
+  .tech-time-controls {
+    display: grid;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #b0b4ba;
+  }
+
+  .tech-time-controls select,
+  .tech-time-controls button {
+    min-height: 42px;
+    font-size: 16px;
+  }
 
   .tech-order-badge {
     display: inline-flex;
@@ -258,7 +272,7 @@
           <tbody>
             <% activeOrders.forEach(order => { %>
               <tr>
-                <td><%= order.work_order_number %></td>
+                <td><a href="/work-orders/<%= encodeURIComponent(order.id) %>/technician-print">Open WO #<%= order.work_order_number %></a></td>
                 <td><%= order.customer_name %></td>
                 <td><%= order.vehicle_label %></td>
                 <td>
@@ -284,14 +298,23 @@
       <form method="post" action="/technician/updates" class="form" style="margin-bottom:12px;">
         <input type="hidden" name="work_order_id" value="<%= order.id %>" />
         <div class="tech-order-badge"><%= order.vehicle_label %></div>
+        <div class="tech-time-controls">
+          <button type="submit" name="time_toggle" value="<%= order.time_in && !order.time_out ? 'time_out' : 'time_in' %>" class="tech-status-btn tech-status-btn--done">
+            <%= order.time_in && !order.time_out ? 'Time Out' : 'Time In' %>
+          </button>
+          <% if (order.time_in) { %><div class="dashboard-note">Time In: <%= order.time_in %><%= order.time_out ? (' | Time Out: ' + order.time_out) : '' %></div><% } %>
+        </div>
         <label>
           Optional Note
           <textarea name="note" placeholder="Optional details for SR"></textarea>
         </label>
         <div class="tech-status-actions">
-          <button type="submit" name="status_action" value="break" class="tech-status-btn tech-status-btn--break">Break</button>
-          <button type="submit" name="status_action" value="done" class="tech-status-btn tech-status-btn--done">Done</button>
-          <button type="submit" name="status_action" value="waiting_parts" class="tech-status-btn tech-status-btn--parts">Waiting Parts</button>
+          <button type="submit" name="timeout_action" value="break" class="tech-status-btn tech-status-btn--break">Break</button>
+          <button type="submit" name="timeout_action" value="job_done" class="tech-status-btn tech-status-btn--done">Done</button>
+          <button type="submit" name="timeout_action" value="waiting_parts" class="tech-status-btn tech-status-btn--parts">Waiting Parts</button>
+          <button type="submit" name="timeout_action" value="transfer_job" class="tech-status-btn tech-status-btn--note">Transfer Job</button>
+          <button type="submit" name="timeout_action" value="off_duty" class="tech-status-btn tech-status-btn--note">Off Duty</button>
+          <button type="submit" name="timeout_action" value="clock_out_time" class="tech-status-btn tech-status-btn--note">Clock Out</button>
           <button type="submit" class="tech-status-btn tech-status-btn--note">Send Note</button>
         </div>
       </form>

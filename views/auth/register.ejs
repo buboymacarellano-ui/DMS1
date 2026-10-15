@@ -12,7 +12,7 @@
   <main class="auth-shell">
     <section class="auth-card">
       <h1>FRONTLINE SIGN UP</h1>
-      <p class="auth-subtitle">Create SA, SR, or Senior SR access from Employee DB. Username is the employee ID; job code must match the access level.</p>
+      <p class="auth-subtitle">Create SA, SR, or Senior SR access from Employee DB. Username is the employee ID; barcode input is also accepted for employee selection, and job code must match the access level.</p>
 
       <% if (error) { %>
         <p class="error"><%= error %></p>
@@ -35,7 +35,11 @@
           <select name="employee_id" id="register-employee-id" required>
             <option value="">-- Select employee --</option>
             <% currentOptions.forEach((option) => { %>
-              <option value="<%= option.employeeId %>" <%= String(employeeId || '').toUpperCase() === String(option.employeeId || '').toUpperCase() ? 'selected' : '' %>><%= option.label %> | <%= option.branch %> | <%= option.jobCode %></option>
+              <% const currentEmployeeId = String(employeeId || '').toUpperCase(); %>
+              <option value="<%= option.employeeId %>" <%= (currentEmployeeId === String(option.employeeId || '').toUpperCase() || (option.barcode && currentEmployeeId === String(option.barcode || '').toUpperCase())) ? 'selected' : '' %>><%= option.label %> | <%= option.branch %> | <%= option.jobCode %><%= option.barcode ? ' | ' + option.barcode : '' %></option>
+              <% if (option.barcode) { %>
+                <option value="<%= option.barcode %>" <%= currentEmployeeId === String(option.barcode || '').toUpperCase() ? 'selected' : '' %>><%= option.label %> | <%= option.branch %> | <%= option.jobCode %> | <%= option.barcode %></option>
+              <% } %>
             <% }); %>
           </select>
         </label>
@@ -88,11 +92,21 @@
           var option = options[i];
           var item = document.createElement('option');
           item.value = option.employeeId;
-          item.textContent = option.label + ' | ' + option.branch + ' | ' + option.jobCode;
-          if (selectedId && String(selectedId).toUpperCase() === String(option.employeeId).toUpperCase()) {
+          item.textContent = option.label + ' | ' + option.branch + ' | ' + option.jobCode + (option.barcode ? ' | ' + option.barcode : '');
+          var selectedKey = String(selectedId || '').toUpperCase();
+          if (selectedKey && (selectedKey === String(option.employeeId).toUpperCase() || (option.barcode && selectedKey === String(option.barcode).toUpperCase()))) {
             item.selected = true;
           }
           employeeSelect.appendChild(item);
+          if (option.barcode) {
+            var barcodeItem = document.createElement('option');
+            barcodeItem.value = option.barcode;
+            barcodeItem.textContent = option.label + ' | ' + option.branch + ' | ' + option.jobCode + ' | ' + option.barcode;
+            if (selectedKey === String(option.barcode).toUpperCase()) {
+              barcodeItem.selected = true;
+            }
+            employeeSelect.appendChild(barcodeItem);
+          }
         }
       }
 

@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const path = require('path');
 const fs = require('fs').promises;
 const store = require('../data/store');
@@ -54,6 +54,7 @@ const { recordGmApproval, TYPES: GM_TXN_TYPES } = require('../lib/gm-transaction
 const { findReceivablePo, isOpenLine } = require('../lib/po-receiving');
 const { findPartByBarcode } = require('../lib/parts-barcode-lookup');
 const { DATABASE_TYPES, recordPartOperation, buildDatabaseRecords } = require('../lib/pm-database-records');
+const { verifyReceiverBarcode } = require('../lib/receiver-barcode');
 
 const router = express.Router();
 
@@ -1227,7 +1228,7 @@ router.get('/print/transaction/:id', async (req, res) => {
   const esc = (value) => String(value == null ? '' : value)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  const number = row.transaction_number || row.id || '—';
+  const number = row.transaction_number || row.id || 'â€”';
   return res.type('html').send(`<!doctype html><html><head><meta charset="utf-8"><title>Transaction Report ${esc(number)}</title><link rel="stylesheet" href="/fonts/inter.css"><style>body{font-family:"Inter","Segoe UI",Roboto,Arial,sans-serif;margin:24px;color:#10202f}h1{margin-bottom:4px}table{border-collapse:collapse;width:100%;max-width:720px}th,td{border:1px solid #ccd5df;padding:8px;text-align:left}th{width:30%;background:#eef4fb}.actions{margin-top:20px}@media print{.actions{display:none}}</style></head><body><h1>Parts Transaction Report</h1><p>Transaction Number: <strong>${esc(number)}</strong></p><table><tbody><tr><th>Date</th><td>${esc(row.transaction_date || row.created_at || '')}</td></tr><tr><th>Type</th><td>${esc(row.transaction_type || '')}</td></tr><tr><th>Location</th><td>${esc(row.present_location || row.branch || '')}</td></tr><tr><th>Part Number</th><td>${esc(row.part_number || '')}</td></tr><tr><th>Part Name</th><td>${esc(row.part_name || '')}</td></tr><tr><th>Quantity</th><td>${esc(row.qty)}</td></tr><tr><th>Supplier</th><td>${esc(row.supplier || '')}</td></tr><tr><th>Editor</th><td>${esc(row.editor || '')}</td></tr></tbody></table><div class="actions"><button type="button" onclick="window.print()">Print</button></div></body></html>`);
 });
 
@@ -1267,7 +1268,7 @@ router.post('/transfers/:id/transmit', async (req, res) => {
   transfer.transmitted_at = new Date().toISOString();
   transfer.transmitted_by = editor;
   await store.replaceData(data);
-  return res.redirect('/parts-manager?panel=approvals&success=' + encodeURIComponent(`Transmittal ${transfer.transmittal_number || transfer.id} sent. Status set to Branch Receiving — ${transfer.to_branch} can now load ${transfer.transaction_number || ''} in Parts Receiving.`));
+  return res.redirect('/parts-manager?panel=approvals&success=' + encodeURIComponent(`Transmittal ${transfer.transmittal_number || transfer.id} sent. Status set to Branch Receiving â€” ${transfer.to_branch} can now load ${transfer.transaction_number || ''} in Parts Receiving.`));
 });
 
 router.get('/print/po/:id', async (req, res) => {
@@ -1497,7 +1498,7 @@ router.post('/transfers/batch', async (req, res) => {
     ok: true,
     transfers: created,
     message: `${raw.length} line(s) split into ${created.length} stock transfer(s): `
-      + created.map((t) => `${t.transaction_number} → ${t.to_branch} (${t.lines} line${t.lines === 1 ? '' : 's'})${t.auto_approved ? ' auto-approved' : ''}`).join(', ') + '.',
+      + created.map((t) => `${t.transaction_number} â†’ ${t.to_branch} (${t.lines} line${t.lines === 1 ? '' : 's'})${t.auto_approved ? ' auto-approved' : ''}`).join(', ') + '.',
   });
 });
 
@@ -1809,7 +1810,14 @@ async function recordPoReceivingEntry(req, res, data, poNumber, entries) {
   });
   if (errors.length) return res.status(400).json({ ok: false, error: errors.join(' ') });
 
-  const editor = String(req.session?.user?.username || 'system').trim();
+  const user = req.session?.user || {};
+    const role = String(user.role || '').trim().toLowerCase();
+    if (PM_ROLES.has(role)) {
+      const receiverCheck = verifyReceiverBarcode(user, req.body && req.body.receiver_barcode);
+      if (!receiverCheck.ok) return res.status(403).json({ ok: false, error: receiverCheck.error });
+    }
+
+    const editor = String(user.username || 'system').trim();
   const stamp = stampNow();
   if (!Array.isArray(data.parts_purchase_orders)) data.parts_purchase_orders = [];
   const location = resolvePmLocation(entries[0].present_location, data) || WAREHOUSE_1;
@@ -1899,7 +1907,7 @@ async function recordPoReceivingEntry(req, res, data, poNumber, entries) {
     created: receivedNow,
     message: closed
       ? `PO ${po.po_number} saved (${summary}) and is now Closed PO.`
-      : `PO ${po.po_number} saved (${summary}). ${openLeft} line(s) still to receive — the PO stays Receiving until they arrive, or remove the non-arriving lines under PO Records > Edit to close it.`,
+      : `PO ${po.po_number} saved (${summary}). ${openLeft} line(s) still to receive â€” the PO stays Receiving until they arrive, or remove the non-arriving lines under PO Records > Edit to close it.`,
   });
 }
 
@@ -1955,7 +1963,7 @@ router.post('/api/purchase-orders/:id/remove-lines', async (req, res) => {
       ok: true,
       po_closed: closed,
       message: closed
-        ? `Removed ${removed.length} line(s) from PO ${po.po_number}. All remaining lines are received — PO is now Closed.`
+        ? `Removed ${removed.length} line(s) from PO ${po.po_number}. All remaining lines are received â€” PO is now Closed.`
         : `Removed ${removed.length} line(s) from PO ${po.po_number}. ${openLeft} line(s) still to receive.`,
     });
   } catch (err) {
@@ -1977,7 +1985,14 @@ router.post('/api/parts/receiving-entry', async (req, res) => {
       return res.status(400).json({ error: 'No entries provided.' });
     }
 
-    const editor = String(req.session?.user?.username || 'system').trim();
+    const user = req.session?.user || {};
+    const role = String(user.role || '').trim().toLowerCase();
+    if (PM_ROLES.has(role)) {
+      const receiverCheck = verifyReceiverBarcode(user, req.body && req.body.receiver_barcode);
+      if (!receiverCheck.ok) return res.status(403).json({ ok: false, error: receiverCheck.error });
+    }
+
+    const editor = String(user.username || 'system').trim();
     const data = await store.getRawData();
     const poNumber = String(req.body.po_number || '').trim();
     if (poNumber) return await recordPoReceivingEntry(req, res, data, poNumber, entries);
@@ -2074,7 +2089,14 @@ router.post('/api/parts/csv-batch-add', async (req, res) => {
       return res.status(400).json({ error: 'No CSV data provided.' });
     }
 
-    const editor = String(req.session?.user?.username || 'system').trim();
+    const user = req.session?.user || {};
+    const role = String(user.role || '').trim().toLowerCase();
+    if (PM_ROLES.has(role)) {
+      const receiverCheck = verifyReceiverBarcode(user, req.body && req.body.receiver_barcode);
+      if (!receiverCheck.ok) return res.status(403).json({ ok: false, error: receiverCheck.error });
+    }
+
+    const editor = String(user.username || 'system').trim();
     const data = await store.getRawData();
     const createdRecords = [];
     const errors = [];
@@ -2340,7 +2362,7 @@ router.post('/api/requests/approve-all', async (req, res) => {
     const allInventory = (data.parts_inventory || []);
     const pending = allInventory.filter(isPendingPartsRequest);
     
-    console.log('🔍 Approve-all called');
+    console.log('ðŸ” Approve-all called');
     console.log('  Total inventory:', allInventory.length);
     console.log('  Pending requests:', pending.length);
     
@@ -2352,7 +2374,7 @@ router.post('/api/requests/approve-all', async (req, res) => {
       return res.status(400).json({ error: 'No pending requests to approve.' });
     }
     
-    console.log('  ✓ Processing', pending.length, 'requests');
+    console.log('  âœ“ Processing', pending.length, 'requests');
     
     // Allocate one transaction number for all
     const masterTransactionNumber = allocatePartsTransactionNumber(data);
@@ -2409,14 +2431,14 @@ router.post('/api/requests/approve-all', async (req, res) => {
       }
     }
     
-    console.log('  Results:', results.map((r) => r.ok ? '✓' : '✗').join(''));
+    console.log('  Results:', results.map((r) => r.ok ? 'âœ“' : 'âœ—').join(''));
     
     // Save ONE consolidated receipt for all items
     let consolidatedReceipt = null;
     const successCount = results.filter((r) => r.ok).length;
     if (successCount > 0 && approvedItems.length > 0) {
       consolidatedReceipt = await saveConsolidatedReceipt(masterTransactionNumber, approvedItems, resolver);
-      console.log('  ✓ Consolidated receipt:', consolidatedReceipt.filename);
+      console.log('  âœ“ Consolidated receipt:', consolidatedReceipt.filename);
     }
     
     // Persist all changes
@@ -2433,7 +2455,7 @@ router.post('/api/requests/approve-all', async (req, res) => {
       overview,
     });
   } catch (err) {
-    console.error('❌ Approve all error:', err.message);
+    console.error('âŒ Approve all error:', err.message);
     console.error(err.stack);
     return res.status(500).json({ error: err.message });
   }
@@ -2624,7 +2646,7 @@ router.post('/api/purchase-orders-send-approval', async (req, res) => {
 
     // In production, you would send a notification to GM here
     // For now, just log it
-    console.log(`✓ PO ${po_number} sent to GM for approval by ${editor}`);
+    console.log(`âœ“ PO ${po_number} sent to GM for approval by ${editor}`);
 
     return res.json({
       ok: true,
@@ -2869,3 +2891,6 @@ module.exports = router;
 module.exports.isPartsManagerRole = isPartsManagerRole;
 module.exports.canAccessPartsManagerWorkspace = canAccessPartsManagerWorkspace;
 module.exports.autoApprovePartsRequestIfEnabled = autoApprovePartsRequestIfEnabled;
+
+
+

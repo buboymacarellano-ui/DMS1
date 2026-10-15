@@ -3,7 +3,7 @@ const store = require('../data/store');
 const { isIncomingStockType, isPartsActivityLog, TYPE_STOCK, TYPE_SOLD } = require('../lib/parts-request');
 const inventory = require('../lib/parts-inventory-controller');
 const { WAREHOUSE_1, sameLocation } = require('../lib/parts-location-scope');
-const { frontlineSessionBranch } = require('../lib/frontline-roles');
+const { frontlineSessionBranch, employeeBarcode, employeeMatchesIdentifier } = require('../lib/frontline-roles');
 const { canonicalizeBranchName, normalizeBranchKey } = require('../lib/branches');
 const { saveBillingPdf, BILLING_WARRANTY_NOTE } = require('../lib/billing-pdf');
 const { loadLaborPriceMatrix } = require('../lib/labor-price-matrix');
@@ -91,6 +91,16 @@ function getTechnicianDisplayName(employee) {
   return name || identifier;
 }
 
+function technicianLookupKeys(value) {
+  return normalizeText(value).toUpperCase();
+}
+
+function findTechnicianByInput(employees, value) {
+  const candidate = technicianLookupKeys(value);
+  if (!candidate) return null;
+  return (employees || []).find((employee) => employeeMatchesIdentifier(employee, candidate)) || null;
+}
+
 function buildTechnicianDirectory(employees) {
   return (employees || [])
     .filter((employee) => (
@@ -100,12 +110,21 @@ function buildTechnicianDirectory(employees) {
     .map((employee) => ({
       id: employee.id || '',
       employee_id: employee.employee_id || '',
+      barcode: employeeBarcode(employee),
       name: getTechnicianDisplayName(employee),
       branch: normalizeText(employee.work_location_branch_id),
       branch_key: normalizeBranchKey(employee.work_location_branch_id),
       job_title: normalizeText(employee.job_title),
     }))
     .filter((employee) => employee.name);
+}
+
+function resolveTechnicianLabel(employees, value) {
+  const input = normalizeText(value);
+  if (!input) return '';
+  const match = findTechnicianByInput(employees, input);
+  if (match) return getTechnicianDisplayName(match);
+  return input;
 }
 
 function buildBranchOptionsFromEmployees(employees) {
@@ -802,7 +821,7 @@ router.post('/new', async (req, res) => {
     time_in,
     time_out,
   } = req.body;
-  const normalizedTechnician = (technician || '').trim();
+  const normalizedTechnician = resolveTechnicianLabel(employees, technician);
   const normalizedTimeIn = (time_in || '').trim();
   const technicianAssignedAt = normalizedTechnician ? new Date().toISOString() : '';
 
@@ -822,7 +841,7 @@ router.post('/new', async (req, res) => {
     service_advisor: (service_advisor || '').trim(),
     technician: normalizedTechnician,
     technician_assigned_at: technicianAssignedAt,
-    time_in: normalizedTechnician ? (normalizedTimeIn || getCurrentTimeHHMM()) : '',
+    time_in: normalizedTimeIn,
     time_out: (time_out || '').trim(),
     ...mergeWorkOrderMask(req.body, selectedCustomer, selectedVehicle),
   });
@@ -867,6 +886,7 @@ router.post('/:id/edit', async (req, res) => {
   let customers = await store.getAll('customers');
   let vehicles = await store.getAll('vehicles');
   ({ customers, vehicles } = await scopeCustomerVehicleData(req, customers, vehicles));
+  const employees = await store.getAll('employees');
   const vehicleCatalog = await loadVehicleTypeCatalog();
   applyCatalogUnitType(req.body, vehicleCatalog);
 
@@ -884,7 +904,7 @@ router.post('/:id/edit', async (req, res) => {
     time_in,
     time_out,
   } = req.body;
-  const normalizedTechnician = (technician || '').trim();
+  const normalizedTechnician = resolveTechnicianLabel(employees, technician);
   const normalizedTimeIn = (time_in || '').trim();
   const hadTechnician = String(existingWo.technician || '').trim().length > 0;
   const hasTechnicianNow = normalizedTechnician.length > 0;
@@ -909,7 +929,7 @@ router.post('/:id/edit', async (req, res) => {
     service_advisor: (service_advisor || '').trim(),
     technician: normalizedTechnician,
     technician_assigned_at: nextTechnicianAssignedAt,
-    time_in: normalizedTimeIn || (normalizedTechnician ? getCurrentTimeHHMM() : ''),
+    time_in: normalizedTimeIn,
     time_out: (time_out || '').trim(),
     ...mergeWorkOrderMask(req.body, selectedCustomer, selectedVehicle),
   });

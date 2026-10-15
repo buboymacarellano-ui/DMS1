@@ -88,6 +88,13 @@ function matchesTechnician(workOrder, technicianName, technicianEmployeeId) {
   );
 }
 
+function hasTechnicianTimedIn(workOrderId, updates) {
+  return (updates || []).some((entry) =>
+    normalizeText(entry.work_order_id) === normalizeText(workOrderId) &&
+    normalizeText(entry.status_action).toLowerCase() === 'time_in'
+  );
+}
+
 async function buildTechnicianDashboardData(sessionUser) {
   const technicianName = normalizeText(sessionUser.technician_name || sessionUser.username);
   const technicianEmployeeId = normalizeEmployeeId(sessionUser.technician_employee_id || '');
@@ -111,6 +118,7 @@ async function buildTechnicianDashboardData(sessionUser) {
         .filter((entry) => normalizeText(entry.work_order_id) === normalizeText(wo.id))
         .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
         .slice(0, 5);
+      const technicianTimedIn = hasTechnicianTimedIn(wo.id, updates);
 
       return {
         id: wo.id,
@@ -118,7 +126,9 @@ async function buildTechnicianDashboardData(sessionUser) {
         customer_name: normalizeText(customer.name) || normalizeText(wo.customer_entry) || 'Unknown Customer',
         vehicle_label: buildVehicleLabel(wo, vehicle),
         services: buildServiceList(wo),
-        status: normalizeText(wo.status) || 'open',
+      status: normalizeText(wo.status) || 'open',
+        time_in: technicianTimedIn ? normalizeText(wo.time_in) : '',
+        time_out: technicianTimedIn ? normalizeText(wo.time_out) : '',
         branch: normalizeText(wo.branch),
         created_at: wo.created_at || '',
         technician_assigned_at: wo.technician_assigned_at || '',
@@ -182,6 +192,8 @@ router.post('/updates', async (req, res) => {
   const workOrderId = normalizeText(req.body.work_order_id);
   const note = normalizeText(req.body.note);
   const statusAction = normalizeText(req.body.status_action).toLowerCase();
+  let timeToggle = normalizeText(req.body.time_toggle).toLowerCase();
+  const timeoutAction = normalizeText(req.body.timeout_action).toLowerCase();
   const onBreak = Boolean(req.body.on_break);
   const waitingParts = Boolean(req.body.waiting_parts);
 
@@ -191,13 +203,63 @@ router.post('/updates', async (req, res) => {
 
   const hasStatusAction = statusAction === 'break' || statusAction === 'waiting_parts' || statusAction === 'done';
 
-  if (!note && !onBreak && !waitingParts && !hasStatusAction) {
+  if (!timeToggle && ['break', 'waiting_parts', 'transfer_job', 'job_done', 'off_duty', 'clock_out_time'].includes(timeoutAction)) {
+    timeToggle = 'time_out';
+  }
+
+  if (!note && !onBreak && !waitingParts && !hasStatusAction && !timeToggle) {
     return res.redirect('/technician?error=Provide%20a%20note%20or%20status%20checkbox%20first.');
   }
 
   const workOrder = await store.getById('work_orders', workOrderId);
   if (!workOrder || !matchesTechnician(workOrder, technicianName, technicianEmployeeId)) {
     return res.redirect('/technician?error=You%20can%20only%20update%20your%20assigned%20work%20orders.');
+  }
+
+  if (timeToggle === 'time_in' || timeToggle === 'time_out') {
+    const now = getCurrentTimeHHMM();
+    const updatePayload = {};
+    let message = '';
+    let updateFlags = { on_break: false, waiting_parts: false, done: false };
+
+    if (timeToggle === 'time_in') {
+      updatePayload.time_in = now;
+      updatePayload.status = 'in-progress';
+      message = `Technician timed in at ${updatePayload.time_in}.`;
+    } else {
+      updatePayload.time_out = normalizeText(workOrder.time_out) || now;
+      const timeoutMap = {
+        break: { status: 'break', message: 'Technician is on break.', flags: { on_break: true, waiting_parts: false, done: false } },
+        waiting_parts: { status: 'waiting-parts', message: 'Technician is waiting for parts.', flags: { on_break: false, waiting_parts: true, done: false } },
+        transfer_job: { status: 'open', message: 'Job transferred and returned for technician assignment.', flags: { on_break: false, waiting_parts: false, done: false } },
+        job_done: { status: 'completed', message: 'Technician marked this job as done.', flags: { on_break: false, waiting_parts: false, done: true } },
+        off_duty: { status: 'completed', message: 'Technician is off duty.', flags: { on_break: false, waiting_parts: false, done: false } },
+        clock_out_time: { status: 'completed', message: 'Technician clocked out.', flags: { on_break: false, waiting_parts: false, done: false } },
+      };
+      const selected = timeoutMap[timeoutAction] || timeoutMap.clock_out_time;
+      updatePayload.status = selected.status;
+      message = `${selected.message} Time out: ${updatePayload.time_out}.`;
+      updateFlags = selected.flags;
+
+      if (timeoutAction === 'transfer_job') {
+        updatePayload.technician = '';
+        updatePayload.technician_assigned_at = '';
+        updatePayload.time_in = '';
+        updatePayload.time_out = '';
+      }
+    }
+
+    await store.update('work_orders', workOrder.id, updatePayload);
+    await store.create('technician_updates', {
+      work_order_id: workOrder.id,
+      sender_role: 'technician',
+      sender_username: normalizeText(user.username),
+      technician_name: technicianName,
+      status_flags: updateFlags,
+      status_action: timeoutAction || timeToggle,
+      message,
+    });
+    return res.redirect('/technician?success=Time%20log%20saved.');
   }
 
   let nextFlags = {

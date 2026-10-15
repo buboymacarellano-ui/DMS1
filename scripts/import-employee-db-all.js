@@ -46,6 +46,7 @@ function extractId(value) {
 
 const HEADER_MAP = {
   employeeid: 'employee_id',
+  barcode: 'barcode',
   firstname: 'first_name',
   middlename: 'middle_name',
   lastname: 'last_name',

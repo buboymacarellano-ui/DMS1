@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   const root = document.getElementById('pm-workspace');
   if (!root) return;
 
@@ -406,7 +406,7 @@
         credentials: 'same-origin',
       });
       if (res.status === 404) {
-        setBarcodeStatus('New barcode — fill in the part details; it will be saved with this entry.', false);
+        setBarcodeStatus('New barcode â€” fill in the part details; it will be saved with this entry.', false);
         document.getElementById('pm-edit-part-number').focus();
         return;
       }
@@ -422,7 +422,7 @@
       set('pm-edit-cost', part.cost_price || '');
       set('pm-edit-markup', part.markup || '');
       set('pm-edit-retail', part.retail_price || '');
-      setBarcodeStatus('Barcode found: ' + part.part_number + ' — ' + part.part_name + '. Enter the Qty and Receipt #.', false);
+      setBarcodeStatus('Barcode found: ' + part.part_number + ' â€” ' + part.part_name + '. Enter the Qty and Receipt #.', false);
       document.getElementById('pm-edit-qty').focus();
     } catch (error) {
       input.dataset.lookedUp = '';
@@ -446,6 +446,14 @@
 
   async function saveNewReceivingEntry() {
     const val = (id) => String((document.getElementById(id) || {}).value || '').trim();
+    const receiverInput = document.getElementById('pm-edit-receiver-barcode');
+    const receiverBarcode = val('pm-edit-receiver-barcode');
+    if (receiverInput && receiverInput.required && !receiverBarcode) {
+      window.alert('Swipe your ID barcode first.');
+      receiverInput.focus();
+      return;
+    }
+
     const entry = {
       barcode: val('pm-edit-barcode'),
       transaction_date: val('pm-edit-date'),
@@ -473,7 +481,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         credentials: 'same-origin',
-        body: JSON.stringify({ entries: [entry] }),
+        body: JSON.stringify({ receiver_barcode: receiverBarcode, entries: [entry] }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok || !payload.ok || !payload.created) {
@@ -811,9 +819,9 @@
           const cells = Array.from(row.querySelectorAll('td'));
           
           // Extract from cells: 0=checkbox, 1=Part#, 2=Name, 3=Location, 4=Supplier, 5=Stock, 6=Safety, 7=Status
-          const partName = (cells[2] || {}).textContent?.trim() || '—';
+          const partName = (cells[2] || {}).textContent?.trim() || 'â€”';
           const location = (cells[3] || {}).textContent?.trim() || 'Unassigned';
-          const supplier = (cells[4] || {}).textContent?.trim() || '—';
+          const supplier = (cells[4] || {}).textContent?.trim() || 'â€”';
           const currentStockText = (cells[5] || {}).textContent?.trim() || '0';
           const safetyStockText = (cells[6] || {}).textContent?.trim() || '5';
           
@@ -870,13 +878,13 @@
         updateCheckboxState();
         modal.style.display = 'none';
 
-        alert(`✓ Successfully transferred ${selectedRows.length} item${selectedRows.length !== 1 ? 's' : ''} to ordering grid!\n\nClick "Panel 7: Ordering Grid" to view and manage.`);
+        alert(`âœ“ Successfully transferred ${selectedRows.length} item${selectedRows.length !== 1 ? 's' : ''} to ordering grid!\n\nClick "Panel 7: Ordering Grid" to view and manage.`);
       } catch (err) {
         alert('Error transferring items: ' + err.message);
         console.error('Transfer error:', err);
       } finally {
         confirmTransferBtn.disabled = false;
-        confirmTransferBtn.textContent = '✓ Confirm & Send to Ordering Grid';
+        confirmTransferBtn.textContent = 'âœ“ Confirm & Send to Ordering Grid';
       }
     });
 
@@ -904,7 +912,7 @@
     const splitLabel = document.getElementById('pm-health-transfer-split');
     const resultBox = document.getElementById('pm-health-transfer-result');
     if (fillDest) {
-      fillDest.innerHTML = '<option value="">—</option>' + locations.map((location) => `<option value="${escapeHtml(location)}">${escapeHtml(location)}</option>`).join('');
+      fillDest.innerHTML = '<option value="">â€”</option>' + locations.map((location) => `<option value="${escapeHtml(location)}">${escapeHtml(location)}</option>`).join('');
       fillDest.addEventListener('change', () => {
         const value = fillDest.value;
         if (!value) return;
@@ -937,16 +945,16 @@
       const ready = groups.filter((g) => g.destination);
       const unassigned = groups.find((g) => !g.destination);
       if (splitLabel) {
-        splitLabel.textContent = `${stagedRows.length} line(s) → ${ready.length} PTN(s)`
+        splitLabel.textContent = `${stagedRows.length} line(s) â†’ ${ready.length} PTN(s)`
           + (ready.length ? ' [' + ready.map((g) => g.destination + ': ' + g.indexes.length).join(', ') + ']' : '')
-          + (unassigned ? ` — ${unassigned.indexes.length} line(s) still need a destination` : '');
+          + (unassigned ? ` â€” ${unassigned.indexes.length} line(s) still need a destination` : '');
       }
       transferGridSubmit.textContent = ready.length > 1 ? `File ${ready.length} Stock Transfer Requests (${ready.length} PTNs)` : 'File Stock Transfer Request';
       let ptn = 0;
       transferGridBody.innerHTML = groups.map((group) => {
         const header = group.destination
-          ? `PTN ${++ptn} of ${ready.length} — ${escapeHtml(group.source)} → ${escapeHtml(group.destination)} (${group.indexes.length} line${group.indexes.length === 1 ? '' : 's'}, qty ${group.indexes.reduce((s, i) => s + (Number(stagedRows[i].qty) || 0), 0)})`
-          : `No destination yet (${group.indexes.length} line${group.indexes.length === 1 ? '' : 's'}) — choose a destination branch`;
+          ? `PTN ${++ptn} of ${ready.length} â€” ${escapeHtml(group.source)} â†’ ${escapeHtml(group.destination)} (${group.indexes.length} line${group.indexes.length === 1 ? '' : 's'}, qty ${group.indexes.reduce((s, i) => s + (Number(stagedRows[i].qty) || 0), 0)})`
+          : `No destination yet (${group.indexes.length} line${group.indexes.length === 1 ? '' : 's'}) â€” choose a destination branch`;
         const head = `<tr class="pm-transfer-split-head"><td colspan="6" style="background:${group.destination ? '#f4ecf7' : '#fdecea'};font-weight:700;color:${group.destination ? '#6c3483' : '#c0392b'};">${header}</td></tr>`;
         return head + group.indexes.map((index) => {
           const item = stagedRows[index];
@@ -958,7 +966,7 @@
             ${locations.filter((location) => location !== item.source).map((location) => `<option value="${escapeHtml(location)}"${location === item.destination ? ' selected' : ''}>${escapeHtml(location)}</option>`).join('')}
           </select></td>
           <td>${escapeHtml(item.part_number)}</td>
-          <td>${escapeHtml(item.part_name || '—')}</td>
+          <td>${escapeHtml(item.part_name || 'â€”')}</td>
           <td><input type="number" class="pm-health-transfer-qty" data-index="${index}" value="${item.qty}" min="1" step="1" style="width:70px;" /></td>
           <td><button type="button" class="btn pm-health-transfer-remove" data-index="${index}">Remove</button></td>
         </tr>`;
@@ -998,7 +1006,7 @@
         return;
       }
       const groups = splitGroups();
-      if (!window.confirm(`File ${groups.length} stock transfer request(s)?\n\n` + groups.map((g, i) => `PTN ${i + 1}: ${g.source} → ${g.destination} (${g.indexes.length} line(s))`).join('\n'))) return;
+      if (!window.confirm(`File ${groups.length} stock transfer request(s)?\n\n` + groups.map((g, i) => `PTN ${i + 1}: ${g.source} â†’ ${g.destination} (${g.indexes.length} line(s))`).join('\n'))) return;
       transferGridSubmit.disabled = true;
       transferGridStatus.textContent = `Filing ${groups.length} stock transfer request(s)...`;
       try {
@@ -1021,7 +1029,7 @@
             + json.transfers.map((t) => `<tr><td><strong>${escapeHtml(t.transaction_number)}</strong></td>`
               + `<td><a href="/parts-manager/print/packing/${encodeURIComponent(t.id)}" target="_blank" rel="noopener">${escapeHtml(t.packing_list_number)}</a></td>`
               + `<td><a href="/parts-manager/print/transmittal/${encodeURIComponent(t.id)}" target="_blank" rel="noopener">${escapeHtml(t.transmittal_number)}</a></td>`
-              + `<td>${escapeHtml(t.from_branch)} → ${escapeHtml(t.to_branch)}</td><td>${t.lines}</td><td>${t.qty}</td><td>${t.auto_approved ? 'Auto-approved' : 'Pending GM approval'}</td></tr>`).join('')
+              + `<td>${escapeHtml(t.from_branch)} â†’ ${escapeHtml(t.to_branch)}</td><td>${t.lines}</td><td>${t.qty}</td><td>${t.auto_approved ? 'Auto-approved' : 'Pending GM approval'}</td></tr>`).join('')
             + '</tbody></table><a class="btn" href="/parts-manager?panel=approvals#pending-transfers" style="margin-top:8px;display:inline-block;">Go to Approvals</a>';
         }
       } catch (error) {
@@ -1086,10 +1094,10 @@
     tbody.innerHTML = items.map((item, idx) => `
       <tr data-order-id="${item.id}">
         <td style="text-align:center;"><input type="checkbox" class="pm-ordering-check" data-order-id="${item.id}" /></td>
-        <td><strong>${item.part_number || '—'}</strong></td>
-        <td>${item.part_name || '—'}</td>
+        <td><strong>${item.part_number || 'â€”'}</strong></td>
+        <td>${item.part_name || 'â€”'}</td>
         <td>${item.location || 'Unassigned'}</td>
-        <td>${item.supplier || '—'}</td>
+        <td>${item.supplier || 'â€”'}</td>
         <td style="text-align:right;">${item.current_stock || 0}</td>
         <td style="text-align:right;">${item.safety_stock || 5}</td>
         <td style="text-align:right;">${item.order_qty || 0}</td>
@@ -1244,7 +1252,7 @@
         if (!res.ok || !data.ok) {
           alert('Error creating PO: ' + (data.error || 'Unknown error'));
           poConfirmBtn.disabled = false;
-          poConfirmBtn.textContent = '✓ Create PO';
+          poConfirmBtn.textContent = 'âœ“ Create PO';
           return;
         }
 
@@ -1263,7 +1271,7 @@
         console.error('PO creation error:', err);
       } finally {
         poConfirmBtn.disabled = false;
-        poConfirmBtn.textContent = '✓ Create PO';
+        poConfirmBtn.textContent = 'âœ“ Create PO';
       }
     });
 
@@ -1346,11 +1354,11 @@
             <tbody>
               ${items.map((item, idx) => `
                 <tr style="border-bottom:1px solid #ddd;">
-                  <td style="padding:10px;"><strong>${item.part_number || '—'}</strong></td>
-                  <td style="padding:10px;">${item.part_name || '—'}</td>
+                  <td style="padding:10px;"><strong>${item.part_number || 'â€”'}</strong></td>
+                  <td style="padding:10px;">${item.part_name || 'â€”'}</td>
                   <td style="padding:10px;text-align:center;"><strong>${item.order_qty || 0}</strong></td>
                   <td style="padding:10px;text-align:center;">pcs</td>
-                  <td style="padding:10px;text-align:right;">${item.supplier || '—'}</td>
+                  <td style="padding:10px;text-align:right;">${item.supplier || 'â€”'}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -1366,7 +1374,7 @@
             </div>
             <div>
               <div style="color:#666;margin-bottom:4px;">PO Status:</div>
-              <div style="font-size:16px;font-weight:bold;color:#f39c12;">⏳ Awaiting GM Approval</div>
+              <div style="font-size:16px;font-weight:bold;color:#f39c12;">â³ Awaiting GM Approval</div>
             </div>
           </div>
         </div>
@@ -1374,10 +1382,10 @@
         <!-- Action Buttons -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
           <button type="button" id="pm-po-print-btn" class="btn" style="background:#3498db;color:white;padding:12px 20px;border:none;border-radius:3px;cursor:pointer;font-weight:bold;">
-            🖨 Print PO
+            ðŸ–¨ Print PO
           </button>
           <button type="button" id="pm-po-send-approval-btn" class="btn" style="background:#27ae60;color:white;padding:12px 20px;border:none;border-radius:3px;cursor:pointer;font-weight:bold;">
-            📤 Send for Approval
+            ðŸ“¤ Send for Approval
           </button>
         </div>
 
@@ -1409,7 +1417,7 @@
 
       const sendBtn = document.getElementById('pm-po-send-approval-btn');
       sendBtn.disabled = true;
-      sendBtn.textContent = '⏳ Sending...';
+      sendBtn.textContent = 'â³ Sending...';
 
       try {
         const res = await fetch('/parts-manager/api/purchase-orders-send-approval', {
@@ -1427,11 +1435,11 @@
         if (!res.ok || !data.ok) {
           alert('Error: ' + (data.error || 'Failed to send for approval'));
           sendBtn.disabled = false;
-          sendBtn.textContent = '📤 Send for Approval';
+          sendBtn.textContent = 'ðŸ“¤ Send for Approval';
           return;
         }
 
-        alert(`✓ PO ${window.currentPOForApproval.po_number} sent to GM for approval!\n\nStatus: Pending GM Review`);
+        alert(`âœ“ PO ${window.currentPOForApproval.po_number} sent to GM for approval!\n\nStatus: Pending GM Review`);
 
         // Clear selected items from ordering grid
         const selectedIds = (window.selectedItemsForPO || []).map((i) => i.id);
@@ -1446,7 +1454,7 @@
         alert('Network error: ' + err.message);
         console.error('Approval send error:', err);
         sendBtn.disabled = false;
-        sendBtn.textContent = '📤 Send for Approval';
+        sendBtn.textContent = 'ðŸ“¤ Send for Approval';
       }
     });
 
@@ -1549,7 +1557,7 @@
         openPanel('ordering');
 
         // Visual feedback
-        alert(`✓ ${partNumber} added to ordering grid!`);
+        alert(`âœ“ ${partNumber} added to ordering grid!`);
       });
     });
 
@@ -1594,7 +1602,7 @@
               </div>
               <div>
                 <div style="font-weight:bold;color:#666;font-size:0.9em;">Status</div>
-                <div style="font-size:1em;"><span style="background:#27ae60;color:white;padding:3px 8px;border-radius:0;font-size:0.9em;">✓ ${po.status || 'N/A'}</span></div>
+                <div style="font-size:1em;"><span style="background:#27ae60;color:white;padding:3px 8px;border-radius:0;font-size:0.9em;">âœ“ ${po.status || 'N/A'}</span></div>
               </div>
               <div>
                 <div style="font-weight:bold;color:#666;font-size:0.9em;">Supplier</div>
@@ -1663,7 +1671,7 @@
           html += `
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid #ecf0f1;">
               <button type="button" class="pm-po-close-btn btn" style="background:#95a5a6;color:white;padding:8px 16px;">Close</button>
-              <button type="button" class="pm-po-print-btn btn" style="background:#2980b9;color:white;padding:8px 16px;">🖨 Print</button>
+              <button type="button" class="pm-po-print-btn btn" style="background:#2980b9;color:white;padding:8px 16px;">ðŸ–¨ Print</button>
             </div>
           `;
 
@@ -1700,3 +1708,4 @@
     });
   })();
 })();
+

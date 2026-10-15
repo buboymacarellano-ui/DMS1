@@ -1,4 +1,4 @@
-<%- include('../partials/header') %>
+﻿<%- include('../partials/header') %>
 
 <section class="dashboard-shell admin-shell">
   <% const view = typeof partsView !== 'undefined' && partsView ? partsView : { isFrontline: false, scope: 'all', readOnly: false, label: 'Parts Database', location: '' }; %>
@@ -56,7 +56,7 @@
     <a class="btn" href="#parts-records" style="background:#1f8f53;">EditParts</a>
     <% } %>
     <button type="button" class="btn report-export__btn" id="parts-report-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="parts-report-modal">Create Report</button>
-    <span class="dashboard-note admin-note" style="margin:0;align-self:center;">Visible records: <strong><%= total %></strong> · Depleted New / Stock rows hide from this table after 3 working days but stay in History</span>
+    <span class="dashboard-note admin-note" style="margin:0;align-self:center;">Visible records: <strong><%= total %></strong> Â· Depleted New / Stock rows hide from this table after 3 working days but stay in History</span>
   </form>
 
   <div id="parts-records" class="table-scroll" style="overflow-x:auto;max-height:72vh;overflow-y:auto;">
@@ -96,7 +96,7 @@
               </span>
             </td>
             <td style="white-space:nowrap;">
-              <%= p.present_location || p.branch || p.requesting_branch || '—' %>
+              <%= p.present_location || p.branch || p.requesting_branch || 'â€”' %>
             </td>
             <td style="white-space:nowrap;"><%= p.editor || '' %></td>
             <td style="white-space:nowrap;"><%= p.part_number || '' %></td>
@@ -114,7 +114,7 @@
                 <a class="btn" href="/parts/history/<%= encodeURIComponent(p.part_number || '') %><%= view.scope === 'warehouse1' ? '?scope=warehouse1' : '' %>" style="font-size:11px;padding:4px 8px;">History</a>
                 <% if (!view.readOnly) { %>
                   <% if (typeof isSoldTransaction === 'function' && isSoldTransaction(p)) { %>
-                    <span class="dashboard-note" style="display:inline;margin:0;font-size:11px;">Sold — locked</span>
+                    <span class="dashboard-note" style="display:inline;margin:0;font-size:11px;">Sold â€” locked</span>
                   <% } else { %>
                     <a class="btn" href="/parts/<%= p.id %>/edit" style="font-size:11px;padding:4px 8px;">EditParts</a>
                     <form method="post" action="/parts/<%= p.id %>/delete" style="display:inline;" onsubmit="return confirm('Delete this entry?')">
@@ -133,6 +133,10 @@
     <article class="dashboard-card admin-panel" id="approved-transfers" style="margin-top:12px;">
       <div class="dashboard-card__header admin-panel-header">Approved transfers - verify receipt</div>
       <p class="dashboard-note admin-note">Verify approved transfers received at <%= actorBranch || 'your assigned branch' %>. Approval completes the transit status and updates branch inventory.</p>
+      <label style="display:flex;flex-direction:column;font-weight:700;font-size:13px;max-width:320px;margin:10px 0 0 0;">Receiver ID Barcode
+        <input type="text" id="branch-receive-receiver" placeholder="Swipe your ID barcode" autocomplete="off" />
+        <small class="dashboard-note" style="margin:4px 0 0 0;">Only the logged-in receiver can confirm receipt.</small>
+      </label>
       <div class="table-scroll" style="max-height:min(52vh, calc(100vh - 220px));">
         <% const inboundRows = Array.isArray(inboundTransfers) ? inboundTransfers : []; %>
         <% const byTransaction = new Map(); %>
@@ -160,7 +164,10 @@
                       <td><%= row.sub_id || '' %></td>
                       <td><%= row.qty != null ? row.qty : '' %></td>
                       <td><%= row.fulfillment_status || row.request_status || 'In transit' %></td>
-                      <td><form method="post" action="/parts/receive/<%= encodeURIComponent(row.id) %>" style="margin:0;"><button type="submit" class="btn" style="background:#1f8f53;">Verify and Approve</button></form></td>
+                      <td><form method="post" action="/parts/receive/<%= encodeURIComponent(row.id) %>" class="branch-receive-one-form" style="margin:0;">
+  <input type="hidden" name="receiver_barcode" class="branch-receive-receiver-hidden" value="" />
+  <button type="submit" class="btn" style="background:#1f8f53;">Verify and Approve</button>
+</form></td>
                     </tr>
                   <% }) %>
                 </tbody>
@@ -176,16 +183,39 @@
 <script src="/js/parts-report-modal.js"></script>
 <% if (view.isFrontline) { %>
 <script>
+  const receiverInput = document.getElementById('branch-receive-receiver');
+  document.querySelectorAll('.branch-receive-one-form').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+      const receiverBarcode = receiverInput ? String(receiverInput.value || '').trim() : '';
+      if (!receiverBarcode) {
+        event.preventDefault();
+        window.alert('Swipe your ID barcode first.');
+        if (receiverInput) receiverInput.focus();
+        return;
+      }
+      const hidden = form.querySelector('.branch-receive-receiver-hidden');
+      if (hidden) hidden.value = receiverBarcode;
+    });
+  });
+
   document.querySelectorAll('.branch-receive-all-btn').forEach((button) => {
     button.addEventListener('click', async () => {
       const transactionNumber = button.dataset.transactionNumber;
       if (!transactionNumber || !window.confirm(`Approve all transfers for transaction ${transactionNumber}?`)) return;
       button.disabled = true;
       try {
+        const receiverBarcode = receiverInput ? String(receiverInput.value || '').trim() : '';
+        if (!receiverBarcode) {
+          window.alert('Swipe your ID barcode first.');
+          if (receiverInput) receiverInput.focus();
+          button.disabled = false;
+          return;
+        }
         const response = await fetch(`/parts/api/receive-all/${encodeURIComponent(transactionNumber)}`, {
           method: 'POST',
-          headers: { Accept: 'application/json' },
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
           credentials: 'same-origin',
+          body: JSON.stringify({ receiver_barcode: receiverBarcode }),
         });
         const result = await response.json();
         if (!response.ok || !result.ok) throw new Error(result.error || 'Unable to receive transfers.');
@@ -200,3 +230,4 @@
 <% } %>
 
 <%- include('../partials/footer') %>
+

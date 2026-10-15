@@ -65,7 +65,7 @@
     <form id="employee-filter-form" method="get" action="/employees" class="form" style="margin-bottom:12px;">
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px;">
         <label style="margin:0;min-width:280px;">Search
-          <input name="q" value="<%= q %>" placeholder="Employee ID, name, email, title, department..." style="min-width:260px;" />
+          <input name="q" value="<%= q %>" placeholder="Employee ID, barcode, name, email, title, department..." style="min-width:260px;" />
         </label>
         <button type="submit">Filter Table</button>
         <button type="submit" formaction="/employees/export.csv" class="employee-toolbar__btn employee-toolbar__btn--orange" onclick="return confirm('Continue downloading the selected Employee DB records?');">Download EDB Selected</button>
@@ -100,6 +100,7 @@
         <tr>
           <th>#</th>
           <th>Employee ID</th>
+          <th>Barcode</th>
           <th>Name</th>
           <th>Preferred</th>
           <th>Employment Status</th>
@@ -115,12 +116,13 @@
       </thead>
       <tbody>
         <% if (!employees.length) { %>
-          <tr><td colspan="13" style="text-align:center;padding:20px;">No records found.</td></tr>
+          <tr><td colspan="14" style="text-align:center;padding:20px;">No records found.</td></tr>
         <% } %>
         <% employees.forEach((employee, index) => { %>
           <tr>
             <td><%= index + 1 %></td>
             <td><%= employee.employee_id || '' %></td>
+            <td><%= employee.barcode || '' %></td>
             <td><%= [employee.first_name, employee.middle_name, employee.last_name].filter(Boolean).join(' ') || '' %></td>
             <td><%= employee.preferred_name || '' %></td>
             <td><%= employee.employment_status || '' %></td>

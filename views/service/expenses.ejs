@@ -62,8 +62,8 @@
   <label>Petty Cash In
     <input type="number" name="petty_cash_in" min="0" step="0.01" value="<%= val('petty_cash_in') %>">
   </label>
-  <label>Received By
-    <input type="text" name="received_by" value="<%= val('received_by') %>">
+  <label>Received By (Employee ID / Barcode)
+    <input type="text" name="received_by" value="<%= val('received_by') %>" placeholder="Scan or type employee ID / barcode">
   </label>
   <label>Note
     <input type="text" name="note" value="<%= val('note') %>">
