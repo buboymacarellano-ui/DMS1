@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   const root = document.getElementById('parts-receiving');
   if (!root) return;
 
@@ -6,6 +6,7 @@
   const body = document.getElementById('prc-body');
   const refInput = document.getElementById('prc-ref');
   const scanInput = document.getElementById('prc-scan');
+  const receiverInput = document.getElementById('prc-receiver');
   const loadStatus = document.getElementById('prc-load-status');
   const info = document.getElementById('prc-info');
   const status = document.getElementById('prc-status');
@@ -46,8 +47,8 @@
       ['From', shipment.from],
       ['To', shipment.to],
       ['Requested By', shipment.requested_by],
-      ['Approved By', [shipment.approved_by, when(shipment.approved_at)].filter(Boolean).join(' · ')],
-      ['Sent By', [shipment.transmitted_by || shipment.sent_by, when(shipment.transmitted_at || shipment.sent_at)].filter(Boolean).join(' · ')],
+      ['Approved By', [shipment.approved_by, when(shipment.approved_at)].filter(Boolean).join(' Â· ')],
+      ['Sent By', [shipment.transmitted_by || shipment.sent_by, when(shipment.transmitted_at || shipment.sent_at)].filter(Boolean).join(' Â· ')],
       ['Transfer Status', shipment.transfer_status],
       ['Lines / Total Qty', `${shipment.rows.length} / ${shipment.total_qty != null ? shipment.total_qty : ''}`],
       ['Total Cost', money(shipment.total_cost)],
@@ -68,7 +69,7 @@
   async function load(ref) {
     const value = String(ref || refInput.value || '').trim();
     if (!value) { setText(loadStatus, 'Enter a PTN / packing list number first.', '#c0392b'); refInput.focus(); return; }
-    setText(loadStatus, `Loading ${value}…`);
+    setText(loadStatus, `Loading ${value}â€¦`);
     setText(status, '');
     try {
       const res = await fetch(`/parts/api/receiving/lookup/${encodeURIComponent(value)}`, { headers: { Accept: 'application/json' } });
@@ -106,22 +107,28 @@
     render();
     const row = body.querySelector(`tr[data-index="${index}"]`);
     if (row) { row.classList.add('prc-row--scanned'); row.scrollIntoView({ block: 'nearest' }); }
-    setText(loadStatus, `Matched ${shipment.rows[index].part_number} — ${shipment.rows[index].part_name}${canReceive ? ' (marked Received)' : ''}.`, '#1f8f53');
+    setText(loadStatus, `Matched ${shipment.rows[index].part_number} - ${shipment.rows[index].part_name}${canReceive ? ' (marked Received)' : ''}.`, '#1f8f53');
   }
 
   async function save() {
     if (!shipment) { setText(status, 'Load a stock transfer first.', '#c0392b'); return; }
+    const receiverBarcode = receiverInput ? String(receiverInput.value || '').trim() : '';
+    if (canReceive && !receiverBarcode) {
+      setText(status, 'Swipe your ID barcode first.', '#c0392b');
+      if (receiverInput) receiverInput.focus();
+      return;
+    }
     const lines = shipment.rows.filter((l) => l.status !== 'received' && l.decision).map((l) => ({ id: l.id, decision: l.decision }));
     if (!lines.length) { setText(status, 'Mark at least one line Received or No receive.', '#c0392b'); return; }
     const pending = shipment.rows.filter((l) => l.status !== 'received' && !l.decision).length;
     if (pending && !window.confirm(`${pending} line(s) are not marked yet and will stay In Transit. Save anyway?`)) return;
     saveBtn.disabled = true;
-    setText(status, 'Saving…');
+    setText(status, 'Savingâ€¦');
     try {
       const res = await fetch('/parts/api/receiving/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ key: shipment.key, lines }),
+        body: JSON.stringify({ key: shipment.key, lines, receiver_barcode: receiverBarcode }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) throw new Error(json.error || 'Unable to save receiving.');
@@ -183,3 +190,5 @@
 
   if (root.dataset.preload) load(root.dataset.preload);
 })();
+
+

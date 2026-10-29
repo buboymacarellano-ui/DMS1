@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Create Technician Account</title>
   <link rel="stylesheet" href="/fonts/inter.css">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles.css?v=<%= typeof assetVersion !== 'undefined' ? assetVersion : '1' %>">
 </head>
 <body>
   <%- include('../partials/back-button') %>
   <main class="auth-shell">
     <section class="auth-card">
       <h1>TECHNICIAN SIGN UP</h1>
-      <p class="auth-subtitle">Create a technician login account for mobile work-order updates.</p>
+      <p class="auth-subtitle">Create a technician login account for mobile work-order updates. Employee ID or barcode can be used to select the technician.</p>
 
       <% if (error) { %>
         <p class="error"><%= error %></p>
@@ -24,11 +24,12 @@
           <input type="text" name="username" value="<%= username %>" autocomplete="username" required />
         </label>
         <label>
-          Technician ID
-          <input type="text" name="technician_employee_id" list="technician-id-options" value="<%= technicianEmployeeId %>" placeholder="Select employee ID" required />
+          Technician ID / Barcode
+          <input type="text" name="technician_employee_id" list="technician-id-options" value="<%= technicianEmployeeId %>" placeholder="Select employee ID or barcode" required />
           <datalist id="technician-id-options">
             <% (technicianOptions || []).forEach(option => { %>
               <option value="<%= option.employeeId %>"><%= option.label %></option>
+              <% if (option.barcode) { %><option value="<%= option.barcode %>"><%= option.label %> | <%= option.barcode %></option><% } %>
             <% }) %>
           </datalist>
         </label>

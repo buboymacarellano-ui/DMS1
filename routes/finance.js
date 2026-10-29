@@ -1,10 +1,12 @@
-const express = require('express');
+﻿const express = require('express');
 const store = require('../data/store');
+const { buildPurchasesReport } = require('../lib/purchases-report');
 const {
   PAYMENT_METHODS,
   todayKey,
   buildFinanceDashboard,
   buildEodReport,
+  buildProfitLossReport,
   markInvoicePaid,
   isFinanceManagerRole,
 } = require('../lib/finance-ledger');
@@ -50,8 +52,8 @@ function buildEodHtml(report) {
     </tr>`).join('');
   const receivableRows = (report.receivables || []).map((row) => `
     <tr>
-      <td>${escapeHtml(row.customerName || '—')}</td>
-      <td>${escapeHtml(row.plateNumber || '—')}</td>
+      <td>${escapeHtml(row.customerName || '')}</td>
+      <td>${escapeHtml(row.plateNumber || '')}</td>
       <td>${escapeHtml(row.invoice_number || '')}</td>
       <td class="num">P ${money(row.balanceDue)}</td>
     </tr>`).join('') || '<tr><td colspan="4">No unpaid invoices for this date.</td></tr>';
@@ -81,7 +83,7 @@ function buildEodHtml(report) {
   <p class="meta">
     Reporting Date: ${escapeHtml(report.reportingDate)}<br />
     Generated: ${escapeHtml(report.generatedAt)}<br />
-    Gross collected: P ${money(report.totals.gross)} · Outstanding (this date): P ${money((report.receivables || []).reduce((sum, row) => sum + Number(row.balanceDue || 0), 0))}
+    Gross collected: P ${money(report.totals.gross)} Â· Outstanding (this date): P ${money((report.receivables || []).reduce((sum, row) => sum + Number(row.balanceDue || 0), 0))}
   </p>
   <table>
     <thead>
@@ -164,6 +166,81 @@ router.get('/', async (req, res) => {
   });
 });
 
+router.get('/receivables', async (req, res) => {
+  const data = {};
+  for (const name of ['work_orders', 'customers', 'vehicles', 'parts_inventory']) {
+    data[name] = await store.getAll(name);
+  }
+  const reportingDate = reportingDateFrom(req);
+  const dashboard = buildFinanceDashboard(data, reportingDate);
+  return res.render('finance/receivables', {
+    reportingDate,
+    metrics: dashboard.metrics,
+    paymentMatrix: dashboard.paymentMatrix,
+    dailyRows: dashboard.dailyRows,
+    receivables: dashboard.receivables,
+  });
+});
+router.get('/pnl', async (req, res) => {
+  const data = {};
+  for (const name of ['work_orders', 'customers', 'vehicles', 'parts_inventory']) {
+    data[name] = await store.getAll(name);
+  }
+
+  const startDate = String((req.query && req.query.start) || '').trim();
+  const endDate = String((req.query && req.query.end) || '').trim();
+  const view = String((req.query && req.query.view) || 'summary').trim().toLowerCase();
+
+  const report = buildProfitLossReport(data, { startDate, endDate });
+
+  if (wantsJson(req)) {
+    return res.json(Object.assign({}, report, { view }));
+  }
+
+  return res.render('finance/pnl', {
+    reportingDate: report.endDate,
+    report,
+    view,
+  });
+});
+router.get('/purchases', async (req, res) => {
+  const data = {};
+  for (const name of ['po_orders']) {
+    data[name] = await store.getAll(name);
+  }
+
+  const startDate = String((req.query && req.query.start) || '').trim();
+  const endDate = String((req.query && req.query.end) || '').trim();
+  const view = String((req.query && req.query.view) || 'summary').trim().toLowerCase();
+
+  const report = buildPurchasesReport(data, { startDate, endDate });
+
+  if (wantsJson(req)) {
+    return res.json(Object.assign({}, report, { view }));
+  }
+
+  return res.render('finance/purchases', {
+    reportingDate: report.endDate,
+    report,
+    view,
+  });
+});
+router.get('/expenses', async (req, res) => {
+  const startDate = String((req.query && req.query.start) || '').trim();
+  const endDate = String((req.query && req.query.end) || '').trim();
+  let expenses = await store.getAll('expense_logs');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(startDate)) expenses = expenses.filter((row) => String(row.log_date || '') >= startDate);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(endDate)) expenses = expenses.filter((row) => String(row.log_date || '') <= endDate);
+  expenses.sort((a, b) => String(b.log_date || '').localeCompare(String(a.log_date || '')) || String(b.created_at || '').localeCompare(String(a.created_at || '')));
+  const totals = expenses.reduce((sum, row) => {
+    sum.total += Number(row.total || 0);
+    sum.pettyCashOut += Number(row.petty_cash_out || 0);
+    sum.pettyCashIn += Number(row.petty_cash_in || 0);
+    return sum;
+  }, { total: 0, pettyCashOut: 0, pettyCashIn: 0 });
+  if (wantsJson(req)) return res.json({ startDate, endDate, totals, expenses });
+  return res.render('finance/expenses', { reportingDate: endDate || todayKey(), expenses, totals, startDate, endDate });
+});
 router.get('/eod-report', handleEodReport);
 
 apiRouter.get('/eod-report', handleEodReport);
@@ -174,3 +251,7 @@ module.exports.apiRouter = apiRouter;
 module.exports.isFinanceManagerRole = isFinanceManagerRole;
 module.exports.handleEodReport = handleEodReport;
 module.exports.handleMarkPaid = handleMarkPaid;
+
+
+
+

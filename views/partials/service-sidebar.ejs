@@ -3,20 +3,16 @@
     { items: [
       { label: 'Sales Report', href: '/service-receptionist#sa-mtd-bars' },
       { label: 'Quotations', href: '/quotations' },
-      { label: 'New WO', href: '/work-orders/new' },
       { label: 'Work Orders', href: '/work-orders' },
       { label: 'WO Tracker', href: '/work-order-transactions' },
-      { label: 'Create Labor', href: '/pricing/new' },
-      { label: 'Create Parts', href: '/parts/create' },
       { label: 'Parts Receiving', href: '/parts/receiving' },
       { label: 'Parts Database', href: '/parts' },
-      { label: 'Approvals', href: '/approvals' },
-      { label: 'FTE WorkSpace', href: '/gm/fte' },
     ] },
     { items: [
       { label: 'Customers', href: '/customers' },
       { label: 'Billing Queue', href: '/transactions' },
       { label: 'Log Expenses', href: '/expenses' },
+      { label: 'Cash Safe', href: '/Petty-cash' },
     ] },
   ];
   const svcPath = typeof currentPath !== 'undefined' && currentPath ? String(currentPath) : '';
@@ -39,4 +35,7 @@
       <a class="pm-sidebar__link<%= svcActive(item) ? ' pm-sidebar__link--active' : '' %>" href="<%= item.href %>"><%= item.label %></a>
     <% }) %>
   <% }) %>
+  <%- include('sidebar-session-actions') %>
 </nav>
+
+

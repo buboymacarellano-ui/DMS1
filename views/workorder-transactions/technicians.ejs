@@ -31,10 +31,55 @@
     <label>Find Technician <input id="technician-monitor-search" type="search" placeholder="Name, branch or status"></label>
   </div>
 
+  <style>
+    .technician-monitor__grid {
+      width: max-content;
+      min-width: max-content;
+      table-layout: auto;
+    }
+
+    .technician-monitor__grid th,
+    .technician-monitor__grid td {
+      white-space: nowrap;
+    }
+
+    .technician-monitor__grid th {
+      width: auto;
+      min-width: max-content;
+      height: 42px !important;
+      padding: 10px 14px !important;
+      background: linear-gradient(180deg, #2f78ad, #1b4f72) !important;
+      border-color: #8ec8f0 !important;
+      color: #fff !important;
+      font-size: 12px !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.04em;
+      line-height: 1.1 !important;
+      text-align: left;
+      text-transform: uppercase;
+      vertical-align: middle;
+      white-space: nowrap !important;
+    }
+
+    .technician-monitor__grid th:nth-child(1) { min-width: 44px; }
+    .technician-monitor__grid th:nth-child(2) { min-width: 190px; }
+    .technician-monitor__grid th:nth-child(3) { min-width: 100px; }
+    .technician-monitor__grid th:nth-child(4) { min-width: 110px; }
+    .technician-monitor__grid th:nth-child(5) { min-width: 90px; }
+    .technician-monitor__grid th:nth-child(6) { min-width: 120px; }
+    .technician-monitor__grid th:nth-child(7) { min-width: 170px; }
+    .technician-monitor__grid th:nth-child(8) { min-width: 150px; }
+    .technician-monitor__grid th:nth-child(9) { min-width: 105px; }
+    .technician-monitor__grid th:nth-child(10) { min-width: 90px; }
+    .technician-monitor__grid th:nth-child(11) { min-width: 105px; }
+    .technician-monitor__grid th:nth-child(12) { min-width: 120px; }
+    .technician-monitor__grid th:nth-child(13) { min-width: 115px; }
+  </style>
+
   <div class="table-scroll technician-monitor__grid-wrap">
     <table id="technician-monitor-list" class="list technician-monitor__grid">
       <thead>
-        <tr><th>#</th><th>Technician</th><th>Branch</th><th>Status</th><th>Present WO</th><th>WO Status</th><th>Vehicle</th><th>Customer</th><th>Active Hours</th><th>Pending</th><th>Labor Acc.</th><th>Labor MTD</th><th>Completed MTD</th><th></th></tr>
+        <tr><th>#</th><th>Technician</th><th>Branch</th><th>Status</th><th>WO</th><th>Status</th><th>Vehicle</th><th>Customer</th><th>Active /H</th><th>Pending</th><th>Labor</th><th>Labor MTD</th><th>Total MTD</th><th></th></tr>
       </thead>
       <tbody>
         <% technicians.forEach((technician, index) => { const firstPending = technician.pending_orders[0]; const board = technician.board_status || { label: technician.current_order ? 'On-Going' : 'Idle', tone: technician.current_order ? 'ongoing' : 'idle' }; const present = technician.current_order; %>

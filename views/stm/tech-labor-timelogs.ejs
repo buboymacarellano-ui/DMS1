@@ -1,0 +1,77 @@
+<%- include('../partials/header') %>
+<%
+  const peso = (n) => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtHours = (n) => Number(n || 0).toFixed(2) + ' h';
+  const stopReasonHeaders = [];
+  for (let i = 1; i <= 20; i += 1) {
+    stopReasonHeaders.push({ stop: `Time Stop${i}`, reason: `Reason${i}` });
+  }
+%>
+<style>
+  .tech-labor-page .tl-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+  .tech-labor-page .tl-title{margin:0;color:#024e7a;font-weight:700}
+  .tech-labor-page .tl-sub{margin:0;color:#475569;font-size:14px}
+  .tech-labor-page .tl-summary{color:#0a3358;font-weight:700;font-size:14px;margin-bottom:10px}
+  .tech-labor-page .tl-table-wrap{overflow-x:auto;background:#fff;border:1px solid #94a3b8;margin-bottom:14px}
+  .tech-labor-page table.list{width:100%;border-collapse:collapse;font-size:10px}
+  .tech-labor-page table.list th,.tech-labor-page table.list td{padding:8px;border-bottom:1px solid #e2e8f0;text-align:center !important}
+  .tech-labor-page table.list th:first-child,.tech-labor-page table.list td:first-child{text-align:left !important}
+  .tech-labor-page table.list thead th{background:#024e7a !important;color:#fff !important;position:sticky !important;top:0 !important;z-index:10 !important;white-space:normal !important}
+  .tech-labor-page table.list tbody tr:nth-child(even){background:#f8fafc}
+  .tech-labor-page .grand-total{font-weight:800;color:#024e7a}
+  .tech-labor-page .wo-col{font-weight:700;color:#0a3358}
+  .tech-labor-page .tech-col{text-align:left}
+  .tech-labor-page .service-col{text-align:left}
+  @media (max-width:900px){.tech-labor-page .tl-head{flex-direction:column;align-items:stretch}}
+</style>
+
+<section class="dashboard-shell tech-labor-page">
+  <div class="tl-head">
+    <div>
+      <div class="dashboard-title gm-title role-dashboard-title"><span>TechLabor</span> <span class="role-dashboard-title__suffix">TimeLogs</span></div>
+      <p class="tl-sub">Collection of technician labor time logs &middot; <%= (rows || []).length %> row(s)</p>
+    </div>
+    <div>
+      <p class="tl-summary">Total Labor: <span class="grand-total"><%= (rows || []).reduce((sum, r) => sum + Number(r.labor || 0), 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></span></p>
+    </div>
+  </div>
+
+  <div class="tl-table-wrap">
+    <table class="list">
+      <thead>
+        <tr>
+          <th>WO#</th>
+          <th>Date</th>
+          <th>Tech Name</th>
+          <th>Service Rendered</th>
+          <th>Labor Amount</th>
+          <th>Duration/Hour</th>
+          <th>Time Start</th>
+          <th>Time Stop1</th>
+          <th>Reason1</th>
+          <th>Start</th>
+          <% stopReasonHeaders.forEach((h, index) => { if (index === 0) return; %> <th><%= h.stop %></th><th><%= h.reason %></th><th>Start</th><% }) %>
+        </tr>
+      </thead>
+      <tbody>
+        <% (rows || []).forEach((row) => { %>
+          <tr>
+            <td class="wo-col"><%= row.wo || '' %></td>
+            <td><%= row.date || '' %></td>
+            <td class="tech-col"><%= row.tech || '' %></td>
+            <td class="service-col"><%= row.service || '' %></td>
+            <td><%= row.labor ? peso(row.labor) : '' %></td>
+            <td><%= fmtHours(row.duration) %></td>
+            <td><%= row.timeStart || '' %></td>
+            <td><%= row.timeStop1 || '' %></td>
+            <td></td>
+            <td></td>
+            <% for (let i = 2; i <= 20; i += 1) { %><td></td><td></td><td></td><% } %>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

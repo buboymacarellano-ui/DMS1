@@ -15,4 +15,6 @@
   <% gmTop.forEach((item) => { %>
     <a class="portal-sidebar__link<%= item.match(gmPath) ? ' portal-sidebar__link--active' : '' %>" href="<%= item.href %>"><%= item.label %><% if (item.badge && gmPending > 0) { %> (<%= gmPending %>)<% } %></a>
   <% }) %>
+  <%- include('sidebar-session-actions') %>
 </nav>
+

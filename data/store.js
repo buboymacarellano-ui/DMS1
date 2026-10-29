@@ -48,6 +48,7 @@ function normalizeData(data) {
     po_orders: source.po_orders || [],
     po_settings: source.po_settings || { creator_roles: [], creator_user_ids: [], approvers: [] },
     approval_controls: source.approval_controls || {},
+    petty_cash_snapshots: source.petty_cash_snapshots || [],
   };
   return ensureCollections(next);
 }

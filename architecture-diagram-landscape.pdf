@@ -1,0 +1,135 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 792 612] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 6238 >>
+stream
+0.05 0.07 0.10 rg BT /F2 16 Tf 36 575 Td (A&E Auto Service DMS — Architecture Diagram) Tj ET
+0.05 0.07 0.10 rg BT /F1 9 Tf 36 558 Td (Express.js / EJS application with role-based portals and SQLite/JSON persistence) Tj ET
+0.93 0.95 0.98 rg 36 490 130 44 re f 0.18 0.25 0.35 RG 1 w 36 490 130 44 re S
+0.05 0.07 0.10 rg BT /F2 8 Tf 43 518 Td (Users by role) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 43 506 Td (GM • Admin • HR • Service • Parts • Finance) Tj ET
+0.93 0.95 0.98 rg 205 490 120 44 re f 0.18 0.25 0.35 RG 1 w 205 490 120 44 re S
+0.05 0.07 0.10 rg BT /F2 8 Tf 212 518 Td (Web Browser) Tj ET
+0.93 0.95 0.98 rg 365 490 160 44 re f 0.18 0.25 0.35 RG 1 w 365 490 160 44 re S
+0.05 0.07 0.10 rg BT /F2 8 Tf 372 518 Td (Express.js Application) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 372 506 Td (app.js) Tj ET
+0.93 0.95 0.98 rg 565 490 190 44 re f 0.18 0.25 0.35 RG 1 w 565 490 190 44 re S
+0.05 0.07 0.10 rg BT /F2 8 Tf 572 518 Td (Security Middleware) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 572 506 Td (Helmet • Sessions • Rate limiting) Tj ET
+0.18 0.25 0.35 RG 1 w 166 512 m 205 512 l S
+205 512 m 200 515 l 200 509 l h f
+0.18 0.25 0.35 RG 1 w 325 512 m 365 512 l S
+365 512 m 360 515 l 360 509 l h f
+0.18 0.25 0.35 RG 1 w 525 512 m 565 512 l S
+565 512 m 560 515 l 560 509 l h f
+0.93 0.95 0.98 rg 36 410 150 44 re f 0.18 0.25 0.35 RG 1 w 36 410 150 44 re S
+0.05 0.07 0.10 rg BT /F2 8 Tf 43 438 Td (Authentication & RBAC) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 43 426 Td (routes/auth.js) Tj ET
+0.93 0.95 0.98 rg 216 410 150 44 re f 0.18 0.25 0.35 RG 1 w 216 410 150 44 re S
+0.05 0.07 0.10 rg BT /F2 8 Tf 223 438 Td (Portals & Dashboards) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 223 426 Td (lib/portals.js) Tj ET
+0.93 0.95 0.98 rg 396 410 150 44 re f 0.18 0.25 0.35 RG 1 w 396 410 150 44 re S
+0.05 0.07 0.10 rg BT /F2 8 Tf 403 438 Td (Feature Routers) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 403 426 Td (routes/*.js) Tj ET
+0.93 0.95 0.98 rg 576 410 179 44 re f 0.18 0.25 0.35 RG 1 w 576 410 179 44 re S
+0.05 0.07 0.10 rg BT /F2 8 Tf 583 438 Td (EJS Views & Static Assets) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 583 426 Td (views/ • public/) Tj ET
+0.18 0.25 0.35 RG 1 w 445 490 m 111 454 l S
+111 454 m 106 457 l 106 451 l h f
+0.18 0.25 0.35 RG 1 w 445 490 m 291 454 l S
+291 454 m 286 457 l 286 451 l h f
+0.18 0.25 0.35 RG 1 w 445 490 m 471 454 l S
+471 454 m 466 457 l 466 451 l h f
+0.18 0.25 0.35 RG 1 w 445 490 m 665 454 l S
+665 454 m 660 457 l 660 451 l h f
+0.91 0.97 0.91 rg 36 315 150 52 re f 0.18 0.25 0.35 RG 1 w 36 315 150 52 re S
+0.05 0.07 0.10 rg BT /F2 8 Tf 43 351 Td (Operations) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 43 339 Td (Customers • Vehicles) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 43 327 Td (Work Orders • Technicians) Tj ET
+0.91 0.97 0.91 rg 216 315 150 52 re f 0.18 0.25 0.35 RG 1 w 216 315 150 52 re S
+0.05 0.07 0.10 rg BT /F2 8 Tf 223 351 Td (Parts & Inventory) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 223 339 Td (Requests • Purchasing) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 223 327 Td (Receiving • Transfers) Tj ET
+0.91 0.97 0.91 rg 396 315 150 52 re f 0.18 0.25 0.35 RG 1 w 396 315 150 52 re S
+0.05 0.07 0.10 rg BT /F2 8 Tf 403 351 Td (Finance & Billing) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 403 339 Td (Invoices • Payments) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 403 327 Td (Ledger • Expenses) Tj ET
+0.91 0.97 0.91 rg 576 315 179 52 re f 0.18 0.25 0.35 RG 1 w 576 315 179 52 re S
+0.05 0.07 0.10 rg BT /F2 8 Tf 583 351 Td (HR • Reports • Admin) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 583 339 Td (Employees • KPIs • Approvals) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 583 327 Td (Audit & branch controls) Tj ET
+0.18 0.25 0.35 RG 1 w 291 410 m 111 367 l S
+111 367 m 106 370 l 106 364 l h f
+0.18 0.25 0.35 RG 1 w 291 410 m 291 367 l S
+291 367 m 286 370 l 286 364 l h f
+0.18 0.25 0.35 RG 1 w 291 410 m 471 367 l S
+471 367 m 466 370 l 466 364 l h f
+0.18 0.25 0.35 RG 1 w 291 410 m 665 367 l S
+665 367 m 660 370 l 660 364 l h f
+0.93 0.95 0.98 rg 36 220 330 50 re f 0.18 0.25 0.35 RG 1 w 36 220 330 50 re S
+0.05 0.07 0.10 rg BT /F2 8 Tf 43 254 Td (Domain Services — lib/*.js) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 43 242 Td (Finance, parts, purchase orders, reports, branches, technician activity, approvals) Tj ET
+0.93 0.95 0.98 rg 396 220 359 50 re f 0.18 0.25 0.35 RG 1 w 396 220 359 50 re S
+0.05 0.07 0.10 rg BT /F2 8 Tf 403 254 Td (Data Store Abstraction — data/store.js) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 403 242 Td (Central read/write interface used by routes, services, and maintenance jobs) Tj ET
+0.18 0.25 0.35 RG 1 w 111 315 m 201 270 l S
+201 270 m 196 273 l 196 267 l h f
+0.18 0.25 0.35 RG 1 w 291 315 m 201 270 l S
+201 270 m 196 273 l 196 267 l h f
+0.18 0.25 0.35 RG 1 w 471 315 m 201 270 l S
+201 270 m 196 273 l 196 267 l h f
+0.18 0.25 0.35 RG 1 w 665 315 m 201 270 l S
+201 270 m 196 273 l 196 267 l h f
+0.18 0.25 0.35 RG 1 w 366 245 m 396 245 l S
+396 245 m 391 248 l 391 242 l h f
+0.98 0.94 0.84 rg 36 115 330 54 re f 0.18 0.25 0.35 RG 1 w 36 115 330 54 re S
+0.05 0.07 0.10 rg BT /F2 8 Tf 43 153 Td (SQLite \(preferred\)) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 43 141 Td (shop.sqlite • WAL • store_docs table) Tj ET
+0.98 0.94 0.84 rg 396 115 359 54 re f 0.18 0.25 0.35 RG 1 w 396 115 359 54 re S
+0.05 0.07 0.10 rg BT /F2 8 Tf 403 153 Td (JSON fallback) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 403 141 Td (data-snapshot.json) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 403 129 Td (Used when SQLite driver is unavailable) Tj ET
+0.18 0.25 0.35 RG 1 w 201 220 m 201 169 l S
+201 169 m 196 172 l 196 166 l h f
+0.18 0.25 0.35 RG 1 w 201 220 m 575 169 l S
+575 169 m 570 172 l 570 166 l h f
+0.93 0.95 0.98 rg 36 36 330 42 re f 0.18 0.25 0.35 RG 1 w 36 36 330 42 re S
+0.05 0.07 0.10 rg BT /F2 8 Tf 43 62 Td (Maintenance & Data Jobs) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 43 50 Td (scripts/*.js • migrations • imports • backups) Tj ET
+0.93 0.95 0.98 rg 396 36 359 42 re f 0.18 0.25 0.35 RG 1 w 396 36 359 42 re S
+0.05 0.07 0.10 rg BT /F2 8 Tf 403 62 Td (Deployment / Sync) Tj ET
+0.05 0.07 0.10 rg BT /F1 8 Tf 403 50 Td (Render sync • seed data • scheduled operations) Tj ET
+0.18 0.25 0.35 RG 1 w 201 115 m 201 78 l S
+201 78 m 196 81 l 196 75 l h f
+0.18 0.25 0.35 RG 1 w 575 78 m 575 115 l S
+575 115 m 570 118 l 570 112 l h f
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000251 00000 n 
+0000006540 00000 n 
+0000006610 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+6685
+%%EOF

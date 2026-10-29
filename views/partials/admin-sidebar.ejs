@@ -27,4 +27,6 @@
       <a class="portal-sidebar__link<%= admActive(item) ? ' portal-sidebar__link--active' : '' %>" href="<%= item.href %>"><%= item.label %></a>
     <% }) %>
   <% }) %>
+  <%- include('sidebar-session-actions') %>
 </nav>
+

@@ -8,8 +8,9 @@
     { label: 'Pending Approvals', href: '/approvals', match: (p) => p.indexOf('/approvals') === 0, badge: true },
     { label: 'Tech Activities', href: '/work-order-transactions/technicians', match: (p) => p.indexOf('/work-order-transactions/technicians') === 0 },
     { label: 'Parts Database', href: '/parts/database', match: (p) => p === '/parts/database' },
-    { label: 'Billing Queue', href: '/transactions', match: (p) => p.indexOf('/transactions') === 0 },
     { label: 'Sales Reports / Branch Metrics', href: '/kpi', match: (p) => p.indexOf('/kpi') === 0 },
+    { label: 'Sales Report', href: '/stm/sales-report', match: (p) => p.indexOf('/stm/sales-report') === 0 },
+    { label: 'TechLabor TimeLogs', href: '/stm/tech-labor-timelogs', match: (p) => p.indexOf('/stm/tech-labor-timelogs') === 0 },
   ];
   const stmPath = typeof currentPath !== 'undefined' && currentPath ? String(currentPath) : '';
   const stmPending = typeof pendingApprovalCount !== 'undefined' ? Number(pendingApprovalCount || 0) : 0;
@@ -18,4 +19,6 @@
   <% stmItems.forEach((item) => { %>
     <a class="pm-sidebar__link<%= item.match(stmPath) ? ' pm-sidebar__link--active' : '' %>" href="<%= item.href %>"><%= item.label %><% if (item.badge && stmPending > 0) { %> (<%= stmPending %>)<% } %></a>
   <% }) %>
+  <%- include('sidebar-session-actions') %>
 </nav>
+

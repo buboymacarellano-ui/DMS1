@@ -1,7 +1,7 @@
 <%- include('../partials/header') %>
 
 <h2>WO Tracker</h2>
-<p>Current technician assignments and month-to-date work-order performance.</p>
+<p>Technician assignments and MTD performance.</p>
 
 <div class="wo-view-toggle">
   <span class="wo-view-toggle__label wo-view-toggle__label--active">WO Tracker</span>
@@ -19,23 +19,36 @@
 <% const safeTechStats = (typeof technicianStats !== 'undefined' && technicianStats) ? technicianStats : []; %>
 
 <div class="card" style="margin-top:12px">
+  <style>
+    .wo-tracker-table {
+      min-width: max-content;
+      width: max-content;
+    }
+
+    .wo-tracker-table th {
+      white-space: nowrap;
+      min-width: 110px;
+      padding: 6px 18px;
+      line-height: 1.1;
+    }
+  </style>
   <h3>Technician</h3>
   <p>Current assignments and month-to-date performance.</p>
   <% if (!safeTechStats.length) { %>
     <p>No technician assignments yet.</p>
   <% } else { %>
     <div class="table-scroll">
-      <table class="list">
+      <table class="list wo-tracker-table">
         <thead>
           <tr>
-            <th>Technician</th>
-            <th>Live Status</th>
-            <th>Present WO</th>
-            <th>Assigned Car (Current)</th>
-            <th>Time Spent (Present Job)</th>
-            <th>Total Labor (Accumulated)</th>
-            <th>Total Labor Price MTD</th>
-            <th>Work Orders Handled MTD</th>
+            <th>Technicians</th>
+            <th>Status</th>
+            <th>WO</th>
+            <th>Assigned</th>
+            <th>Duration</th>
+            <th>Labor TD</th>
+            <th>Labor MTD</th>
+            <th>WO Total</th>
           </tr>
         </thead>
         <tbody>

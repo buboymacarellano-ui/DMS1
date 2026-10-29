@@ -1,0 +1,137 @@
+﻿<%- include('../partials/header') %>
+<%
+  function fmtMoney(value) {
+    return 'â‚±' + Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  const r = report || {};
+  const totals = r.totals || {};
+  const rows = Array.isArray(r.detailed) ? r.detailed : [];
+  const viewMode = (typeof view !== 'undefined' && view) ? String(view) : 'summary';
+  const startValue = r.startDate || '';
+  const endValue = r.endDate || '';
+%>
+
+<section class="dashboard-shell admin-shell fm-workspace" id="fm-workspace" data-reporting-date="<%= endValue %>">
+  <div class="fm-head">
+    <div class="dashboard-title admin-title role-dashboard-title"><span>Finance</span> <span class="role-dashboard-title__suffix">P&amp;L Report</span></div>
+
+    <form method="get" action="/finance/pnl" class="fm-date-filter" style="gap:10px;">
+      <span>From</span>
+      <input type="date" name="start" value="<%= startValue %>" aria-label="Start date" />
+      <span>To</span>
+      <input type="date" name="end" value="<%= endValue %>" aria-label="End date" />
+      <input type="hidden" name="view" value="<%= viewMode %>" />
+      <button type="submit" class="btn">Apply</button>
+      <a class="btn" href="/finance/pnl?start=<%= encodeURIComponent(startValue) %>&end=<%= encodeURIComponent(endValue) %>&view=summary">Summary</a>
+      <a class="btn" href="/finance/pnl?start=<%= encodeURIComponent(startValue) %>&end=<%= encodeURIComponent(endValue) %>&view=detailed">Detailed</a>
+      <a class="btn" href="/finance/pnl?start=<%= encodeURIComponent(startValue) %>&end=<%= encodeURIComponent(endValue) %>&view=<%= encodeURIComponent(viewMode) %>&format=json" target="_blank" rel="noopener">JSON</a>
+    </form>
+  </div>
+
+  <section class="fm-metrics" aria-label="Profit and loss totals">
+    <article class="gm-kpi-card admin-summary-card fm-metric">
+      <p class="gm-kpi-label">Gross Collections (VAT incl.)</p>
+      <h2 class="gm-kpi-value"><%= fmtMoney(totals.grossCollections) %></h2>
+      <p class="dashboard-note">Cash collected from Paid + Partial invoices</p>
+    </article>
+    <article class="gm-kpi-card admin-summary-card fm-metric">
+      <p class="gm-kpi-label">Output VAT (PH 12%)</p>
+      <h2 class="gm-kpi-value"><%= fmtMoney(totals.outputVat) %></h2>
+      <p class="dashboard-note">Allocated VAT portion from collections</p>
+    </article>
+    <article class="gm-kpi-card admin-summary-card fm-metric">
+      <p class="gm-kpi-label">Net Sales (ex VAT)</p>
+      <h2 class="gm-kpi-value"><%= fmtMoney(totals.netSalesExVat) %></h2>
+      <p class="dashboard-note">Collections minus output VAT</p>
+    </article>
+  </section>
+
+  <section class="fm-metrics" aria-label="Cost and profit totals" style="grid-template-columns:repeat(3, minmax(0, 1fr));">
+    <article class="gm-kpi-card admin-summary-card fm-metric">
+      <p class="gm-kpi-label">Parts Cost (COGS)</p>
+      <h2 class="gm-kpi-value"><%= fmtMoney(totals.partsCost) %></h2>
+      <p class="dashboard-note">Recognized on fully Paid invoices</p>
+    </article>
+    <article class="gm-kpi-card admin-summary-card fm-metric">
+      <p class="gm-kpi-label">Labor Cost</p>
+      <h2 class="gm-kpi-value"><%= fmtMoney(totals.laborCost) %></h2>
+      <p class="dashboard-note">Recognized on fully Paid invoices</p>
+    </article>
+    <article class="gm-kpi-card admin-summary-card fm-metric">
+      <p class="gm-kpi-label">Net Profit</p>
+      <h2 class="gm-kpi-value"><%= fmtMoney(totals.netProfit) %></h2>
+      <p class="dashboard-note">Net sales (ex VAT) âˆ’ parts âˆ’ labor</p>
+    </article>
+  </section>
+
+  <section class="dashboard-card admin-panel fm-panel" aria-label="P&amp;L summary">
+    <div class="dashboard-card__header admin-panel-header">Summary</div>
+    <div class="table-scroll">
+      <table class="list">
+        <tbody>
+          <tr><th>Period</th><td><%= startValue %> to <%= endValue %></td></tr>
+          <tr><th>Gross Collections (VAT incl.)</th><td style="text-align:right;"><%= fmtMoney(totals.grossCollections) %></td></tr>
+          <tr><th>Less: Output VAT (12%)</th><td style="text-align:right;"><%= fmtMoney(totals.outputVat) %></td></tr>
+          <tr><th>Net Sales (ex VAT)</th><td style="text-align:right;"><%= fmtMoney(totals.netSalesExVat) %></td></tr>
+          <tr><th>Less: Parts Cost (COGS)</th><td style="text-align:right;"><%= fmtMoney(totals.partsCost) %></td></tr>
+          <tr><th>Less: Labor Cost</th><td style="text-align:right;"><%= fmtMoney(totals.laborCost) %></td></tr>
+          <tr><th>Net Profit</th><td style="text-align:right;"><%= fmtMoney(totals.netProfit) %></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="dashboard-note" style="margin-top:10px;">
+      Notes: VAT shown is output VAT allocation from collected invoices (PH VAT 12%). This report does not include operating expenses, withholding taxes, input VAT, or income tax computations.
+    </p>
+  </section>
+
+  <% if (viewMode === 'detailed') { %>
+    <section class="dashboard-card admin-panel fm-panel" aria-label="P&amp;L detailed">
+      <div class="dashboard-card__header admin-panel-header">Detailed</div>
+      <p class="dashboard-note">Invoice-level collections with VAT allocation and profit breakdown.</p>
+      <div class="table-scroll">
+        <table class="list" id="fm-pnl-detailed">
+          <thead>
+            <tr>
+              <th>Collected On</th>
+              <th>Invoice</th>
+              <th>Customer</th>
+              <th>Plate</th>
+              <th>Status</th>
+              <th>Method</th>
+              <th>Collected</th>
+              <th>Output VAT</th>
+              <th>Net Sales</th>
+              <th>Parts</th>
+              <th>Labor</th>
+              <th>Net Profit</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (!rows.length) { %>
+              <tr class="fm-empty"><td colspan="12">No collections found for this period.</td></tr>
+            <% } %>
+            <% rows.forEach((row) => { %>
+              <tr>
+                <td><%= row.collectedOn || '' %></td>
+                <td><%= row.invoice_number %></td>
+                <td><%= row.customerName || '' %></td>
+                <td><%= row.plateNumber || '' %></td>
+                <td><%= row.paymentStatus || '' %></td>
+                <td><%= row.paymentMethod || '' %></td>
+                <td style="text-align:right;"><%= fmtMoney(row.collected) %></td>
+                <td style="text-align:right;"><%= fmtMoney(row.vatAllocated) %></td>
+                <td style="text-align:right;"><%= fmtMoney(row.netSales) %></td>
+                <td style="text-align:right;"><%= fmtMoney(row.partsCostPrice) %></td>
+                <td style="text-align:right;"><%= fmtMoney(row.laborCost) %></td>
+                <td style="text-align:right;"><%= fmtMoney(row.netProfit) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  <% } %>
+</section>
+
+<%- include('../partials/footer') %>

@@ -1,5 +1,46 @@
 <%- include('../partials/header') %>
 
+<%
+  const woNumber = String(wo.work_order_number || wo.id || '').trim();
+  const barcodeValue = woNumber;
+%>
+
+<style>
+  .wo-assignment-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .wo-barcode-section {
+    flex: 0 0 68mm;
+    box-sizing: border-box;
+    background: #fff;
+    color: #000;
+    border: 1px solid rgba(0,0,0,0.35);
+    border-radius: 6px;
+    padding: 3mm 4mm;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.12);
+  }
+  .wo-barcode-section__title {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin: 0 0 1.5mm;
+  }
+  #wo-barcode-svg {
+    display: block;
+    width: 100%;
+    height: 16mm;
+  }
+  @media print {
+    .no-print { display: none !important; }
+    .wo-barcode-section { box-shadow: none; }
+  }
+</style>
+
 <div class="invoice">
   <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
     <div>
@@ -16,25 +57,31 @@
   <section style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
     <div>
       <h3>Customer</h3>
-      <div><strong><%= customer.name || '—' %></strong></div>
+      <div><strong><%= customer.name || '' %></strong></div>
       <div>Phone: <%= wo.telephone_number || customer.phone || '' %></div>
       <div>Branch: <%= wo.branch || '' %></div>
     </div>
     <div>
       <h3>Vehicle</h3>
-      <div>Brand: <strong><%= wo.car_brand || vehicle.make || '—' %></strong></div>
-      <div>Model: <%= wo.car_model || vehicle.model || '—' %></div>
-      <div>Year: <%= wo.car_year || vehicle.year || '—' %></div>
-      <div>Plate: <%= wo.plate_number || vehicle.license_plate || '—' %></div>
-      <div>Odometer: <%= wo.odometer || '—' %></div>
+      <div>Brand: <strong><%= wo.car_brand || vehicle.make || '' %></strong></div>
+      <div>Model: <%= wo.car_model || vehicle.model || '' %></div>
+      <div>Year: <%= wo.car_year || vehicle.year || '' %></div>
+      <div>Plate: <%= wo.plate_number || vehicle.license_plate || '' %></div>
+      <div>Odometer: <%= wo.odometer || '' %></div>
     </div>
   </section>
 
-  <section style="margin-bottom:12px">
-    <div><strong>SR:</strong> <%= wo.service_advisor || '' %></div>
-    <div><strong>Tecnician:</strong> <%= wo.technician || '' %></div>
-    <div><strong>Time In:</strong> <%= wo.time_in || '' %></div>
-    <div><strong>Time Out:</strong> <%= wo.time_out || '' %></div>
+  <section class="wo-assignment-section">
+    <div>
+      <div><strong>SR:</strong> <%= wo.service_advisor || '' %></div>
+      <div><strong>Tecnician:</strong> <%= wo.technician || '' %></div>
+      <div><strong>Time In:</strong> <%= wo.time_in || '' %></div>
+      <div><strong>Time Out:</strong> <%= wo.time_out || '' %></div>
+    </div>
+    <div class="wo-barcode-section" aria-label="Work order barcode">
+      <div class="wo-barcode-section__title">Scan for Technician Portal</div>
+      <svg id="wo-barcode-svg"></svg>
+    </div>
   </section>
 
   <h3>Service Instructions</h3>
@@ -51,7 +98,7 @@
       <% (items || []).forEach((it, idx) => { %>
         <tr>
           <td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.04)"><%= idx + 1 %></td>
-          <td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.04)"><%= it.reason || it.service_type || '—' %></td>
+          <td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.04)"><%= it.reason || it.service_type || '' %></td>
           <td class="description-cell" style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.04)"><%= it.description || '' %></td>
           <td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.04)"><%= it.parts || '' %></td>
         </tr>
@@ -69,12 +116,34 @@
     <div class="description-cell" style="min-height:60px;border:1px solid var(--border);padding:8px;border-radius:6px"><%= wo.description || '' %></div>
   </section>
 
-  <div style="margin-top:18px;display:flex;justify-content:space-between;align-items:center">
+  <div class="no-print" style="margin-top:18px;display:flex;justify-content:space-between;align-items:center">
     <div>This print is for technician execution only (no pricing shown).</div>
     <div>
       <button onclick="window.print()" class="btn">Print</button>
     </div>
   </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script>
+  (function initWorkOrderBarcode() {
+    var value = <%- JSON.stringify(barcodeValue) %>;
+    var svg = document.getElementById('wo-barcode-svg');
+    if (!svg || !value) return;
+    if (typeof window.JsBarcode !== 'function') return;
+
+    try {
+      window.JsBarcode(svg, value, {
+        format: 'CODE128',
+        displayValue: false,
+        width: 2,
+        height: 55,
+        margin: 0,
+      });
+    } catch (e) {
+      // Ignore barcode render errors so the page can still print.
+    }
+  })();
+</script>
 
 <%- include('../partials/footer') %>

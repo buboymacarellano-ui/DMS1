@@ -1,0 +1,358 @@
+<%- include('../partials/header') %>
+
+<%
+  const peso = (n) => '\u20B1' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const dash = '\u2014';
+  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
+  const logStamp = [today, now].filter(Boolean).join(' ');
+  const val = (k, fb) => (prefill && prefill[k] != null && prefill[k] !== '' ? prefill[k] : (fb || ''));
+  const rows = prefill && Array.isArray(prefill.replenish_rows) ? prefill.replenish_rows : [];
+  const loggedExpenses = (typeof expensesTotal !== 'undefined' && expensesTotal != null) ? Number(expensesTotal) || 0 : 0;
+  const recordRows = (typeof snapshots !== 'undefined' && Array.isArray(snapshots)) ? snapshots : [];
+  const clockOf = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
+  };
+  const sourceReasonOf = (line) => {
+    const src = String((line && line.source) || '').trim();
+    const rsn = String((line && line.reason) || '').trim();
+    if (!src && !rsn) return dash;
+    if (!src) return rsn;
+    if (!rsn) return src;
+    return src + ' - ' + rsn;
+  };
+%>
+
+<div class="container">
+  <h2 class="dashboard-title">Petty Cash View</h2>
+
+  <% if (formError) { %>
+    <p class="error"><%= formError %></p>
+  <% } %>
+  <% if (formSuccess) { %>
+    <p class="success"><%= formSuccess %></p>
+  <% } %>
+
+  <style>
+    .locked-amount{
+      cursor:not-allowed;
+      opacity:.75;
+      font-weight:700;
+    }
+    .locked-amount::-webkit-outer-spin-button,
+    .locked-amount::-webkit-inner-spin-button{
+      -webkit-appearance:none;
+      margin:0;
+    }
+    .locked-amount{
+      -moz-appearance:textfield;
+    }
+    .replenish-save-btn--saved{
+      font-weight:800;
+    }
+  </style>
+
+  <form method="post" action="<%= typeof formAction !== 'undefined' && formAction ? formAction : '/Petty-cash--view' %>" class="service-form" id="petty-cash-view-form" style="max-width:980px;">
+    <div class="service-table-scroll">
+      <table class="service-table" id="petty-cash-grid">
+        <thead>
+          <tr>
+            <th style="width:20%;">Field</th>
+            <th style="width:22%;">Amount (₱)</th>
+            <th style="width:20%;">Source</th>
+            <th style="width:26%;">Reason</th>
+            <th style="width:12%;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Logged Date</strong></td>
+            <td colspan="4">
+              <input type="text" value="<%= logStamp %>" readonly tabindex="-1" style="width:100%;">
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Last Inventory Amount</strong></td>
+            <td colspan="4">
+              <input type="number" name="last_inv_amount" id="last-inv-amount" class="locked-amount" min="0" step="0.01" value="<%= val('last_inv_amount', '0') %>" readonly tabindex="-1" title="Auto-filled from the previous Cash On Hand when the final save is activated" style="width:100%;">
+            </td>
+          </tr>
+
+          <% for (let i = 0; i < 5; i++) { %>
+            <tr>
+              <td><strong>Replenish Amount #<%= i + 1 %></strong></td>
+              <td>
+                <input type="number" name="replenish_amount_<%= i %>" class="replenish-amount" data-index="<%= i %>" min="0" step="0.01" value="<%= val('replenish_amount_' + i, (rows[i] && rows[i].amount) || '0') %>" style="width:100%;" autocomplete="off">
+              </td>
+              <td>
+                <input type="text" name="replenish_source_<%= i %>" class="replenish-source" value="<%= val('replenish_source_' + i, (rows[i] && rows[i].source) || '') %>" style="width:100%;">
+              </td>
+              <td>
+                <input type="text" name="replenish_reason_<%= i %>" class="replenish-reason" value="<%= val('replenish_reason_' + i, (rows[i] && rows[i].reason) || '') %>" style="width:100%;">
+              </td>
+              <td style="text-align:center;">
+                <button type="button" class="btn btn-sm replenish-save-btn" data-index="<%= i %>" title="Save Replenish Amount #<%= i + 1 %>">Save</button>
+              </td>
+            </tr>
+          <% } %>
+
+          <tr>
+            <td><strong>Total Cash Registered</strong></td>
+            <td colspan="4">
+              <input type="text" id="total-cash-registered" value="<%= val('total_cash_registered', '0') %>" readonly tabindex="-1" style="width:100%;">
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Total Expenses</strong></td>
+            <td colspan="4">
+              <input type="text" id="total-expenses" data-total="<%= loggedExpenses %>" value="<%= val('total_expenses', loggedExpenses) %>" readonly tabindex="-1" style="width:100%;">
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Cash On Hand</strong></td>
+            <td colspan="4">
+              <input type="text" id="cash-on-hand" value="<%= val('cash_on_hand', '0') %>" readonly tabindex="-1" style="width:100%;">
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <input type="hidden" name="total_cash_registered" id="total-cash-registered-value" value="0">
+    <input type="hidden" name="total_expenses" id="total-expenses-value" value="0">
+    <input type="hidden" name="cash_on_hand" id="cash-on-hand-value" value="0">
+
+    <div class="service-actions" style="margin-top:16px;">
+      <button type="submit" class="btn" id="save-btn"><strong>Save &amp; Reset</strong></button>
+    </div>
+  </form>
+
+  <h3 class="dashboard-title" style="font-size:18px;margin-top:26px;">Petty Cash Records</h3>
+
+  <div class="table-scroll" style="margin-top:0;">
+    <table class="list petty-cash-records-table" id="petty-cash-records">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Last Inventory Amount</th>
+          <% for (let i = 0; i < 5; i++) { %><th>Replenish <%= i + 1 %></th><% } %>
+          <th>Total Cash Registered</th>
+          <th>Cash On Hand</th>
+          <% for (let i = 0; i < 5; i++) { %><th>Source &amp; Reason <%= i + 1 %></th><% } %>
+          <th>Cashier (Logged In User)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!recordRows.length) { %>
+          <tr><td colspan="15">No petty cash records yet.</td></tr>
+        <% } %>
+        <% recordRows.forEach(snap => { %>
+          <% const snapLines = Array.isArray(snap.replenish_rows) ? snap.replenish_rows : []; %>
+          <tr>
+            <td><%= [snap.log_date, clockOf(snap.created_at)].filter(Boolean).join(' ') || dash %></td>
+            <td><%= peso(snap.last_inv_amount) %></td>
+            <% for (let i = 0; i < 5; i++) { %>
+              <td><%= peso(snapLines[i] && snapLines[i].amount) %></td>
+            <% } %>
+            <td><%= peso(snap.total_cash_registered) %></td>
+            <td><%= peso(snap.cash_on_hand) %></td>
+            <% for (let i = 0; i < 5; i++) { %>
+              <td><%= sourceReasonOf(snapLines[i]) %></td>
+            <% } %>
+            <td><%= snap.created_by || dash %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var lastInv = document.getElementById('last-inv-amount');
+    var amounts = Array.prototype.slice.call(document.querySelectorAll('.replenish-amount'));
+    var rowSaveBtns = Array.prototype.slice.call(document.querySelectorAll('.replenish-save-btn'));
+    var totalRegistered = document.getElementById('total-cash-registered');
+    var totalExpenses = document.getElementById('total-expenses');
+    var cashOnHand = document.getElementById('cash-on-hand');
+    var totalRegisteredValue = document.getElementById('total-cash-registered-value');
+    var totalExpensesValue = document.getElementById('total-expenses-value');
+    var cashOnHandValue = document.getElementById('cash-on-hand-value');
+
+    var AMOUNT_KEY = 'petty_replenish_amount_';
+    var LOCK_KEY = 'petty_replenish_locked_';
+    var FINAL_KEY = 'petty_cash_final_save_pending';
+    var LAST_INV_KEY = 'petty_last_inv_amount';
+
+    var currentCashOnHand = 0;
+
+    function fmt(n) {
+      var v = Number(n) || 0;
+      return v.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function compute() {
+      var lastInvVal = Number(lastInv && lastInv.value) || 0;
+      var replenish = amounts.reduce(function (sum, el) {
+        return sum + (Number(el && el.value) || 0);
+      }, 0);
+
+      var totalRegisteredVal = lastInvVal + replenish;
+      if (totalRegistered) totalRegistered.value = fmt(totalRegisteredVal);
+
+      // Total Expenses comes from the logged petty cash out records.
+      var totalExpensesVal = Number(totalExpenses && totalExpenses.getAttribute('data-total')) || 0;
+      if (totalExpenses) totalExpenses.value = fmt(totalExpensesVal);
+
+      var coh = totalRegisteredVal - totalExpensesVal;
+      currentCashOnHand = coh;
+      if (cashOnHand) cashOnHand.value = fmt(coh);
+
+      if (totalRegisteredValue) totalRegisteredValue.value = String(totalRegisteredVal);
+      if (totalExpensesValue) totalExpensesValue.value = String(totalExpensesVal);
+      if (cashOnHandValue) cashOnHandValue.value = String(coh);
+    }
+
+    function buttonOf(el) {
+      var row = el && el.closest ? el.closest('tr') : null;
+      return row ? row.querySelector('.replenish-save-btn') : null;
+    }
+
+    // A saved line can never be edited again until the final save is activated.
+    function setLocked(el, locked) {
+      if (!el) return;
+      el.readOnly = !!locked;
+      el.setAttribute('aria-readonly', locked ? 'true' : 'false');
+      el.classList.toggle('locked-amount', !!locked);
+      var btn = buttonOf(el);
+      if (btn) {
+        btn.textContent = locked ? 'Saved' : 'Save';
+        btn.classList.toggle('replenish-save-btn--saved', !!locked);
+        btn.setAttribute('aria-pressed', locked ? 'true' : 'false');
+        btn.title = locked ? 'Amount saved and locked' : 'Save this replenish amount';
+      }
+    }
+
+    function guard(el) {
+      if (!el) return;
+      ['keydown', 'keypress', 'beforeinput', 'paste', 'drop', 'cut', 'contextmenu'].forEach(function (evt) {
+        el.addEventListener(evt, function (e) {
+          if (el.readOnly) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        });
+      });
+    }
+
+    // Per-line save: persists the amount and locks the field.
+    rowSaveBtns.forEach(function (btn) {
+      var index = Number(btn.getAttribute('data-index'));
+      var el = amounts[index];
+      if (!el) return;
+      guard(el);
+      btn.addEventListener('click', function () {
+        var value = String(el.value == null ? '' : el.value).trim();
+        if (value === '') {
+          el.focus();
+          return;
+        }
+        try {
+          localStorage.setItem(AMOUNT_KEY + index, value);
+          localStorage.setItem(LOCK_KEY + index, '1');
+        } catch (e) {}
+        setLocked(el, true);
+        compute();
+      });
+    });
+
+    // Restore persisted lines on load.
+    function restore() {
+      var pending = false;
+      try { pending = localStorage.getItem(FINAL_KEY) === '1'; } catch (e) {}
+
+      if (pending) {
+        // The final save was activated, so every saved line goes back to blank.
+        try {
+          localStorage.removeItem(FINAL_KEY);
+          amounts.forEach(function (el, i) {
+            localStorage.removeItem(AMOUNT_KEY + i);
+            localStorage.removeItem(LOCK_KEY + i);
+          });
+        } catch (e) {}
+        amounts.forEach(function (el) {
+          el.value = '';
+          setLocked(el, false);
+        });
+        return;
+      }
+
+      amounts.forEach(function (el, i) {
+        var saved = null;
+        var locked = false;
+        try {
+          saved = localStorage.getItem(AMOUNT_KEY + i);
+          locked = localStorage.getItem(LOCK_KEY + i) === '1';
+        } catch (e) {}
+        if (locked) {
+          if (saved !== null) el.value = saved;
+          setLocked(el, true);
+          return;
+        }
+        if (saved !== null && (el.value === '' || el.value === '0')) el.value = saved;
+        setLocked(el, false);
+      });
+    }
+
+    // The Last Inventory Amount is an auto-filled carry-over, never typed by hand.
+    function restoreLastInv() {
+      if (!lastInv) return;
+      var saved = null;
+      try { saved = localStorage.getItem(LAST_INV_KEY); } catch (e) {}
+      if (saved !== null && saved !== '') lastInv.value = saved;
+      setLocked(lastInv, true);
+    }
+
+    // On final save the Cash On Hand balance moves into the Last Inventory Amount.
+    function transferCashOnHand() {
+      compute();
+      if (!lastInv) return;
+      var carried = String(Math.round(currentCashOnHand * 100) / 100);
+      lastInv.value = carried;
+      setLocked(lastInv, true);
+      try { localStorage.setItem(LAST_INV_KEY, carried); } catch (e) {}
+    }
+
+    amounts.forEach(function (el) { el.addEventListener('input', compute); });
+    guard(lastInv);
+
+    // The final save submits the form and clears every saved line back to blank.
+    var saveBtn = document.getElementById('save-btn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', function () {
+        try {
+          transferCashOnHand();
+          amounts.forEach(function (el, i) {
+            if (el.readOnly) {
+              localStorage.setItem(AMOUNT_KEY + i, el.value);
+              localStorage.setItem(LOCK_KEY + i, '1');
+            } else {
+              localStorage.removeItem(AMOUNT_KEY + i);
+              localStorage.removeItem(LOCK_KEY + i);
+            }
+          });
+          localStorage.setItem(FINAL_KEY, '1');
+        } catch (e) {}
+      });
+    }
+
+    restore();
+    restoreLastInv();
+
+    compute();
+  })();
+</script>
+
+<%- include('../partials/footer') %>

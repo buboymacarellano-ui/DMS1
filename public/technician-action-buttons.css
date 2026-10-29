@@ -1,0 +1,182 @@
+.tech-status-btn,
+button.tech-status-btn,
+.tech-status-btn--break,
+.tech-status-btn--done,
+.tech-status-btn--parts,
+.tech-status-btn--note {
+  background: #0e7490 !important;
+  color: #fff !important;
+  border-color: #155e75 !important;
+}
+
+.btn,
+button,
+input[type="button"],
+input[type="submit"],
+.actions a,
+.actions button,
+.wo-create-actions .btn {
+  background: #0e7490 !important;
+  color: #fff !important;
+  border-color: #155e75 !important;
+  font-size: 14px !important;
+}
+
+html body table.list tbody td.actions a,
+html body table.list tbody td.actions button,
+html body .actions a,
+html body .actions button {
+  color: #fff !important;
+}
+
+.btn,
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+.actions a,
+.actions button {
+  font-size: 14px !important;
+}
+
+html body table.list tbody tr.work-order-row td.actions a,
+html body table.list tbody tr.work-order-row td.actions button {
+  background: #0e7490 !important;
+  color: #fff !important;
+  border-color: #155e75 !important;
+  font-size: 14px !important;
+}
+
+html body table.list tbody tr.work-order-row td.actions a {
+  font-size: 14px !important;
+}
+
+.btn:hover,
+button:hover,
+input[type="button"]:hover,
+input[type="submit"]:hover,
+.actions a:hover,
+.actions button:hover,
+.wo-create-actions .btn:hover {
+  background: #155e75 !important;
+  color: #fff !important;
+}
+
+/* Shared professional table headers across all portals. */
+html body table thead th,
+html body table.list thead th,
+html body table.transaction-table thead th,
+html body table.technician-monitor__grid thead th {
+  background: linear-gradient(180deg, #2f78ad, #1b4f72) !important;
+  border-color: #8ec8f0 !important;
+  color: #fff !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em;
+  line-height: 1.1 !important;
+  padding: 10px 14px !important;
+  text-align: left;
+  text-transform: uppercase;
+  vertical-align: middle;
+  white-space: nowrap !important;
+}
+
+html body .labor-charge-db table thead th {
+  background: linear-gradient(180deg, #2f78ad, #1b4f72) !important;
+  border-color: #8ec8f0 !important;
+  color: #fff !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em;
+  line-height: 1.1 !important;
+  padding: 10px 14px !important;
+  text-transform: uppercase;
+  vertical-align: middle;
+  white-space: nowrap !important;
+}
+
+html body .labor-charge-db table {
+  table-layout: auto;
+  width: max-content;
+  min-width: max-content;
+}
+
+html body .labor-charge-db table thead th:nth-child(1) { min-width: 150px; }
+html body .labor-charge-db table thead th:nth-child(2) { min-width: 130px; }
+html body .labor-charge-db table thead th:nth-child(3) { min-width: 160px; }
+html body .labor-charge-db table thead th:nth-child(4) { min-width: 145px; }
+html body .labor-charge-db table thead th:nth-child(5) { min-width: 190px; }
+html body .labor-charge-db table thead th:nth-child(6) { min-width: 130px; }
+
+/* Shared logged-in user holder. */
+html body .header-user-badge {
+  background: #f01818 !important;
+  border-color: #a80000 !important;
+  color: #fff !important;
+  text-shadow: none !important;
+}
+
+html body .site-header.site-header--gm-clean {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 18px;
+  flex-wrap: nowrap;
+}
+html body .site-header.site-header--gm-clean > .site-header__left { grid-column: 1; grid-row: 1; }
+html body .site-header.site-header--gm-clean > .site-header__actions { grid-column: 3; grid-row: 1; }
+html body .site-header.site-header--gm-clean > .portal-sidebar {
+  order: initial;
+  grid-column: 2;
+  grid-row: 1;
+  flex: none;
+  position:fixed !important;
+  left:0;
+  top:var(--gm-sidebar-top, 96px);
+  width:192px !important;
+  height:calc(100vh - var(--gm-sidebar-top, 96px)) !important;
+  min-height:calc(100vh - var(--gm-sidebar-top, 96px)) !important;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  justify-content:flex-start;
+  gap:0;
+  margin:0;
+  padding:0;
+  background:transparent !important;
+  background:
+    repeating-linear-gradient(180deg, rgba(255,255,255,0.06) 0 2px, transparent 2px 4px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,0.10) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #3b5998 0%, #2b4c7e 50%, #1e3a63 100%) !important;
+  border-right:2px solid #555b61;
+  border-top:0;
+  border-bottom:0;
+  border-radius:0;
+  overflow:hidden;
+  z-index:1000;
+  white-space:nowrap;
+}
+html body .site-header.site-header--gm-clean > .portal-sidebar .portal-sidebar__link {
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  width:100%;
+  min-height:44px;
+  padding:12px 16px;
+  border:0;
+  border-bottom:1px solid #6b7178;
+  background:transparent !important;
+  color:#fff !important;
+  font-size:14px;
+  font-weight:700;
+  text-decoration:none;
+  white-space:nowrap;
+  text-align:left;
+}
+html body .site-header.site-header--gm-clean > .portal-sidebar .portal-sidebar__link:first-child { border-top:0; border-left:0; }
+html body .site-header.site-header--gm-clean > .portal-sidebar .portal-sidebar__link:hover,
+html body .site-header.site-header--gm-clean > .portal-sidebar .portal-sidebar__link--active {
+  background:rgba(255,255,255,0.14) !important;
+  color:#fff !important;
+  text-decoration:none;
+}

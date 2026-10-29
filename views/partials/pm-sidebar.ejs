@@ -16,4 +16,6 @@
   <a class="pm-sidebar__link<%= activePanel === 'health-transfer' ? ' pm-sidebar__link--active' : '' %>" href="/parts-manager?panel=health-transfer" data-pm-panel="health-transfer">Stock Transfer Grid</a>
   <a class="pm-sidebar__link<%= activePanel === 'vitals' ? ' pm-sidebar__link--active' : '' %>" href="/parts-manager?panel=vitals" data-pm-panel="vitals">DB Vitals</a>
   <a class="pm-sidebar__link<%= activePanel === 'csv' ? ' pm-sidebar__link--active' : '' %>" href="/parts-manager?panel=csv" data-pm-panel="csv">Load/Download Parts Entry CSV</a>
+  <%- include('sidebar-session-actions') %>
 </nav>
+

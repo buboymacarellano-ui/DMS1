@@ -1,0 +1,8 @@
+<% if (currentUser) { %>
+  <div class="sidebar-session-actions" aria-label="Session actions">
+    <%- include('theme-toggle') %>
+    <form method="post" action="/auth/logout" class="header-logout-form sidebar-logout-form">
+      <button type="submit" class="btn btn-fullscreen btn-theme-toggle">Close</button>
+    </form>
+  </div>
+<% } %>

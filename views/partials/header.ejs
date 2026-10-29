@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Auto Shop Manager</title>
   <link rel="stylesheet" href="/fonts/inter.css">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles.css?v=<%= typeof assetVersion !== 'undefined' ? assetVersion : '1' %>">
   <script>
     try { if (window.localStorage.getItem('ae_night_mode') === '1') document.documentElement.classList.add('night-mode'); } catch (e) {}
     try { if (window.localStorage.getItem('dms-sidebar-hidden') === '1') document.documentElement.classList.add('sidebar-hidden'); } catch (e) {}
@@ -92,20 +92,10 @@
     <% } %>
     <% if (cleanSessionHeader) { %>
       <div class="site-header__left site-header__left--gm-stack">
-        <% if (currentUser) { %>
-          <span class="header-user-badge header-user-badge--gm-lead" title="Signed-in <%= roleLabel %>">
-            <%= roleLabel %>: <%= currentUser.username %>
-          </span>
-        <% } else { %>
-          <span class="header-user-badge header-user-badge--gm-lead"><%= roleLabel %></span>
-        <% } %>
         <div class="site-header__logo-wrap">
           <h1 class="site-header__brand-left">
             <a href="<%= cleanHomePath %>" class="brand-heading" aria-label="<%= roleLabel %> Dashboard" title="<%= roleLabel %> Dashboard">
-              <span class="brand-text">
-                <span class="brand-text__name">A&amp;E Auto Service</span>
-                <span class="brand-text__entity">GROUP INC.</span>
-              </span>
+              <img src="/icons/dms1-logo.png" alt="DMS1" class="brand-icon" aria-hidden="true" />
             </a>
           </h1>
           <% if (!isHomePage) { %>
@@ -115,29 +105,15 @@
       </div>
 
       <div class="site-header__actions" aria-label="Session actions">
-        <% if (headerBranch) { %>
-          <span class="header-branch-badge" id="signed-in-branch" aria-label="Signed-in branch: <%= headerBranch %>" title="Signed-in branch"><%= headerBranch %></span>
+        <% if (currentUser) { %>
+          <%- include('header-user-info', { roleLabel, headerBranch }) %>
         <% } %>
-        <div class="site-header__session-btns">
-          <div class="site-header__btn-row">
-            <button type="button" id="fullscreen-toggle" class="btn btn-fullscreen">Full Screen</button>
-            <%- include('theme-toggle') %>
-          </div>
-          <% if (currentUser) { %>
-            <form method="post" action="/auth/logout" class="header-logout-form">
-              <button type="submit" class="btn btn-fullscreen">Log Out</button>
-            </form>
-          <% } %>
-        </div>
       </div>
     <% } else { %>
       <div class="site-header__logo-wrap">
         <h1>
           <a href="/" class="brand-heading" aria-label="Return to main page" title="Return to main page">
-            <span class="brand-text">
-              <span class="brand-text__name">A&amp;E Auto Service</span>
-              <span class="brand-text__entity">GROUP INC.</span>
-            </span>
+            <img src="/icons/dms1-logo.png" alt="DMS1" class="brand-icon" aria-hidden="true" />
           </a>
         </h1>
         <% if (!isHomePage) { %>
@@ -145,9 +121,6 @@
         <% } %>
       </div>
       <nav>
-        <% if (headerBranch) { %>
-          <span class="header-branch-badge" id="signed-in-branch" aria-label="Signed-in branch: <%= headerBranch %>" title="Signed-in branch"><%= headerBranch %></span>
-        <% } %>
         <% if (activeRole === 'technician') { %>
           <a href="/technician">Technician</a>
         <% } else if (activeRole === 'service_technical_manager') { %>
@@ -192,16 +165,7 @@
           <a href="/po/settings">PO Settings</a>
         <% } %>
         <% if (currentUser) { %>
-          <span class="header-user-badge"><%= roleLabel %>: <%= currentUser.username %><%= ['service_receptionist', 'senior_service_receptionist', 'service_advisor'].includes(activeRole) && currentUser.branch ? ` | ${currentUser.branch}` : '' %></span>
-        <% } %>
-        <% if (!['hr', 'hr_manager', 'hr_generalist', 'payroll', 'hr_clerk'].includes(activeRole)) { %>
-          <button type="button" id="fullscreen-toggle" class="btn btn-fullscreen">Full Screen</button>
-        <% } %>
-        <%- include('theme-toggle') %>
-        <% if (currentUser) { %>
-          <form method="post" action="/auth/logout" class="header-logout-form">
-            <button type="submit" class="btn btn-fullscreen">Log Out</button>
-          </form>
+          <%- include('header-user-info', { roleLabel, headerBranch }) %>
         <% } %>
       </nav>
     <% } %>
@@ -228,3 +192,6 @@
     <% if (typeof globalError !== 'undefined' && globalError) { %>
       <p class="error global-error-message"><%= globalError %></p>
     <% } %>
+
+
+

@@ -15,6 +15,7 @@ const PAY_STRUCTURES = ['Salaried', 'Hourly', 'Commission-based'];
 const FLSA_TYPES = ['Exempt', 'Non-Exempt'];
 const EMPLOYEE_FIELD_OPTIONS = [
   { key: 'employee_id', label: 'Employee ID' },
+  { key: 'barcode', label: 'Barcode' },
   { key: 'first_name', label: 'First Name' },
   { key: 'middle_name', label: 'Middle Name' },
   { key: 'last_name', label: 'Last Name' },
@@ -91,6 +92,7 @@ function buildEmployeeCsvHeaderAliases() {
   aliases.remarks1 = 'remarks_1';
   aliases.remarks2 = 'remarks_2';
   aliases.telephonenumber = 'work_phone';
+  aliases.barcode = 'barcode';
 
   return aliases;
 }
@@ -155,6 +157,7 @@ function getSelectionCriteria(query) {
 function matchesSelection(employee, criteria, searchTerm) {
   const matchesSearch = !searchTerm || [
     employee.employee_id,
+    employee.barcode,
     employee.first_name,
     employee.middle_name,
     employee.last_name,
@@ -210,6 +213,7 @@ function toNumber(value) {
 function buildEmployeeFromBody(body, existing = {}) {
   return {
     employee_id: normalizeText(body.employee_id) || normalizeText(existing.employee_id),
+    barcode: normalizeText(body.barcode) || normalizeText(existing.barcode),
     first_name: normalizeText(body.first_name),
     middle_name: normalizeText(body.middle_name),
     last_name: normalizeText(body.last_name),
@@ -434,6 +438,7 @@ router.get('/new', (req, res) => {
 router.post('/new', async (req, res) => {
   const body = req.body;
   const employee_id = normalizeText(body.employee_id);
+  const barcode = normalizeText(body.barcode);
   const first_name = normalizeText(body.first_name);
   const last_name = normalizeText(body.last_name);
   const employment_status = normalizeText(body.employment_status);
@@ -449,6 +454,9 @@ router.post('/new', async (req, res) => {
   const employees = await store.getAll('employees');
   if (employees.some((employee) => normalizeText(employee.employee_id) === employee_id)) {
     errors.push('Employee ID already exists.');
+  }
+  if (barcode && employees.some((employee) => normalizeText(employee.barcode) === barcode)) {
+    errors.push('Barcode already exists.');
   }
 
   if (errors.length) {
@@ -501,6 +509,7 @@ router.post('/:id/edit', async (req, res) => {
 
   const body = req.body;
   const employee_id = normalizeText(body.employee_id);
+  const barcode = normalizeText(body.barcode);
   const first_name = normalizeText(body.first_name);
   const last_name = normalizeText(body.last_name);
   const employment_status = normalizeText(body.employment_status);
@@ -516,6 +525,9 @@ router.post('/:id/edit', async (req, res) => {
   const employees = await store.getAll('employees');
   if (employees.some((employee) => normalizeText(employee.employee_id) === employee_id && employee.id !== req.params.id)) {
     errors.push('Employee ID already exists.');
+  }
+  if (barcode && employees.some((employee) => normalizeText(employee.barcode) === barcode && employee.id !== req.params.id)) {
+    errors.push('Barcode already exists.');
   }
 
   if (errors.length) {

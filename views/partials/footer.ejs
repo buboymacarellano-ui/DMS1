@@ -1,4 +1,5 @@
   </main>
+  <script src="/js/enter-advance.js"></script>
   <script src="/js/database-tables.js"></script>
   <footer class="site-footer">
     <small>Auto Shop Manager — local prototype</small>
@@ -120,69 +121,12 @@
     })();
     <% } %>
 
-    (function initFullscreenToggle() {
-      const button = document.getElementById('fullscreen-toggle');
-      if (!button) return;
-      const STORAGE_KEY = 'ae_app_full_mode';
-
-      function isFullscreen() {
-        return Boolean(document.fullscreenElement);
+    (function clearStaleFullModePreference() {
+      try {
+        window.localStorage.removeItem('ae_app_full_mode');
+      } catch (error) {
+        // Ignore storage failures.
       }
-
-      function getPreferredFullMode() {
-        try {
-          return window.localStorage.getItem(STORAGE_KEY) === '1';
-        } catch (error) {
-          return false;
-        }
-      }
-
-      function setPreferredFullMode(enabled) {
-        try {
-          window.localStorage.setItem(STORAGE_KEY, enabled ? '1' : '0');
-        } catch (error) {
-          // Ignore storage failures and keep runtime state only.
-        }
-      }
-
-      function applyState() {
-        const active = getPreferredFullMode();
-        document.body.classList.toggle('app-fullscreen', active);
-        button.textContent = active ? 'Exit Full Screen' : 'Full Screen';
-      }
-
-      button.addEventListener('click', async () => {
-        const shouldEnable = !getPreferredFullMode();
-        setPreferredFullMode(shouldEnable);
-        applyState();
-        try {
-          if (shouldEnable && !isFullscreen()) {
-            await document.documentElement.requestFullscreen();
-          } else if (!shouldEnable && isFullscreen()) {
-            await document.exitFullscreen();
-          }
-        } catch (error) {
-          if (shouldEnable) {
-            window.alert('Browser fullscreen was blocked. App will stay in full mode layout. Press F11 for full browser fullscreen.');
-          }
-        } finally {
-          applyState();
-        }
-      });
-
-      document.addEventListener('fullscreenchange', () => {
-        if (!isFullscreen() && getPreferredFullMode()) {
-          document.body.classList.add('app-fullscreen');
-          button.textContent = 'Exit Full Screen';
-          return;
-        }
-        applyState();
-      });
-
-      if (getPreferredFullMode()) {
-        document.body.classList.add('app-fullscreen');
-      }
-      applyState();
     })();
 
     (function initNightModeToggle() {

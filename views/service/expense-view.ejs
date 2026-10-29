@@ -14,7 +14,8 @@
       <div>Expense Log</div>
     </div>
     <div style="text-align:right">
-      <div>Log Date: <strong><%= expense.log_date || '—' %></strong></div>
+      <div>Serial No: <strong><%= Number(expense.serial_no || 0) || '—' %></strong></div>
+      <div>Log Date: <strong><%= expense.log_date || '—' %></strong></div
       <div>Branch: <strong><%= expense.branch || '—' %></strong></div>
     </div>
   </header>
@@ -42,3 +43,6 @@
 </div>
 
 <%- include('../partials/footer') %>
+
+
+

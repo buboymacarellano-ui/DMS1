@@ -40,6 +40,36 @@
   </form>
 
   <article class="dashboard-card labor-charge-db" id="created-parts-db">
+    <style>
+      #created-parts-db .labor-charge-db__scroll table {
+        width: max-content !important;
+        min-width: max-content !important;
+        table-layout: auto !important;
+      }
+
+      #created-parts-db .labor-charge-db__scroll thead th {
+        background: linear-gradient(180deg, #2f78ad, #1b4f72) !important;
+        border-color: #8ec8f0 !important;
+        color: #fff !important;
+        font-size: 12px !important;
+        font-weight: 800 !important;
+        line-height: 1.1 !important;
+        padding: 10px 18px !important;
+        text-transform: uppercase;
+        white-space: nowrap !important;
+      }
+
+      #created-parts-db .labor-charge-db__scroll thead th:nth-child(1) { min-width: 110px !important; }
+      #created-parts-db .labor-charge-db__scroll thead th:nth-child(2) { min-width: 160px !important; }
+      #created-parts-db .labor-charge-db__scroll thead th:nth-child(3) { min-width: 130px !important; }
+      #created-parts-db .labor-charge-db__scroll thead th:nth-child(4) { min-width: 150px !important; }
+      #created-parts-db .labor-charge-db__scroll thead th:nth-child(5) { min-width: 150px !important; }
+      #created-parts-db .labor-charge-db__scroll thead th:nth-child(6) { min-width: 110px !important; }
+      #created-parts-db .labor-charge-db__scroll thead th:nth-child(7) { min-width: 130px !important; }
+      #created-parts-db .labor-charge-db__scroll thead th:nth-child(8) { min-width: 80px !important; }
+      #created-parts-db .labor-charge-db__scroll thead th:nth-child(9) { min-width: 110px !important; }
+      #created-parts-db .labor-charge-db__scroll thead th:nth-child(10) { min-width: 110px !important; }
+    </style>
     <div class="dashboard-card__header admin-panel-header">Central Created Parts Database</div>
     <p class="dashboard-note">Live for every SA, SR, and SSR branch. Physical stock stays at the creating branch. Warehouse 1 and Parts Manager log the transaction so later movements on this part stay in the main parts database. The part is available immediately on work-order service selection.</p>
     <p class="dashboard-note"><strong><%= createdRows.length %></strong> created part<%= createdRows.length === 1 ? '' : 's' %></p>

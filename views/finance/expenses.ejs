@@ -1,0 +1,37 @@
+﻿<%- include('../partials/header') %>
+<%
+  function fmtMoney(value) { return '₱' + Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+%>
+<section class="dashboard-shell admin-shell fm-workspace" id="fm-workspace">
+  <div class="fm-head">
+    <div class="dashboard-title admin-title role-dashboard-title"><span>Finance</span> <span class="role-dashboard-title__suffix">Expenses</span></div>
+    <form method="get" action="/finance/expenses" class="fm-date-filter" style="gap:10px;">
+      <span>From</span><input type="date" name="start" value="<%= startDate %>" aria-label="Start date" />
+      <span>To</span><input type="date" name="end" value="<%= endDate %>" aria-label="End date" />
+      <button type="submit" class="btn">Apply</button>
+      <a class="btn" href="/finance/expenses?start=<%= encodeURIComponent(startDate) %>&end=<%= encodeURIComponent(endDate) %>&format=json" target="_blank" rel="noopener">JSON</a>
+    </form>
+  </div>
+  <section class="fm-metrics" aria-label="Expense totals">
+    <article class="gm-kpi-card admin-summary-card fm-metric"><p class="gm-kpi-label">Expense Records</p><h2 class="gm-kpi-value"><%= expenses.length %></h2></article>
+    <article class="gm-kpi-card admin-summary-card fm-metric"><p class="gm-kpi-label">Total Expenses</p><h2 class="gm-kpi-value"><%= fmtMoney(totals.total) %></h2></article>
+    <article class="gm-kpi-card admin-summary-card fm-metric"><p class="gm-kpi-label">Petty Cash Net</p><h2 class="gm-kpi-value"><%= fmtMoney(totals.pettyCashOut - totals.pettyCashIn) %></h2></article>
+  </section>
+  <section class="dashboard-card admin-panel fm-panel">
+    <div class="dashboard-card__header admin-panel-header">Service Portal Expense Logs</div>
+    <div style="overflow-x:auto;">
+      <table class="list expense-log-table">
+        <thead><tr><th>Date</th><th>Type</th><th>Category / Account</th><th>Purpose / Notes</th><th>Vendor</th><th>Specifics</th><th>Unit</th><th>Unit Price</th><th>QTY</th><th>Total</th><th>Receipt</th><th>Petty Cash Out</th><th>Petty Cash In</th><th>Received By</th><th>Branch</th><th>Created By</th><th>Note</th></tr></thead>
+        <tbody>
+          <% if (!expenses.length) { %><tr><td colspan="17">No expenses found for the selected period.</td></tr><% } %>
+          <% expenses.forEach((row) => { %>
+            <tr><td><%= row.log_date || '—' %></td><td><%= row.expense_type || '—' %></td><td><%= row.category || '—' %></td><td><%= row.business_purpose || '—' %></td><td><%= row.vendor || '—' %></td><td><%= row.specifics || '—' %></td><td><%= row.unit || '—' %></td><td><%= fmtMoney(row.unit_price) %></td><td><%= row.qty ?? '—' %></td><td><strong><%= fmtMoney(row.total) %></strong></td><td><%= row.reference_receipt || '—' %></td><td><%= fmtMoney(row.petty_cash_out) %></td><td><%= fmtMoney(row.petty_cash_in) %></td><td><%= row.received_by || '—' %></td><td><%= row.branch || '—' %></td><td><%= row.created_by || '—' %></td><td><%= row.note || '—' %></td></tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
+
+
+

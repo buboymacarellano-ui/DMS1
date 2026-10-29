@@ -1,0 +1,25 @@
+<%
+  const infoUsername = currentUser ? (currentUser.username || '') : '';
+  const infoRole = typeof roleLabel !== 'undefined' ? roleLabel : '';
+  const infoBranch = (typeof headerBranch !== 'undefined' && headerBranch) ? headerBranch : '';
+%>
+<div class="header-user-info" aria-label="Signed-in user">
+  <% if (infoUsername) { %>
+    <div class="header-user-info__row">
+      <span class="header-user-info__label">User Name:</span>
+      <span class="header-user-info__value"><%= infoUsername %></span>
+    </div>
+  <% } %>
+  <% if (infoRole) { %>
+    <div class="header-user-info__row">
+      <span class="header-user-info__label">Role:</span>
+      <span class="header-user-info__value"><%= infoRole %></span>
+    </div>
+  <% } %>
+  <% if (infoBranch) { %>
+    <div class="header-user-info__row">
+      <span class="header-user-info__label">Branch ID:</span>
+      <span class="header-user-info__value"><%= infoBranch %></span>
+    </div>
+  <% } %>
+</div>

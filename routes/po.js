@@ -1,4 +1,4 @@
-const crypto = require('crypto');
+﻿const crypto = require('crypto');
 const express = require('express');
 const store = require('../data/store');
 const portals = require('../lib/portals');
@@ -17,11 +17,6 @@ function activeUser(req) {
 
 function wantsJson(req) {
   return req.path.indexOf('/api/') === 0 || req.path === '/save' || req.is('application/json');
-}
-
-function deny(req, res, message) {
-  if (wantsJson(req)) return res.status(403).json({ error: message });
-  return res.status(403).render('po/denied', { message });
 }
 
 const requireCreator = safe(async (req, res, next) => {
@@ -273,6 +268,13 @@ router.post('/settings', requireGm, safe(async (req, res) => {
   res.redirect('/po/settings?success=PO+settings+saved.');
 }));
 
+router.get('/print/:id', safe(async (req, res) => {
+  const user = activeUser(req);
+  const [order, settings] = await Promise.all([store.getById('po_orders', normalize(req.params.id)), store.getPoSettings()]);
+  if (!order) return res.status(404).render('po/denied', { message: 'Purchase order not found.' });
+  if (!canViewPo(user, order, settings)) return deny(req, res, 'Access denied. You cannot view this purchase order.' );
+  return res.type('html').send(buildPoPrintHtml(order, { autoPrint: String(req.query.print || '') === '1' }));
+}));
 router.get('/:id', safe(async (req, res) => {
   const user = activeUser(req);
   const [order, settings] = await Promise.all([store.getById('po_orders', normalize(req.params.id)), store.getPoSettings()]);
@@ -306,3 +308,4 @@ router.post('/:id/approve', safe((req, res) => decide(req, res, 'approved')));
 router.post('/:id/reject', safe((req, res) => decide(req, res, 'rejected')));
 
 module.exports = router;
+

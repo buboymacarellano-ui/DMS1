@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GM_PORTAL_PATHS, type GmPortalView } from './gmRoutes';
 
 const TIMELINE_DURATIONS = ['H', 'D', 'W', 'M', 'Y', 'ALL'] as const;
@@ -148,7 +148,7 @@ export function setupTimelineFilters(options: {
 }
 
 export type DashboardNavigateOptions = {
-  /** Deep-link into FteDashboard with the transaction entry modal open. */
+
   openLogModal?: boolean;
 };
 
@@ -160,9 +160,8 @@ export type DashboardProps = {
   pendingBillingCount?: number;
   avgTicket?: number;
   /**
-   * `gm` — manager analytics shell
-   * `stm` — STM top-card workspace
-   * `sa` / `sr` — full work-order dashboards; FTE via 4th shortcut card
+   * `gm` â€” manager analytics shell
+   * `stm` â€” STM top-card workspace
    */
   variant?: 'gm' | 'stm' | 'sa' | 'sr' | 'ssr';
   assignedBranch?: string;
@@ -177,7 +176,7 @@ export type DashboardProps = {
 
 function formatPeso(value: number): string {
   const amount = Number.isFinite(value) ? value : 0;
-  return `₱ ${amount.toLocaleString('en-PH', {
+  return `â‚± ${amount.toLocaleString('en-PH', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -311,8 +310,7 @@ function marginDensityCellStyle(pct: number): React.CSSProperties {
 }
 
 /**
- * Dashboard shell — GM dense view, STM cards, or SA/SR work-order dashboards.
- * SA/SR open FTE Tracking via the 4th top shortcut card (CebuCity-locked destination).
+ * Dashboard shell â€” GM dense view, STM cards, or SA/SR work-order dashboards.
  */
 export default function Dashboard({
   reportingDate = '2026-08-13',
@@ -329,7 +327,6 @@ export default function Dashboard({
   onNavigate,
   navigateHref = (view, options) => {
     const base = GM_PORTAL_PATHS[view];
-    if (view === 'fte' && options?.openLogModal) return `${base}?log=1`;
     return base;
   },
 }: DashboardProps) {
@@ -339,10 +336,10 @@ export default function Dashboard({
   const [cardMetrics, setCardMetrics] = useState<DashboardCards>(() => ({
     revenueLabel: `Revenue on ${reportingLabel}`,
     revenueValue: todayRevenue,
-    revenueDelta: '▲ Daily close',
+    revenueDelta: 'â–² Daily close',
     cumulativeLabel: `Week Through ${reportingLabel}`,
     cumulativeValue: weeklyRevenue,
-    cumulativeDelta: '▲ Week to date',
+    cumulativeDelta: 'â–² Week to date',
     pendingBillingCount,
     pendingSpark: DEFAULT_SPARK,
     avgTicket,
@@ -388,7 +385,7 @@ export default function Dashboard({
     }
     if (Array.isArray(payload.matrix?.rows)) {
       setMatrixRows(payload.matrix.rows.map((row) => ({
-        branch: row.branch || '—',
+        branch: row.branch || 'â€”',
         openWorkOrders: Number(row.openWorkOrders || 0),
         liveAccumulatedRevenue: Number(row.liveAccumulatedRevenue || 0),
         targetPacingPct: Number(row.targetPacingPct || 0),
@@ -518,7 +515,6 @@ export default function Dashboard({
           </article>
 
           <article className="gm-kpi-card sa-card">
-            <div className="sa-card-title">FTE WORKSPACE</div>
             <div className="sa-card-body">
               <p className="sa-line">Transaction &amp; Record Center</p>
               <p className="sa-line">
@@ -529,8 +525,6 @@ export default function Dashboard({
               <button
                 type="button"
                 className="btn"
-                aria-label="Open FTE Tracking Panel"
-                onClick={() => go('fte')}
               >
                 OPEN PANEL
               </button>
@@ -590,7 +584,7 @@ export default function Dashboard({
               }, 5000);
             }}
           >
-            <span>🔄</span> Restart Network Tunnel
+            <span>ðŸ”„</span> Restart Network Tunnel
           </button>
         </div>
         <div className="dashboard-title gm-title role-dashboard-title">
@@ -642,7 +636,6 @@ export default function Dashboard({
           </article>
 
           <article className="gm-kpi-card sa-card">
-            <div className="sa-card-title">FTE</div>
             <div className="sa-card-body">
               <p className="sa-line">Facility, Tool &amp; Equipment Tracking</p>
               <p className="sa-line">Log repairs, PM, and expense issues.</p>
@@ -651,10 +644,7 @@ export default function Dashboard({
               <button
                 type="button"
                 className="btn"
-                aria-label="Log FTE Issue"
-                onClick={() => go('fte', { openLogModal: true })}
               >
-                + LOG FTE ISSUE
               </button>
             </div>
           </article>
@@ -759,10 +749,8 @@ export default function Dashboard({
           <button
             type="button"
             className="btn gm-dense-link"
-            onClick={() => go('fte')}
             aria-label="Open Facility, Tool and Equipment Tracking Panel"
           >
-            FTE
           </button>
         </div>
         </div>
@@ -775,7 +763,7 @@ export default function Dashboard({
         >
           <div className="flex justify-between items-center mb-4 gm-target-panel__head">
             <h4 className="text-md font-bold text-orange-400">
-              ⚙️ Set Branch Gross Sales Targets for {salesTargets.monthLabel || 'August 2026'}
+              âš™ï¸ Set Branch Gross Sales Targets for {salesTargets.monthLabel || 'August 2026'}
             </h4>
             <button
               type="button"
@@ -783,7 +771,7 @@ export default function Dashboard({
               className="text-gray-400 hover:text-white gm-target-panel__close"
               aria-label="Close target panel"
             >
-              ✕
+              âœ•
             </button>
           </div>
           <form
@@ -796,7 +784,7 @@ export default function Dashboard({
             <input type="hidden" name="duration" value={activeDuration} />
             {BRANCH_TARGET_NAMES.map((branchName) => (
               <div key={branchName}>
-                <label className="block text-xs font-medium text-gray-300">{branchName} Target (₱)</label>
+                <label className="block text-xs font-medium text-gray-300">{branchName} Target (â‚±)</label>
                 <input
                   type="number"
                   name={branchName}
@@ -812,7 +800,7 @@ export default function Dashboard({
                 type="submit"
                 className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded shadow"
               >
-                💾 Save & Recalculate Dashboard
+                ðŸ’¾ Save & Recalculate Dashboard
               </button>
             </div>
           </form>

@@ -1,0 +1,200 @@
+﻿<%- include('../partials/header') %>
+<style>
+  .fm-modal { display: none; position: fixed; z-index: 1100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); }
+  .fm-modal.active { display: flex; justify-content: center; align-items: center; }
+  .fm-modal__content { background: #fff; border-radius: 10px; width: min(1100px, 96vw); height: min(82vh, 860px); overflow: hidden; box-shadow: 0 18px 60px rgba(0,0,0,0.35); display: flex; flex-direction: column; }
+  .fm-modal__header { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid #e6e6e6; }
+  .fm-modal__title { font-weight: 800; color: #10202f; }
+  .fm-modal__close { cursor: pointer; font-size: 26px; font-weight: 800; line-height: 1; padding: 0 6px; }
+  .fm-modal__body { flex: 1; background: #f4f7fb; }
+  .fm-modal__body iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+</style><%
+  function fmtMoney(value) {
+    return 'â‚±' + Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  const r = report || {};
+  const totals = r.totals || {};
+  const rows = Array.isArray(r.detailed) ? r.detailed : [];
+  const viewMode = (typeof view !== 'undefined' && view) ? String(view) : 'summary';
+  const startValue = r.startDate || '';
+  const endValue = r.endDate || '';
+%>
+
+<section class="dashboard-shell admin-shell fm-workspace" id="fm-workspace" data-reporting-date="<%= endValue %>">
+  <div class="fm-head">
+    <div class="dashboard-title admin-title role-dashboard-title"><span>Finance</span> <span class="role-dashboard-title__suffix">Purchases</span></div>
+
+    <form method="get" action="/finance/purchases" class="fm-date-filter" style="gap:10px;">
+      <span>From</span>
+      <input type="date" name="start" value="<%= startValue %>" aria-label="Start date" />
+      <span>To</span>
+      <input type="date" name="end" value="<%= endValue %>" aria-label="End date" />
+      <input type="hidden" name="view" value="<%= viewMode %>" />
+      <button type="submit" class="btn">Apply</button>
+      <a class="btn" href="/finance/purchases?start=<%= encodeURIComponent(startValue) %>&end=<%= encodeURIComponent(endValue) %>&view=summary">Summary</a>
+      <a class="btn" href="/finance/purchases?start=<%= encodeURIComponent(startValue) %>&end=<%= encodeURIComponent(endValue) %>&view=detailed">Detailed</a>
+      <a class="btn" href="/po/create" target="_blank" rel="noopener">Create PO</a>
+      <a class="btn" href="/po" target="_blank" rel="noopener">PO Records</a>
+      <a class="btn" href="/finance/purchases?start=<%= encodeURIComponent(startValue) %>&end=<%= encodeURIComponent(endValue) %>&view=<%= encodeURIComponent(viewMode) %>&format=json" target="_blank" rel="noopener">JSON</a>
+    </form>
+  </div>
+
+  <section class="fm-metrics" aria-label="Purchases totals">
+    <article class="gm-kpi-card admin-summary-card fm-metric">
+      <p class="gm-kpi-label">Purchase Orders</p>
+      <h2 class="gm-kpi-value"><%= Number(totals.purchaseCount || 0) %></h2>
+      <p class="dashboard-note">Count of POs in selected period</p>
+    </article>
+    <article class="gm-kpi-card admin-summary-card fm-metric">
+      <p class="gm-kpi-label">Purchases (ex VAT)</p>
+      <h2 class="gm-kpi-value"><%= fmtMoney(totals.purchasesExVat) %></h2>
+      <p class="dashboard-note">PO subtotal total</p>
+    </article>
+    <article class="gm-kpi-card admin-summary-card fm-metric">
+      <p class="gm-kpi-label">Input VAT</p>
+      <h2 class="gm-kpi-value"><%= fmtMoney(totals.inputVat) %></h2>
+      <p class="dashboard-note">PO tax total (for PH VAT tracking)</p>
+    </article>
+  </section>
+
+  <section class="fm-metrics" aria-label="Purchases totals 2" style="grid-template-columns:repeat(3, minmax(0, 1fr));">
+    <article class="gm-kpi-card admin-summary-card fm-metric">
+      <p class="gm-kpi-label">Purchases (VAT incl.)</p>
+      <h2 class="gm-kpi-value"><%= fmtMoney(totals.purchasesInclVat) %></h2>
+      <p class="dashboard-note">PO grand total</p>
+    </article>
+    <article class="gm-kpi-card admin-summary-card fm-metric">
+      <p class="gm-kpi-label">Net VAT Payable (est.)</p>
+      <h2 class="gm-kpi-value"><%= fmtMoney((typeof totals.netVatPayable === 'number' ? totals.netVatPayable : 0)) %></h2>
+      <p class="dashboard-note">Output VAT (from P&amp;L) minus input VAT (this report)</p>
+    </article>
+    <article class="gm-kpi-card admin-summary-card fm-metric">
+      <p class="gm-kpi-label">Notes</p>
+      <h2 class="gm-kpi-value">PH</h2>
+      <p class="dashboard-note">Tax % per PO line drives VAT totals</p>
+    </article>
+  </section>
+
+  <section class="dashboard-card admin-panel fm-panel" aria-label="Purchases summary">
+    <div class="dashboard-card__header admin-panel-header">Summary</div>
+    <div class="table-scroll">
+      <table class="list">
+        <tbody>
+          <tr><th>Period</th><td><%= startValue %> to <%= endValue %></td></tr>
+          <tr><th>PO Count</th><td style="text-align:right;"><%= Number(totals.purchaseCount || 0) %></td></tr>
+          <tr><th>Purchases (ex VAT)</th><td style="text-align:right;"><%= fmtMoney(totals.purchasesExVat) %></td></tr>
+          <tr><th>Input VAT</th><td style="text-align:right;"><%= fmtMoney(totals.inputVat) %></td></tr>
+          <tr><th>Purchases (VAT incl.)</th><td style="text-align:right;"><%= fmtMoney(totals.purchasesInclVat) %></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="dashboard-note" style="margin-top:10px;">This page is wired to the PO module (`/po`). It summarizes saved POs. Receiving / actual cash disbursements are not tracked here unless the PO workflow captures them.</p>
+  </section>
+
+  <% if (true) { %>
+    <section class="dashboard-card admin-panel fm-panel" aria-label="Purchases detailed">
+      <div class="dashboard-card__header admin-panel-header">Detailed</div>
+      <p class="dashboard-note">Each row represents one PO from the PO creation module.</p>
+      <div class="table-scroll">
+        <table class="list" id="fm-purchases-detailed">
+  <thead>
+    <tr>
+      <th>PO Date</th>
+      <th>PO Number</th>
+      <th>Supplier</th>
+      <th>Department</th>
+      <th>Requestor</th>
+      <th>Terms</th>
+      <th>Status</th>
+      <th>Lines</th>
+      <th>Subtotal</th>
+      <th>Input VAT</th>
+      <th>Grand Total</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% if (!rows.length) { %>
+      <tr class="fm-empty"><td colspan="12">No purchases found for this period.</td></tr>
+    <% } %>
+    <% rows.forEach((row) => { %>
+      <tr>
+        <td><%= row.po_date || '' %></td>
+        <td><a href="/po/<%= encodeURIComponent(row.id) %>" target="_blank" rel="noopener"><%= row.po_number %></a></td>
+        <td><%= row.supplier || '' %></td>
+        <td><%= row.department || '' %></td>
+        <td><%= row.requestor || '' %></td>
+        <td><%= row.payment_terms || '' %></td>
+        <td><%= row.status || '' %></td>
+        <td style="text-align:right;"><%= Number(row.lines || 0) %></td>
+        <td style="text-align:right;"><%= fmtMoney(row.subtotal) %></td>
+        <td style="text-align:right;"><%= fmtMoney(row.tax_total) %></td>
+        <td style="text-align:right;"><%= fmtMoney(row.grand_total) %></td>
+        <td style="white-space:nowrap;">
+          <button type="button" class="btn btn-secondary fm-po-inspect" data-id="<%= row.id %>">Inspect</button>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+      </div>
+    </section>
+  <% } %>
+</section>
+<div id="fm-po-preview" class="fm-modal" aria-hidden="true">
+  <div class="fm-modal__content">
+    <div class="fm-modal__header">
+      <div class="fm-modal__title">PO Print Preview</div>
+      <div class="fm-modal__close" data-action="close" aria-label="Close">&times;</div>
+    </div>
+    <div class="fm-modal__body">
+      <iframe id="fm-po-preview-frame" title="PO preview" loading="lazy"></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const modal = document.getElementById('fm-po-preview');
+  const frame = document.getElementById('fm-po-preview-frame');
+  if (!modal || !frame) return;
+
+  function openPreview(id) {
+    if (!id) return;
+    frame.src = '/po/print/' + encodeURIComponent(id);
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closePreview() {
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+    frame.src = 'about:blank';
+  }
+
+  document.addEventListener('click', (event) => {
+    const btn = event.target.closest('.fm-po-inspect');
+    if (btn) {
+      event.preventDefault();
+      openPreview(btn.getAttribute('data-id'));
+      return;
+    }
+
+    const closer = event.target.closest('[data-action="close"]');
+    if (closer) {
+      event.preventDefault();
+      closePreview();
+      return;
+    }
+
+    if (event.target === modal) closePreview();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closePreview();
+  });
+})();
+</script>
+
+<%- include('../partials/footer') %>

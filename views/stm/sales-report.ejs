@@ -1,0 +1,119 @@
+<%- include('../partials/header') %>
+<%
+  const safeBranch = (typeof selectedBranch !== 'undefined' && selectedBranch) ? String(selectedBranch) : 'all';
+  const safeStart = (typeof startDate !== 'undefined' && startDate) ? String(startDate) : '';
+  const safeEnd = (typeof endDate !== 'undefined' && endDate) ? String(endDate) : '';
+  const visibleRecords = safeBranch === 'all' ? (records || []) : (records || []).filter((r) => String(r.Branch || '') === safeBranch);
+  const serviceCount = (record) => Array.from({ length: 15 }, (_, index) => record['Service' + (index + 1)]).filter(Boolean).length;
+  const partCount = (record) => Array.from({ length: 50 }, (_, index) => record['Part' + (index + 1)]).filter(Boolean).length;
+  const serviceRendered = (record) => Array.from({ length: 15 }, (_, index) => record['Service' + (index + 1)]).filter(Boolean).join('; ');
+  const partsUsed = (record) => Array.from({ length: 50 }, (_, index) => record['Part' + (index + 1)]).filter(Boolean).join('; ');
+  const totalGrand = visibleRecords.reduce((sum, r) => sum + Number(r['Totalwith Vat'] || r['Grand Total'] || 0), 0);
+%>
+<style>
+  .sales-report-page .sr-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+  .sales-report-page .sr-title{margin:0;color:#024e7a;font-weight:700}
+  .sales-report-page .sr-sub{margin:0;color:#475569;font-size:14px}
+  .sales-report-page .sr-filter{display:flex;gap:10px;align-items:center}
+  .sales-report-page .sr-summary{color:#0a3358;font-weight:700;font-size:14px;margin-bottom:10px}
+  .sales-report-page .sr-table-wrap{overflow-x:auto;background:#fff;border:1px solid #94a3b8;margin-bottom:14px}
+  .sales-report-page table.list{width:100%;border-collapse:collapse;font-size:10px}
+  .sales-report-page table.list th,.sales-report-page table.list td{padding:8px;border-bottom:1px solid #e2e8f0;text-align:center !important}
+  .sales-report-page table.list th:first-child,.sales-report-page table.list td:first-child{text-align:left !important}
+  .sales-report-page table.list thead th{background:#024e7a !important;color:#fff !important;position:sticky !important;top:0 !important;z-index:10 !important;white-space:normal !important}
+  .sales-report-page table.list tbody tr:nth-child(even){background:#f8fafc}
+  .sales-report-page .grand-total{font-weight:800;color:#024e7a}
+  .sales-report-page .btn{display:inline-flex;align-items:center;gap:6px}
+  @media (max-width:900px){.sales-report-page .sr-filter{flex-direction:column;align-items:stretch}}
+</style>
+
+<section class="dashboard-shell sales-report-page">
+  <div class="sr-head">
+    <div>
+      <div class="dashboard-title gm-title role-dashboard-title"><span>Sales Report</span> <span class="role-dashboard-title__suffix">All Branches</span></div>
+      <p class="sr-sub">Collection of all branch transaction records &middot; <%= visibleRecords.length %> record(s)</p>
+    </div>
+    <div class="sr-filter">
+      <label>
+        <span class="sr-sub">Branch</span>
+        <select id="sales-report-branch" aria-label="Branch">
+          <option value="all"<%= safeBranch === 'all' ? ' selected' : '' %>>All Branches</option>
+          <% branches.forEach((name) => { %>
+            <option value="<%= name %>"<%= safeBranch === name ? ' selected' : '' %>><%= name %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>
+        <span class="sr-sub">Start Date</span>
+        <input type="date" id="sales-report-start" value="<%= safeStart %>" aria-label="Start date">
+      </label>
+      <label>
+        <span class="sr-sub">End Date</span>
+        <input type="date" id="sales-report-end" value="<%= safeEnd %>" aria-label="End date">
+      </label>
+      <p class="sr-summary">Grand Total: <span class="grand-total"><%= totalGrand.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></span></p>
+    </div>
+  </div>
+
+  <div class="sr-table-wrap">
+    <table class="list">
+      <thead>
+        <tr>
+          <% headers.forEach((h) => { %>
+            <th><%= h %></th>
+          <% }) %>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% visibleRecords.forEach((record) => { %>
+          <tr>
+            <td><%= record['Transaction date'] || '' %></td>
+            <td><%= record['work order Number'] || '' %></td>
+            <td><%= record['Branch'] || '' %></td>
+            <td><%= record['Customer name'] || '' %></td>
+            <td><%= record['Telephone number'] || '' %></td>
+            <td><%= record['Car Brand'] || '' %></td>
+            <td><%= record['Model'] || '' %></td>
+            <td><%= record['Year'] || '' %></td>
+            <td><%= record['SA'] || record['Service Advice Advisor'] || '' %></td>
+            <td><%= record['Tecnician'] || record['Technician'] || '' %></td>
+            <td><%= serviceCount(record) %></td>
+            <td><%= serviceRendered(record) %></td>
+            <td><%= partCount(record) %></td>
+            <td><%= partsUsed(record) %></td>
+            <td><%= record['Total Labor'] || '' %></td>
+            <td><%= record['Total Parts'] || '' %></td>
+            <td><%= record['Grand Total'] || '' %></td>
+            <td><%= record['Vat'] || '' %></td>
+            <td><%= record['Totalwith Vat'] || '' %></td>
+            <td><%= record['TimeIn'] || '' %></td>
+            <td><%= record['TimeOut'] || '' %></td>
+            <td><a href="/transactions/<%= record.id %>">View</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<script>
+  (function bindSalesReportFilters() {
+    const branch = document.getElementById('sales-report-branch');
+    const start = document.getElementById('sales-report-start');
+    const end = document.getElementById('sales-report-end');
+    if (!branch && !start && !end) return;
+    function apply() {
+      const params = [];
+      if (branch && branch.value !== 'all') params.push('branch=' + encodeURIComponent(branch.value));
+      if (start && start.value) params.push('startDate=' + encodeURIComponent(start.value));
+      if (end && end.value) params.push('endDate=' + encodeURIComponent(end.value));
+      window.location.href = '/stm/sales-report' + (params.length ? '?' + params.join('&') : '');
+    }
+    if (branch) branch.addEventListener('change', apply);
+    if (start) start.addEventListener('change', apply);
+    if (end) end.addEventListener('change', apply);
+  })();
+</script>
+
+<%- include('../partials/footer') %>

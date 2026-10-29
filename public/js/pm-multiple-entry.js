@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   const root = document.getElementById('pm-multiple-entry');
   if (!root) return;
 
@@ -186,7 +186,7 @@
         headers: { Accept: 'application/json' },
       });
       if (response.status === 404) {
-        setStatus('New barcode ' + key + ' — fill in the part details for this row.', false);
+        setStatus('New barcode ' + key + ' - fill in the part details for this row.', false);
         return false;
       }
       const part = await response.json().catch(() => ({}));
@@ -197,7 +197,7 @@
           input.value = part[field];
         }
       });
-      setStatus('Barcode ' + key + ' matched ' + part.part_number + ' — ' + part.part_name + '.', false);
+      setStatus('Barcode ' + key + ' matched ' + part.part_number + ' - ' + part.part_name + '.', false);
       return true;
     } catch (error) {
       setStatus(String(error.message || error), true);
@@ -238,6 +238,14 @@
   }
 
   saveButton.addEventListener('click', async () => {
+    const receiverInput = document.getElementById('pm-multiple-receiver');
+    const receiverBarcode = receiverInput ? String(receiverInput.value || '').trim() : '';
+    if (receiverInput && receiverInput.required && !receiverBarcode) {
+      setStatus('Swipe your ID barcode first.', true);
+      receiverInput.focus();
+      return;
+    }
+
     const entries = readEntries();
     if (!entries.length) {
       setStatus('Add at least one receiving entry before saving.', true);
@@ -262,7 +270,7 @@
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ entries, po_number: String((poInput && poInput.value) || '').trim(), po_retrieved_at: loadedAt }),
+        body: JSON.stringify({ receiver_barcode: receiverBarcode, entries, po_number: String((poInput && poInput.value) || '').trim(), po_retrieved_at: loadedAt }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.ok) {
@@ -299,3 +307,4 @@
 
   resetGrid();
 })();
+

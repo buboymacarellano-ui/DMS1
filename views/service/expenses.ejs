@@ -1,121 +1,161 @@
 <%- include('../partials/header') %>
 
 <%
-  const peso = (n) => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const peso = (n) => '\u20B1' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const dash = '\u2014';
   const p = prefill || {};
   const val = (key, fallback) => (p[key] != null && p[key] !== '' ? p[key] : (fallback || ''));
+  const timePart = (iso) => (iso ? new Date(iso).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' }) : '');
+  const logStamp = editId
+    ? [p.log_date, timePart(p.created_at)].filter(Boolean).join(' ')
+    : [today, timePart(new Date().toISOString())].filter(Boolean).join(' ');
+  const formAction = editId ? ('/expenses/' + editId) : '/expenses';
 %>
 
-<h2 class="wo-new-title">Log Expenses</h2>
+<h2 class="wo-new-title"><%= editId ? 'Amend Expenses' : 'Expenses' %></h2>
 
 <% if (formError) { %>
   <p class="error"><%= formError %></p>
 <% } %>
 
-<form method="post" action="/expenses" class="form expense-log-form" id="expense-log-form">
-  <label>Log Date
-    <input type="date" name="log_date" value="<%= val('log_date', today) %>" required>
+<
+
+<div style="flex:1;min-width:320px;">
+  <h3 style="margin:0 0 10px;font-size:16px;font-weight:700;">Log Expenses</h3>
+  <!-- Log Expenses form (right) -->
+  <form method="post" action="<%= formAction %>" class="form expense-log-form" id="expense-log-form" style="max-width:none;">
+  <label>Log Date &amp; Time (Auto)
+    <input type="text" value="<%= logStamp %>" readonly tabindex="-1">
   </label>
-  <label>Expenses Type
-    <select name="expense_type" required>
-      <option value="">-- select --</option>
-      <% expenseTypes.forEach(type => { %>
-        <option value="<%= type %>" <%= val('expense_type') === type ? 'selected' : '' %>><%= type %></option>
-      <% }) %>
-    </select>
+  <label>Serial No (Auto)
+    <input type="text" value="<%= editId ? (Number(p.serial_no || 0) || dash) : (Number(serialNo || 0) || dash) %>" readonly tabindex="-1">
   </label>
-  <label>Category / Account
-    <select name="category" required>
-      <option value="">-- select --</option>
-      <% expenseCategories.forEach(category => { %>
-        <option value="<%= category %>" <%= val('category') === category ? 'selected' : '' %>><%= category %></option>
-      <% }) %>
-    </select>
-  </label>
-  <label>Business Purpose / Notes
-    <input type="text" name="business_purpose" value="<%= val('business_purpose') %>">
-  </label>
-  <label>Vendor / Supplier
-    <input type="text" name="vendor" value="<%= val('vendor') %>">
-  </label>
-  <label>Specifics
-    <input type="text" name="specifics" value="<%= val('specifics') %>">
-  </label>
-  <label>Unit
-    <input type="text" name="unit" value="<%= val('unit') %>">
-  </label>
-  <label>Unit Price
-    <input type="number" name="unit_price" id="expense-unit-price" min="0" step="0.01" value="<%= val('unit_price') %>">
-  </label>
-  <label>QTY
-    <input type="number" name="qty" id="expense-qty" min="0" step="0.01" value="<%= val('qty') %>">
-  </label>
-  <label>Total
-    <input type="text" id="expense-total" value="" readonly tabindex="-1">
-  </label>
-  <label>Reference Receipt
-    <input type="text" name="reference_receipt" value="<%= val('reference_receipt') %>">
-  </label>
+
   <label>Petty Cash Out
-    <input type="number" name="petty_cash_out" min="0" step="0.01" value="<%= val('petty_cash_out') %>">
+    <input type="number" name="petty_cash_out" min="0" step="0.01" value="<%= val('petty_cash_out') %>" required>
   </label>
-  <label>Petty Cash In
-    <input type="number" name="petty_cash_in" min="0" step="0.01" value="<%= val('petty_cash_in') %>">
+
+  <label>Received By (Employee ID / Barcode)
+    <input type="text" name="received_by" value="<%= val('received_by') %>" placeholder="Scan or type employee ID / barcode" required>
   </label>
-  <label>Received By
-    <input type="text" name="received_by" value="<%= val('received_by') %>">
-  </label>
-  <label>Note
-    <input type="text" name="note" value="<%= val('note') %>">
-  </label>
-  <div>
-    <button type="submit" class="btn">Add Expense</button>
+    <label>Expenses Type
+      <select name="expense_type" id="expense-type">
+        <option value="">-- select --</option>
+        <% expenseTypes.forEach(type => { %>
+          <option value="<%= type %>" <%= val('expense_type') === type ? 'selected' : '' %>><%= type %></option>
+        <% }) %>
+      </select>
+    </label>
+
+    <label>Category / Account
+      <select name="category" id="expense-category">
+        <option value="">-- select --</option>
+        <% expenseCategories.forEach(category => { %>
+          <option value="<%= category %>" <%= val('category') === category ? 'selected' : '' %>><%= category %></option>
+        <% }) %>
+      </select>
+    </label>
+
+    <label>Service WO# or Notes
+      <input type="text" name="business_purpose" value="<%= val('business_purpose') %>" required>
+    </label>
+
+    <label>Vendor / Supplier
+      <input type="text" name="vendor" value="<%= val('vendor') %>">
+    </label>
+
+    <label>Specifics
+      <input type="text" name="specifics" value="<%= val('specifics') %>">
+    </label>
+
+    <label>Unit
+      <input type="text" name="unit" value="<%= val('unit') %>">
+    </label>
+
+    <label>Unit Price
+      <input type="number" name="unit_price" id="expense-unit-price" min="0" step="0.01" value="<%= val('unit_price') %>">
+    </label>
+
+    <label>QTY
+      <input type="number" name="qty" id="expense-qty" min="0" step="0.01" value="<%= val('qty') %>">
+    </label>
+
+    <label>Total
+      <input type="text" id="expense-total" value="" readonly tabindex="-1">
+    </label>
+
+    <label>Reference Receipt
+      <input type="text" name="reference_receipt" value="<%= val('reference_receipt') %>">
+    </label>
+
+    <label>Return Cash(Change)
+      <input type="number" name="petty_cash_in" min="0" step="0.01" value="<%= val('petty_cash_in') %>">
+    </label>
+
+    <label>Note
+      <input type="text" name="note" value="<%= val('note') %>">
+    </label>
+<div>
+    <button type="submit" class="btn"><%= editId ? 'Update Expense' : 'Add Expense' %></button>
+    <% if (editId) { %>
+      <a class="btn btn-sm" href="/expenses" style="margin-left:6px;">Cancel Edit</a>
+    <% } %>
   </div>
 </form>
+</div>
+</div>
 
 <div class="table-scroll">
   <table class="list expense-log-table">
     <thead>
       <tr>
-        <th>Log Date</th>
-        <th>Expenses Type</th>
-        <th>Category / Account</th>
-        <th>Business Purpose / Notes</th>
-        <th>Vendor / Supplier</th>
-        <th>Specifics</th>
-        <th>Unit</th>
-        <th>Unit Price</th>
-        <th>QTY</th>
-        <th>Total</th>
-        <th>Reference Receipt</th>
-        <th>Petty Cash Out</th>
-        <th>Petty Cash In</th>
-        <th>Received By</th>
-        <th>Note</th>
-        <th>Action</th>
+        <th style="text-align:center;">Serial No</th>
+        <th style="text-align:center;">Edit</th>
+        <th style="text-align:center;">Log Date &amp; Time</th>
+        <th style="text-align:center;">Last Edit</th>
+        <th style="text-align:center;">Edits</th>
+        <th style="text-align:center;">Petty Cash Out</th>
+        <th style="text-align:center;">Received By</th>
+        <th style="text-align:center;">Expenses Type</th>
+        <th style="text-align:center;">Category / Account</th>
+        <th style="text-align:center;">Business Purpose / Notes</th>
+        <th style="text-align:center;">Vendor / Supplier</th>
+        <th style="text-align:center;">Specifics</th>
+        <th style="text-align:center;">Unit</th>
+        <th style="text-align:center;">Unit Price</th>
+        <th style="text-align:center;">QTY</th>
+        <th style="text-align:center;">Total</th>
+        <th style="text-align:center;">Reference Receipt</th>
+        <th style="text-align:center;">Return Cash(Change)</th>
+        <th style="text-align:center;">Note</th>
+        <th style="text-align:center;">Action</th>
       </tr>
     </thead>
     <tbody>
       <% if (!expenses.length) { %>
-        <tr><td colspan="16">No expenses logged yet.</td></tr>
+        <tr><td colspan="20">No expenses logged yet.</td></tr>
       <% } %>
       <% expenses.forEach(row => { %>
         <tr>
-          <td><%= row.log_date || '—' %></td>
-          <td><%= row.expense_type || '—' %></td>
-          <td><%= row.category || '—' %></td>
-          <td><%= row.business_purpose || '—' %></td>
-          <td><%= row.vendor || '—' %></td>
-          <td><%= row.specifics || '—' %></td>
-          <td><%= row.unit || '—' %></td>
-          <td><%= peso(row.unit_price) %></td>
-          <td><%= row.qty %></td>
-          <td><%= peso(row.total) %></td>
-          <td><%= row.reference_receipt || '—' %></td>
+          <td><%= Number(row.serial_no || 0) || dash %></td>
+          <td><a class="btn btn-sm" href="/expenses/<%= row.id %>/edit">Edit</a></td>
+          <td><%= [row.log_date, row.created_at ? new Date(row.created_at).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' }) : ''].filter(Boolean).join(' ') || dash %></td>
+          <td><%= row.updated_at ? new Date(row.updated_at).toLocaleString('en-PH') : dash %></td>
+          <td><%= Number(row.edit_count || 0) %></td>
           <td><%= peso(row.petty_cash_out) %></td>
-          <td><%= peso(row.petty_cash_in) %></td>
-          <td><%= row.received_by || '—' %></td>
-          <td><%= row.note || '—' %></td>
+          <td><%= row.received_by || dash %></td>
+          <td><%= row.expense_type || dash %></td>
+          <td><%= row.category || dash %></td>
+          <td><%= row.business_purpose || dash %></td>
+          <td><%= row.vendor || dash %></td>
+          <td><%= row.specifics || dash %></td>
+          <td><%= row.unit || dash %></td>
+          <td><%= row.unit_price ? peso(row.unit_price) : dash %></td>
+          <td><%= row.qty ? row.qty : dash %></td>
+          <td><%= row.total ? peso(row.total) : dash %></td>
+          <td><%= row.reference_receipt || dash %></td>
+          <td><%= row.petty_cash_in ? peso(row.petty_cash_in) : dash %></td>
+          <td><%= row.note || dash %></td>
           <td><a class="btn" href="/expenses/<%= row.id %>">View</a></td>
         </tr>
       <% }) %>
@@ -124,14 +164,138 @@
 </div>
 
 <script>
+    var rep = document.getElementById('pc-replenish');
+    var coh = document.getElementById('pc-coh');
+    var expensesTd = document.getElementById('pc-expenses-td');
+    var saveBtn = document.getElementById('pc-save-btn');
+    var hint = document.getElementById('pc-save-hint');
+
+    function computeCoh() {
+      var a = Number(cfy && cfy.value) || 0;
+      var b = Number(rep && rep.value) || 0;
+      var totalExp = 0;
+      document.querySelectorAll('.expense-log-table tbody tr').forEach(function (tr) {
+        var cells = tr.querySelectorAll('td');
+        if (cells.length >= 6) {
+          var v = cells[5].textContent.replace(/[^\d.]/g, '');
+          totalExp += Number(v) || 0;
+        }
+      });
+      if (expensesTd) expensesTd.value = totalExp.toFixed(2);
+      if (coh) coh.value = (a + b - totalExp).toFixed(2);
+    }
+
+    if (rep) rep.addEventListener('input', computeCoh);
+    computeCoh();
+
+    var repSaveBtn = document.getElementById('pc-replenish-save');
+    if (repSaveBtn) {
+      repSaveBtn.addEventListener('click', function () {
+        var val = rep.value;
+        try { localStorage.setItem('petty_replenish_amount', val); } catch (e) {}
+        rep.readOnly = true;
+        repSaveBtn.disabled = true;
+        repSaveBtn.textContent = 'Saved';
+      });
+    }
+    // Restore saved replenish amount
+    try {
+      var saved = localStorage.getItem('petty_replenish_amount');
+      if (saved !== null && rep) { rep.value = saved; computeCoh(); }
+    } catch (e) {}
+    // Clear saved replenish only after petty cash is saved (form submit)
+    var pcForm = document.getElementById('petty-cash-form');
+    if (pcForm) {
+      pcForm.addEventListener('submit', function () {
+        try {
+          var cohVal = coh ? coh.value : '0';
+          localStorage.setItem('petty_cash_from_yesterday', cohVal);
+          localStorage.removeItem('petty_replenish_amount');
+          if (expensesTd) expensesTd.value = '';
+        } catch (e) {}
+      });
+    }
+    // Restore cash from yesterday from saved COH (only after 6am)
+    try {
+      var cfySaved = localStorage.getItem('petty_cash_from_yesterday');
+      var nowHour = new Date().getHours();
+      if (cfySaved !== null && cfy && nowHour >= 6) { cfy.value = cfySaved; computeCoh(); }
+    } catch (e) {}
+    function checkSaveTime() {
+      var now = new Date();
+      var hour = now.getHours();
+      var enabled = hour >= 17;
+      if (saveBtn) saveBtn.disabled = !enabled;
+      if (hint) hint.textContent = enabled ? 'Save enabled (after 5:00 PM).' : 'Save is enabled after 5:00 PM.';
+    }
+    var resetBtn = document.getElementById('pc-reset-btn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function () {
+        try {
+          localStorage.removeItem('petty_replenish_amount');
+          localStorage.removeItem('petty_cash_from_yesterday');
+        } catch (e) {}
+        if (cfy) cfy.value = '0';
+        if (rep) { rep.value = '0'; rep.readOnly = false; }
+        if (expensesTd) expensesTd.value = '0';
+        if (coh) coh.value = '0';
+        var rs = document.getElementById('pc-replenish-save');
+        if (rs) { rs.disabled = false; rs.textContent = 'Save'; }
+        computeCoh();
+      });
+    }
+    checkSaveTime();
+    setInterval(checkSaveTime, 30000);
+  })();
+</script>
+
+<script>
+  (function () {
+    var type = document.getElementById('expense-type') || document.querySelector('select[name="expense_type"]');
+    var category = document.getElementById('expense-category') || document.querySelector('select[name="category"]');
+    if (!type || !category) return;
+
+    var optionsByType = <%- JSON.stringify(expenseCategoriesByType || {}) %>;
+    var allCategories = <%- JSON.stringify(expenseCategories || []) %>;
+
+    function rebuild() {
+      var selectedType = String(type.value || '');
+      var list = (selectedType && optionsByType[selectedType]) ? optionsByType[selectedType] : allCategories;
+      var current = String(category.value || '');
+
+      while (category.options.length > 1) category.remove(1);
+
+      (list || []).forEach(function (label) {
+        var opt = document.createElement('option');
+        opt.value = label;
+        opt.textContent = label;
+        category.appendChild(opt);
+      });
+
+      if (current && (list || []).indexOf(current) >= 0) category.value = current;
+      else category.value = '';
+    }
+
+    type.addEventListener('change', function () {
+      rebuild();
+      category.focus();
+    });
+
+    rebuild();
+  })();
+
   (function () {
     var price = document.getElementById('expense-unit-price');
     var qty = document.getElementById('expense-qty');
     var total = document.getElementById('expense-total');
+
+    if (!price || !qty || !total) return;
+
     function update() {
       var value = (Number(price.value) || 0) * (Number(qty.value) || 0);
       total.value = value.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
+
     price.addEventListener('input', update);
     qty.addEventListener('input', update);
     update();

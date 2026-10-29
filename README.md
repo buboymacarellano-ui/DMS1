@@ -93,7 +93,6 @@ The system sends you straight to your own dashboard. You do not need to search f
 | HR staff | HR Portal | Employee records, shift rosters |
 | Payroll | Payroll screen | Payroll processing |
 | Finance Manager / Accounting | Accounting | Financial records |
-| Assets & Facilities | FTE Tracking | Staffing and facilities |
 
 You only see the screens your role is allowed to open. This is normal — it is not a fault. If you genuinely need access to something you cannot open, ask your manager to have your role updated. Do not share another person's login.
 
@@ -109,7 +108,7 @@ Database/list views size columns primarily to their data cells with uniform cell
 - **Pressing the ESC key** also goes back one screen. This is the quickest way when you open something by mistake.
 - **Approvals / Requests** in the header shows pending items. If there is a number beside it, that many items are waiting for you.
 
-Your role and name are shown in the header so you can always confirm who is logged in. Accounts signed into any of the seven operational branches also see their branch name in a separate 50%-faded red badge beside the session controls. This reflects the signed-in branch, not a report's selected branch filter; warehouse and unassigned accounts do not show a branch badge.
+On the right of the header you can always confirm who is logged in — the white lettering lists **User Name**, **Role** and **Branch ID**. The branch shown is the signed-in branch, not a report's selected branch filter; warehouse and unassigned accounts do not show a branch ID.
 
 ---
 
@@ -117,15 +116,9 @@ Your role and name are shown in the header so you can always confirm who is logg
 
 There are two different things here. They are easy to confuse, so read both.
 
-### A. The Full Screen button (inside the system)
+### A. Browser full screen (outside the system)
 
-Every page has a **Full Screen** button in the top right corner.
-
-- Click it once — the screen goes full and the button changes to **Exit Full Screen**.
-- Click it again to go back to normal.
-- The system remembers your choice on that computer. Next time you open it, it stays the way you left it.
-
-If your browser blocks true full screen, the system still hides the extra parts of the page so you get the wider layout. You can press **F11** (Windows) or **Control + Command + F** (Mac) to force the browser into full screen.
+There is no full screen button inside the system any more. Use the browser's own full screen instead: press **F11** (Windows) or **Control + Command + F** (Mac) to go full screen and the same key again to come back.
 
 ### B. Kiosk mode (always full screen, no browser bars)
 
@@ -283,7 +276,7 @@ You opened a screen your role cannot access. Use the header links or press ESC t
 Check the branch shown in the header. Branch staff only see records for their assigned branch. If the branch is wrong, log out and log in again with the correct one.
 
 **Full screen will not turn off.**
-Click **Exit Full Screen** in the header. If you are in kiosk mode, use **Alt + F4** (Windows) or **Command + Q** (Mac) — kiosk mode has no exit button by design.
+Press **F11** (Windows) or **Control + Command + F** (Mac) to toggle browser full screen off. If you are in kiosk mode, use **Alt + F4** (Windows) or **Command + Q** (Mac) — kiosk mode has no exit button by design.
 
 **The kiosk PC opens a normal window instead of full screen.**
 The shortcut is wrong or pointing at the old address. See [section 5](#5-full-screen-and-kiosk-setup).
@@ -305,7 +298,6 @@ Note the screen you were on, what you clicked, and what you expected. Send that 
 | **Approval Request** | A request sent to another department for a yes or no |
 | **Branch** | One of the operating locations: Carx2, Carmen, CebuCity, Lapux2, Bogo, Toledo, ITPark |
 | **Proposed Location** | A branch still being planned, not yet operating |
-| **FTE** | Full-time equivalent — headcount tracking |
 | **POS** | Point of Sale, the cashier screen |
 | **Kiosk mode** | A browser opened locked to full screen with no tabs or address bar |
 | **Health check** | A page IT uses to confirm the system is running |

@@ -18,6 +18,7 @@ const BACKUP_FILE = path.join(
 
 const COLUMNS = [
   ['employee_id', 'Employee ID'],
+  ['barcode', 'Barcode'],
   ['first_name', 'First Name'],
   ['middle_name', 'Middle Name'],
   ['last_name', 'Last Name'],

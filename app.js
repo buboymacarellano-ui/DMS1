@@ -9,6 +9,7 @@ const rateLimit = require('express-rate-limit');
 const customersRouter = require('./routes/customers');
 const quotationsRouter = require('./routes/quotations');
 const expensesRouter = require('./routes/expenses');
+const pettyCashRouter = require('./routes/petty-cash');
 const vehiclesRouter = require('./routes/vehicles');
 const workOrdersRouter = require('./routes/workorders');
 const workOrderTransactionsRouter = require('./routes/workorder-transactions');
@@ -51,7 +52,6 @@ const {
 const { buildOcpdReport } = require('./lib/ocpd-reporting');
 const { buildTechnicianOperations, toDashboardStats } = require('./lib/technician-activity');
 const { buildSalesReportRows, summarizeSalesReportRows } = require('./lib/sales-report');
-const { getFteSeedTransactions } = require('./lib/fte-seed');
 const {
   TYPE_SOLD,
   isPartsActivityLog,
@@ -91,7 +91,6 @@ const ROLE_HR_MANAGER = portals.ROLE_HR_MANAGER;
 const ROLE_HR_GENERALIST = portals.ROLE_HR_GENERALIST;
 const ROLE_PAYROLL = portals.ROLE_PAYROLL;
 const ROLE_HR_CLERK = portals.ROLE_HR_CLERK;
-const ROLE_ASSETS_FACILITIES = portals.ROLE_ASSETS_FACILITIES;
 const ROLE_ACCOUNTING = portals.ROLE_ACCOUNTING;
 const APPROVER_ROLES = new Set([
   ROLE_GENERAL_MANAGER,
@@ -118,7 +117,6 @@ const BYPASS_ROLES = new Set([
   ROLE_PARTS_CLERK,
   ROLE_FINANCE_MANAGER,
   ROLE_ACCOUNTING,
-  ROLE_ASSETS_FACILITIES,
   ROLE_TECHNICIAN,
   ROLE_OPERATIONS_MANAGER,
   ROLE_STORE_MANAGER,
@@ -140,6 +138,19 @@ const BYPASS_ROLE = BYPASS_ROLES.has(requestedBypassRole) && portals.isRoleEnabl
 const app = express();
 const PORT = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
+
+let assetStamp = { mtimeMs: 0, version: '1' };
+function currentAssetVersion() {
+  try {
+    const stat = fs.statSync(path.join(__dirname, 'public', 'styles.css'));
+    if (stat.mtimeMs !== assetStamp.mtimeMs) {
+      assetStamp = { mtimeMs: stat.mtimeMs, version: String(stat.mtimeMs) };
+    }
+    return assetStamp.version;
+  } catch (error) {
+    return '1';
+  }
+}
 
 function resolveSessionSecret() {
   const fromEnv = String(process.env.SESSION_SECRET || '').trim();
@@ -198,6 +209,12 @@ app.use(session({
 }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Always revalidate rendered pages so the ?v= asset stamp tracks the current stylesheet.
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-cache');
+  next();
+});
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 20,
@@ -214,7 +231,7 @@ app.use(async (req, res, next) => {
   if (AUTH_DISABLED && !req.session.user) {
     const roleLabel = BYPASS_ROLE === ROLE_GENERAL_MANAGER
       ? 'GM'
-      : (BYPASS_ROLE === ROLE_ADMIN ? 'FO' : (BYPASS_ROLE === ROLE_HR ? 'HR' : (BYPASS_ROLE === ROLE_STM ? 'STM' : (BYPASS_ROLE === ROLE_PARTS_MANAGER ? 'PARTS' : (BYPASS_ROLE === ROLE_FINANCE_MANAGER || BYPASS_ROLE === ROLE_ACCOUNTING ? 'ACCT' : (BYPASS_ROLE === ROLE_ASSETS_FACILITIES ? 'A&F' : (BYPASS_ROLE === ROLE_TECHNICIAN ? 'TECH' : 'SA')))))));
+      : (BYPASS_ROLE === ROLE_ADMIN ? 'FO' : (BYPASS_ROLE === ROLE_HR ? 'HR' : (BYPASS_ROLE === ROLE_STM ? 'STM' : (BYPASS_ROLE === ROLE_PARTS_MANAGER ? 'PARTS' : (BYPASS_ROLE === ROLE_FINANCE_MANAGER || BYPASS_ROLE === ROLE_ACCOUNTING ? 'ACCT' : ((BYPASS_ROLE === ROLE_TECHNICIAN ? 'TECH' : 'SA')))))));
     req.session.user = {
       id: `dev-bypass-${BYPASS_ROLE}`,
       username: `DEV-${roleLabel}`,
@@ -222,6 +239,7 @@ app.use(async (req, res, next) => {
     };
   }
   res.locals.currentUser = req.session.user || null;
+  res.locals.assetVersion = currentAssetVersion();
   const signedInBranch = canonicalizeBranchName(req.session.user && req.session.user.branch);
   res.locals.signedInBranch = DEFAULT_OPERATIONAL_BRANCHES.includes(signedInBranch) ? signedInBranch : '';
   res.locals.globalError = req.session.globalError || '';
@@ -2513,238 +2531,6 @@ app.get('/gm', requireRole(ROLE_GENERAL_MANAGER), async (req, res) => {
 
 
 
-app.get(
-  '/gm/fte',
-  requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_STM, ROLE_SERVICE_ADVISOR, ROLE_SERVICE_RECEPTIONIST, ROLE_SENIOR_SERVICE_RECEPTIONIST, ROLE_ASSETS_FACILITIES, ROLE_ADMIN),
-  async (req, res) => {
-  const branchRows = await store.getAll('branches').catch(() => []);
-  const branchNames = Array.isArray(branchRows) && branchRows.length
-    ? branchRows.map((row) => String(row.name || row.branch || '').trim()).filter(Boolean)
-    : DEFAULT_OPERATIONAL_BRANCHES.slice();
-  const viewerRole = String(
-    (req.session.user && req.session.user.role) || (isLoginAuthDisabled() ? BYPASS_ROLE : '') || ''
-  ).trim().toLowerCase();
-  const canApproveFte = viewerRole === ROLE_GENERAL_MANAGER;
-  const isFrontlineFte = isFrontlineRole(viewerRole);
-  const isStmFte = viewerRole === ROLE_STM;
-  const assignedBranch = isFrontlineFte
-    ? String((req.session.user && req.session.user.branch) || '').trim() || PRIMARY_BRANCH_NAME
-    : String((req.session.user && req.session.user.branch) || '').trim();
-  const assignedBranchCanonical = (() => {
-    if (isFrontlineFte) return PRIMARY_BRANCH_NAME;
-    const key = normalizeBranchAccess(assignedBranch);
-    if (!key) return '';
-    const hit = branchNames.find((name) => normalizeBranchAccess(name) === key);
-    return hit || assignedBranch;
-  })();
-  let fteHomeHref = '/gm';
-  let fteHomeLabel = '← GM Dashboard';
-  if (isStmFte) {
-    fteHomeHref = '/stm';
-    fteHomeLabel = '← STM Dashboard';
-  } else if (viewerRole === ROLE_ASSETS_FACILITIES || viewerRole === ROLE_ADMIN) {
-    fteHomeHref = '/admin';
-    fteHomeLabel = '← Finance Office';
-  } else if (isFrontlineRole(viewerRole)) {
-    fteHomeHref = frontlineHomePath(viewerRole);
-    const tag = frontlineRoleLabel(viewerRole) || 'SA';
-    fteHomeLabel = `← ${tag} Dashboard`;
-  }
-  res.render('gm/fte', {
-    branches: branchNames,
-    canApproveFte,
-    isFrontlineFte,
-    assignedBranch: assignedBranchCanonical,
-    fteHomeHref,
-    fteHomeLabel,
-    metrics: {
-      opexMtd: 86420.75,
-      criticalUptimePct: 97.4,
-      openWorkOrders: 4,
-      upcomingPms7Days: 4,
-      emergencyOrders: [
-        { id: 'FTE-2401', equipment: '2-Post Lift #3', branch: 'Carmen', priority: 'Critical', status: 'Open', ageHours: 6 },
-        { id: 'FTE-2398', equipment: 'Wheel Aligner', branch: 'CebuCity', priority: 'High', status: 'In Progress', ageHours: 14 },
-        { id: 'FTE-2395', equipment: 'Air Compressor', branch: 'Lapux2', priority: 'Critical', status: 'Open', ageHours: 3 },
-        { id: 'FTE-2391', equipment: 'Tire Changer', branch: 'Bogo', priority: 'Medium', status: 'In Progress', ageHours: 22 },
-      ],
-      scheduledPm: [
-        { id: 'PM-118', asset: 'Torque Wrench Set A', branch: 'Toledo', dueDate: '2026-08-15', technician: 'R. Santos' },
-        { id: 'PM-119', asset: 'Paint Booth Filters', branch: 'ITPark', dueDate: '2026-08-16', technician: 'J. Cruz' },
-        { id: 'PM-120', asset: 'Hydraulic Press', branch: 'Carmen', dueDate: '2026-08-17', technician: 'M. Dela Cruz' },
-        { id: 'PM-121', asset: 'AC Recovery Unit', branch: 'CebuCity', dueDate: '2026-08-18', technician: 'A. Reyes' },
-      ],
-      recentExpenses: [
-        { id: 'EXP-901', date: '2026-08-13', description: 'Lift cable replacement', category: 'Repair', branch: 'Carmen', amount: 13750 },
-        { id: 'EXP-900', date: '2026-08-12', description: 'Calibration service fee', category: 'Calibration', branch: 'CebuCity', amount: 4800 },
-        { id: 'EXP-898', date: '2026-08-11', description: 'PPE restock (gloves/goggles)', category: 'Safety', branch: 'Bogo', amount: 2650.5 },
-        { id: 'EXP-896', date: '2026-08-10', description: 'Compressor oil & filters', category: 'Consumable', branch: 'Lapux2', amount: 3120 },
-      ],
-      cribTracker: [
-        { id: 'CRB-441', tool: 'Impact Oil Gun #12', assignee: 'K. Lim', branch: 'Carmen', action: 'Check-Out', at: '08:14' },
-        { id: 'CRB-440', tool: 'Scan Tool Elite', assignee: 'R. Santos', branch: 'CebuCity', action: 'Check-In', at: '09:02' },
-        { id: 'CRB-439', tool: 'Torque Wrench 1/2"', assignee: 'J. Cruz', branch: 'ITPark', action: 'Check-Out', at: '09:40' },
-        { id: 'CRB-438', tool: 'ATF Exchanger Hose', assignee: 'M. Dela Cruz', branch: 'Toledo', action: 'Check-In', at: '10:15' },
-      ],
-      safetyChecklist: [
-        { branch: 'Carmen', date: '2026-08-13', result: 'Pass', completedBy: 'STM Desk' },
-        { branch: 'CebuCity', date: '2026-08-13', result: 'Pass', completedBy: 'Lead Tech' },
-        { branch: 'Lapux2', date: '2026-08-13', result: 'Fail', completedBy: 'Shift Lead' },
-        { branch: 'Bogo', date: '2026-08-13', result: 'Pass', completedBy: 'STM Desk' },
-        { branch: 'ITPark', date: '2026-08-13', result: 'Pass', completedBy: 'Lead Tech' },
-        { branch: 'Carx2', date: '2026-08-13', result: 'Fail', completedBy: '—' },
-      ],
-      calibrationAlerts: [
-        { asset: 'Torque Wrench Master', branch: 'Carmen', dueInDays: 2, serial: 'TW-8841' },
-        { asset: 'Alignment Heads', branch: 'CebuCity', dueInDays: 5, serial: 'AL-2207' },
-        { asset: 'Pressure Gauge Kit', branch: 'Toledo', dueInDays: 6, serial: 'PG-1190' },
-        { asset: 'Multimeter Fluke', branch: 'Bogo', dueInDays: 7, serial: 'MM-552' },
-      ],
-      transactions: [
-        {
-          Transaction_ID: 'FTE-TXN-20260813-0001',
-          Transaction_Date: '2026-08-13',
-          Transaction_Time: '08:42:15',
-          Branch_Name: 'Carmen',
-          Asset_ID: 'AST-LFT-003',
-          Asset_Name: '2-Post Lift #3',
-          Asset_Category: 'Shop Equipment',
-          Transaction_Type: 'Repair',
-          Description: 'Hydraulic hose kit and seal replacement after bay leak',
-          serviceRenderedBy: 'In-House Mechanic',
-          laborRate: 350,
-          serviceHours: 4,
-          laborPrice: 1400,
-          partsPrice: 12350,
-          total: 13750,
-          Payment_Method: 'Company Card',
-          Vendor_Supplier: 'Industrial Supply PH',
-          Requested_By_User_ID: 'USR-STM-014',
-          Approved_By_User_ID: 'USR-GM-001',
-          Status: 'Posted',
-        },
-        {
-          Transaction_ID: 'FTE-TXN-20260812-0004',
-          Transaction_Date: '2026-08-12',
-          Transaction_Time: '14:18:03',
-          Branch_Name: 'CebuCity',
-          Asset_ID: 'AST-ALN-001',
-          Asset_Name: 'Wheel Aligner Heads',
-          Asset_Category: 'Calibration Asset',
-          Transaction_Type: 'Calibration',
-          Description: 'Annual camera head calibration and certificate renewal',
-          serviceRenderedBy: 'Manufacturer Tech',
-          laborRate: 0,
-          serviceHours: 6,
-          laborPrice: 4800,
-          partsPrice: 0,
-          total: 4800,
-          Payment_Method: 'Bank Transfer',
-          Vendor_Supplier: 'Metro Cal Lab',
-          Requested_By_User_ID: 'USR-TECH-027',
-          Approved_By_User_ID: 'USR-STM-008',
-          Status: 'Posted',
-        },
-        {
-          Transaction_ID: 'FTE-TXN-20260811-0009',
-          Transaction_Date: '2026-08-11',
-          Transaction_Time: '10:05:41',
-          Branch_Name: 'Bogo',
-          Asset_ID: 'AST-PPE-LOT',
-          Asset_Name: 'Shop PPE Restock Lot',
-          Asset_Category: 'Safety Consumable',
-          Transaction_Type: 'Purchase',
-          Description: 'Gloves, goggles, and spill kit refill for bay ends',
-          serviceRenderedBy: 'In-House Mechanic',
-          laborRate: 350,
-          serviceHours: 0,
-          laborPrice: 0,
-          partsPrice: 2650.5,
-          total: 2650.5,
-          Payment_Method: 'Cash',
-          Vendor_Supplier: 'Safety First Depot',
-          Requested_By_User_ID: 'USR-LEAD-003',
-          Approved_By_User_ID: 'USR-STM-014',
-          Status: 'Posted',
-        },
-        {
-          Transaction_ID: 'FTE-TXN-20260810-0012',
-          Transaction_Date: '2026-08-10',
-          Transaction_Time: '16:27:55',
-          Branch_Name: 'Lapux2',
-          Asset_ID: 'AST-CMP-002',
-          Asset_Name: 'Air Compressor Bay 2',
-          Asset_Category: 'Facility Equipment',
-          Transaction_Type: 'Preventive Maintenance',
-          Description: 'Compressor oil change, filter set, and pressure check',
-          serviceRenderedBy: 'In-House Electrician',
-          laborRate: 350,
-          serviceHours: 2,
-          laborPrice: 700,
-          partsPrice: 2420,
-          total: 3120,
-          Payment_Method: 'Company Card',
-          Vendor_Supplier: 'AirTech Parts',
-          Requested_By_User_ID: 'USR-FAC-002',
-          Approved_By_User_ID: 'USR-GM-001',
-          Status: 'Posted',
-        },
-        {
-          Transaction_ID: 'FTE-TXN-20260809-0007',
-          Transaction_Date: '2026-08-09',
-          Transaction_Time: '09:33:12',
-          Branch_Name: 'ITPark',
-          Asset_ID: 'AST-TW-012',
-          Asset_Name: 'Torque Wrench 1/2" TW-12',
-          Asset_Category: 'Hand Tool',
-          Transaction_Type: 'Tool Replacement',
-          Description: 'Replace damaged torque wrench from tool crib inventory',
-          serviceRenderedBy: 'Third-Party Provider',
-          laborRate: 0,
-          serviceHours: 0.5,
-          laborPrice: 175,
-          partsPrice: 4075,
-          total: 4250,
-          Payment_Method: 'Petty Cash',
-          Vendor_Supplier: 'Tool World Cebu',
-          Requested_By_User_ID: 'USR-TECH-041',
-          Approved_By_User_ID: 'USR-STM-008',
-          Status: 'Pending Approval',
-        },
-        {
-          Transaction_ID: 'FTE-TXN-20260808-0015',
-          Transaction_Date: '2026-08-08',
-          Transaction_Time: '11:50:28',
-          Branch_Name: 'Toledo',
-          Asset_ID: 'AST-GEN-001',
-          Asset_Name: 'Backup Generator',
-          Asset_Category: 'Facility Equipment',
-          Transaction_Type: 'Service Contract',
-          Description: 'Monthly load test service and diesel stabilizer top-up',
-          serviceRenderedBy: 'In-House Mechanic',
-          laborRate: 350,
-          serviceHours: 3,
-          laborPrice: 1050,
-          partsPrice: 5800,
-          total: 6850,
-          Payment_Method: 'Bank Transfer',
-          Vendor_Supplier: 'PowerSafe Facilities',
-          Requested_By_User_ID: 'USR-FAC-002',
-          Approved_By_User_ID: 'USR-GM-001',
-          Status: 'Posted',
-        },
-      ],
-    },
-  });
-});
-
-app.get(
-  '/gm/catalog',
-  requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_STM, ROLE_SERVICE_ADVISOR, ROLE_SERVICE_RECEPTIONIST, ROLE_SENIOR_SERVICE_RECEPTIONIST, ROLE_PARTS_MANAGER),
-  (req, res) => {
-    return res.render('gm/catalog');
-  }
-);
 
 app.get('/gm/performance-incentives', requireRole(ROLE_GENERAL_MANAGER), (req, res) => {
   const query = new URLSearchParams(req.query).toString();
@@ -3123,15 +2909,14 @@ async function loadStmDashboardPage() {
   const pendingApprovals = (approvalRequests || [])
     .filter((request) => String(request.status || '').toLowerCase() === 'pending')
     .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-  const fteHistory = getFteSeedTransactions().slice().sort((a, b) => (
-    String(b.Transaction_Date || '').localeCompare(String(a.Transaction_Date || ''))
-  ));
   const now = Date.now();
   const unassignedOverdue = (workOrders || []).filter((wo) => {
     if (!isWorkOrderOpen(wo)) return false;
     if (String(wo.technician || '').trim()) return false;
     return (now - new Date(wo.created_at || 0).getTime()) >= 10 * 60 * 1000;
   }).length;
+  const activeTechnicianCount = technicians.filter((tech) => Number(tech.active_count || 0) > 0).length;
+  const listedTechnicianCount = technicians.length;
 
   return {
     metrics,
@@ -3142,9 +2927,11 @@ async function loadStmDashboardPage() {
     openWorkOrders,
     liveRandom,
     pendingApprovals,
-    fteHistory: fteHistory.slice(0, 12),
-    fteOpenCount: fteHistory.filter((row) => /pending|open|in progress/i.test(String(row.Status || ''))).length,
     branches: DEFAULT_OPERATIONAL_BRANCHES.slice(),
+    technicianLiveReport: {
+      listed: listedTechnicianCount,
+      active: activeTechnicianCount,
+    },
     vitals: {
       technicianProductivityPct: metrics.technicianLabor.technicianProductivityPct,
       technicianEfficiencyPct: metrics.technicianLabor.technicianEfficiencyPct,
@@ -3207,6 +2994,136 @@ app.get('/stm/print-technicians', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_STM)
   }
 });
 
+app.get('/stm/sales-report', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_STM), async (req, res) => {
+  try {
+    const salesHeaders = [
+      'Transaction date', 'work order Number', 'Branch', 'Customer name', 'Telephone number',
+      'Car Brand', 'Model', 'Year', 'SA', 'Tecnician', 'Services', 'Service Rendered', 'Parts', 'Parts Used',
+      'Total Labor', 'Total Parts', 'Grand Total', 'Vat', 'Totalwith Vat', 'TimeIn', 'TimeOut',
+    ];
+    const allRecords = await store.getAll('transaction_records');
+    const requested = String(req.query.branch || '').trim();
+    const startDate = String(req.query.startDate || '').trim();
+    const endDate = String(req.query.endDate || '').trim();
+    const startMs = startDate ? new Date(startDate + 'T00:00:00').getTime() : 0;
+    const endMs = endDate ? new Date(endDate + 'T23:59:59').getTime() : Infinity;
+    const records = (allRecords || [])
+      .slice()
+      .filter((r) => {
+        const d = new Date(r['Transaction date'] || r.created_at || 0).getTime();
+        return (requested === '' || String(r.Branch || '').toLowerCase() === requested.toLowerCase())
+          && (isNaN(startMs) || d >= startMs)
+          && (isNaN(endMs) || d <= endMs);
+      })
+      .sort((a, b) => new Date(b['Transaction date'] || b.created_at || 0).getTime() - new Date(a['Transaction date'] || a.created_at || 0).getTime());
+    const branches = [...new Set((allRecords || []).map((r) => String(r.Branch || '')).filter(Boolean))].sort();
+    return res.render('stm/sales-report', { records, branches, selectedBranch: requested || 'all', startDate, endDate, headers: salesHeaders });
+  } catch (error) {
+    console.error('GET /stm/sales-report failed', error);
+    return res.status(500).send('Unable to load sales report.');
+  }
+});
+
+app.get('/stm/tech-labor-timelogs', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_STM), async (req, res) => {
+  try {
+    const [workOrders, technicianUpdates, employees, customers, vehicles] = await Promise.all([
+      store.getAll('work_orders'),
+      store.getAll('technician_updates'),
+      store.getAll('employees'),
+      store.getAll('customers'),
+      store.getAll('vehicles'),
+    ]);
+    const customerById = new Map((customers || []).map((c) => [c.id, c]));
+    const vehicleById = new Map((vehicles || []).map((v) => [v.id, v]));
+    const toNumber = (value) => { const n = Number(value); return Number.isFinite(n) ? n : 0; };
+    const parseHm = (value) => {
+      const m = String(value || '').match(/^(\d{1,2}):(\d{2})/);
+      if (!m) return null;
+      return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+    };
+    const WORK_START = 8 * 60;      // 08:00
+    const WORK_END = 17 * 60;       // 17:00 (5pm)
+    const MAX_DAILY_HOURS = 8;
+    const clampToWorkWindow = (minutes) => Math.max(WORK_START, Math.min(WORK_END, minutes));
+    const segmentMinutes = (start, stop) => {
+      const s = parseHm(start);
+      const e = parseHm(stop);
+      if (s == null || e == null) return 0;
+      let sClamped = clampToWorkWindow(s);
+      let eClamped = clampToWorkWindow(e);
+      let minutes = eClamped - sClamped;
+      if (minutes < 0) minutes += 24 * 60;
+      if (minutes < 0) minutes = 0;
+      return minutes;
+    };
+    const isSunday = (dateValue) => {
+      const d = new Date(dateValue || 0);
+      return d.getDay() === 0;
+    };
+    const totalDurationHours = (row) => {
+      if (isSunday(row.date)) return 0;
+      let minutes = segmentMinutes(row.timeStart, row.timeStop1);
+      for (let i = 2; i <= 20; i += 1) {
+        minutes += segmentMinutes(row[`start${i}`], row[`timeStop${i}`]);
+      }
+      const dailyHours = Math.min(MAX_DAILY_HOURS, minutes / 60);
+      return Number(dailyHours.toFixed(2));
+    };
+    const workOrderTotal = (wo) => (Array.isArray(wo && wo.service_items) ? wo.service_items : []).reduce((sum, item) => {
+      const labor = toNumber(item && item.labor_price) * Math.max(1, toNumber(item && item.service_qty) || 1);
+      const qtyRaw = Number(item && item.parts_qty);
+      const qty = Number.isFinite(qtyRaw) && qtyRaw > 0 ? qtyRaw : 0;
+      const fallback = labor + (qty * toNumber(item && item.parts_price));
+      const lineTotal = Number(item && item.total_price);
+      return sum + (Number.isFinite(lineTotal) && lineTotal > 0 ? lineTotal : fallback);
+    }, 0);
+    const rows = [];
+    (workOrders || []).forEach((wo) => {
+      const techName = String(wo.technician || '').trim();
+      if (!techName) return;
+      const date = wo.technician_assigned_at || wo.created_at || '';
+      const timeStart = wo.time_in || '';
+      const timeStop1 = wo.time_out || '';
+      const total = workOrderTotal(wo);
+      const rowBase = {
+        wo: wo.work_order_number || wo.id,
+        date,
+        tech: techName,
+        total,
+        timeStart,
+        timeStop1,
+      };
+      for (let i = 2; i <= 20; i += 1) {
+        rowBase[`start${i}`] = '';
+        rowBase[`timeStop${i}`] = '';
+      }
+      rowBase.duration = totalDurationHours(rowBase);
+      const items = Array.isArray(wo.service_items) ? wo.service_items : [];
+      if (items.length === 0) {
+        rows.push({
+          ...rowBase,
+          service: '',
+          labor: '',
+        });
+        return;
+      }
+      items.forEach((item) => {
+        const labor = toNumber(item && item.labor_price) * Math.max(1, toNumber(item && item.service_qty) || 1);
+        rows.push({
+          ...rowBase,
+          service: String(item && (item.description || item.service_type || item.reason || '')).trim(),
+          labor: labor.toFixed(2),
+        });
+      });
+    });
+    rows.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+    return res.render('stm/tech-labor-timelogs', { rows });
+  } catch (error) {
+    console.error('GET /stm/tech-labor-timelogs failed', error);
+    return res.status(500).send('Unable to load tech labor timelogs.');
+  }
+});
+
 app.get('/api/stm/live', requireAnyRole(ROLE_GENERAL_MANAGER, ROLE_STM), async (req, res) => {
   try {
     const payload = await loadStmDashboardPage();
@@ -3252,6 +3169,8 @@ if (portals.isPortalEnabled(portals.PORTAL_STORES)) {
 app.use('/customers', customersRouter);
 app.use('/quotations', quotationsRouter);
 app.use('/expenses', expensesRouter);
+app.use('/Petty-cash', pettyCashRouter);
+app.use('/Petty-cash--view', pettyCashRouter);
 app.use('/vehicles', vehiclesRouter);
 app.use('/work-orders', workOrdersRouter);
 app.use('/work-order-transactions', workOrderTransactionsRouter);
@@ -3418,3 +3337,4 @@ ensureEmployeeDbLogins()
       console.log(`Server running at http://localhost:${PORT}`);
     });
   });
+

@@ -1,7 +1,9 @@
-<%- include('../partials/header') %>
+﻿<%- include('../partials/header') %>
 <%
+  const activeRole = currentUser ? String(currentUser.role || '').toLowerCase() : '';
   const locations = Array.isArray(locationOptions) ? locationOptions : [];
   const defaultLocation = typeof warehouse1 !== 'undefined' && warehouse1 ? warehouse1 : 'Warehouse 1';
+  const requireReceiverSwipe = ['parts_manager', 'pm', 'parts_clerk'].includes(activeRole);
 %>
 
 <section class="dashboard-shell gm-shell stm-shell pm-multiple-entry" id="pm-multiple-entry" data-default-location="<%= defaultLocation %>">
@@ -18,6 +20,9 @@
     <p class="dashboard-note">Fill the rows below. Click inside the Barcode box and scan the parts label with the barcode reader to assign it to that row. A barcode saved before auto-fills the row's part details (including Part #). Save creates New transactions for the first receipt of a part number system-wide, and Stock for later receipts, inside Parts-DB-All with auto PTN, date, editor, and Warehouse 1 location.</p>
 
     <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin:12px 0;">
+      <label style="display:flex;flex-direction:column;font-weight:700;font-size:13px;">Receiver ID Barcode
+        <input type="text" id="pm-multiple-receiver" placeholder="Swipe your ID barcode" autocomplete="off" <%= requireReceiverSwipe ? 'required' : '' %> style="min-width:220px;" />
+      </label>
       <label style="display:flex;flex-direction:column;font-weight:700;font-size:13px;">PO Number
         <input type="text" id="pm-multiple-po" placeholder="PO-YYYYMMDD-000001" autocomplete="off" style="min-width:240px;" />
       </label>
@@ -72,3 +77,5 @@
 </script>
 <script src="/js/pm-multiple-entry.js"></script>
 <%- include('../partials/footer') %>
+
+

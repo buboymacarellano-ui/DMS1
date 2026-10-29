@@ -3,16 +3,18 @@
   const finQuery = finDate ? '?date=' + encodeURIComponent(finDate) : '';
   const finGroups = [
     { title: 'Finance', items: [
-      { label: 'Finance Dashboard', href: '/finance' + finQuery, exact: true },
-      { label: 'Daily Payment Matrix', href: '/finance' + finQuery + '#fm-payment-panel', anchor: true },
-      { label: 'Accounts Receivable', href: '/finance' + finQuery + '#fm-receivables-panel', anchor: true },
+      { label: 'Finance Dashboard', href: '/finance' + finQuery, exact: true, path: '/finance' },
+      { label: 'Receivables', href: '/finance/receivables' + finQuery, exact: true, path: '/finance/receivables' },
+      { label: 'P&L Report', href: '/finance/pnl' + finQuery, exact: true, path: '/finance/pnl' },
+      { label: 'Purchases', href: '/finance/purchases' + finQuery, exact: true, path: '/finance/purchases' },
+      { label: 'Expenses', href: '/finance/expenses' + finQuery, exact: true, path: '/finance/expenses' },
     ] },
     { title: 'Reports', items: [
       { label: 'EOD Cash Drawer', href: '/finance/eod-report' + finQuery, blank: true },
     ] },
   ];
   const finPath = typeof currentPath !== 'undefined' && currentPath ? String(currentPath) : '';
-  const finActive = (item) => !item.anchor && !item.blank && item.exact && (finPath === '/finance' || finPath === '/finance/');
+  const finActive = (item) => !item.anchor && !item.blank && item.exact && item.path && finPath === item.path;
 %>
 <nav class="pm-sidebar" id="finance-sidebar" aria-label="Finance menu">
   <% finGroups.forEach((group) => { %>
@@ -21,4 +23,12 @@
       <a class="pm-sidebar__link<%= finActive(item) ? ' pm-sidebar__link--active' : '' %>" href="<%= item.href %>"<%- item.blank ? ' target="_blank" rel="noopener"' : '' %>><%= item.label %></a>
     <% }) %>
   <% }) %>
+  <%- include('sidebar-session-actions') %>
 </nav>
+
+
+
+
+
+
+

@@ -1,7 +1,6 @@
 <%- include('../partials/header') %>
 
 <%
-  const vehicleSearchEntries = [];
   function toViberNumber(value) {
     const digits = String(value || '').replace(/\D/g, '');
     if (!digits) return '';
@@ -12,33 +11,30 @@
   }
 %>
 
-<div class="wo-vehicle-finder" id="wo-vehicle-finder">
+<div class="wo-vehicle-finder wo-vehicle-finder--actions-only" id="wo-vehicle-finder">
   <div class="wo-vehicle-finder__cell wo-create-actions">
+    <div class="wo-quick-search" id="wo-quick-search">
+      <select id="wo-search-mode" aria-label="Search mode">
+        <option value="customer" selected>Customer</option>
+        <option value="plate">Plate Number</option>
+      </select>
+      <input
+        id="wo-search-input"
+        type="search"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="Search customer"
+        aria-label="Search work orders"
+      />
+    </div>
     <a class="btn" href="/work-orders/new">+ Create Work Order</a>
     <a class="btn" href="/parts/create">+ Create Parts</a>
     <a class="btn" href="/pricing/new">+ Create Labor Charge</a>
     <a class="btn" href="/work-order-transactions/technicians">Technician Assignment</a>
   </div>
-  <div class="wo-vehicle-finder__cell wo-vehicle-finder__search">
-    <input
-      id="wo-vehicle-search"
-      type="search"
-      autocomplete="off"
-      spellcheck="false"
-      placeholder="Search vehicle"
-      aria-label="Search work order vehicles"
-    />
-    <ul id="wo-vehicle-suggest" class="wo-vehicle-finder__suggest"></ul>
-  </div>
-  <div class="wo-vehicle-finder__cell" id="wo-vehicle-tech"><span class="wo-vehicle-finder__placeholder">Technician</span></div>
-  <div class="wo-vehicle-finder__cell" id="wo-vehicle-status"><span class="wo-vehicle-finder__placeholder">Status</span></div>
-  <div class="wo-vehicle-finder__cell wo-vehicle-finder__actions" id="wo-vehicle-actions">
-    <span class="wo-vehicle-finder__placeholder">Edit Entry · Services · Print WO · Billing</span>
-  </div>
 </div>
-
 <div class="table-scroll">
-<table class="list">
+<table class="list work-orders-list">
   <thead><tr><th>#</th><th>Customer</th><th>Telephone Number</th><th>Vehicle</th><th>Technician</th><th>Status</th><th>Running Bill</th><th></th></tr></thead>
   <tbody>
     <% work_orders.forEach((w, i) => { 
@@ -61,15 +57,6 @@
          const plate = (w.plate_number || veh.license_plate || '').trim();
          const vehicleLabel = [make, model].filter(Boolean).join(' ').trim();
          const vehicleWithPlate = [vehicleLabel, plate].filter(Boolean).join(' ').trim();
-         vehicleSearchEntries.push({
-           id: w.id,
-           vehicle: vehicleWithPlate || 'Unknown Vehicle',
-           make: make,
-           model: model,
-           plate: plate,
-           technician: w.technician || '—',
-           status: w.status || '—',
-         });
          const isClosed = String(w.status || '').trim().toLowerCase() === 'closed';
          const hasTechnician = Boolean(String(w.technician || '').trim());
          const activeRole = String(currentUser && currentUser.role || '').trim().toLowerCase();
@@ -81,21 +68,23 @@
         data-created-at="<%= w.created_at || '' %>"
         data-wo-number="<%= w.work_order_number || '' %>"
         data-wo-id="<%= w.id %>"
-      >
+      
+        data-customer="<%= cust.name || '' %>"
+        data-plate="<%= plate || '' %>"
+>
         <td><%= i + 1 %></td>
-        <td><%= cust.name || '—' %></td>
+        <td><%= cust.name || '' %></td>
         <td>
           <% if (viberNumber) { %>
             <a href="viber://chat?number=<%= encodeURIComponent(viberNumber) %>" title="Open Viber chat"><%= viberNumber %></a>
           <% } else { %>
-            —
           <% } %>
         </td>
-        <td><%= vehicleWithPlate || '—' %></td>
+        <td><%= vehicleWithPlate || '' %></td>
         <td>
           <% if (hasTechnician) { %>
             <a href="/work-order-transactions/technicians/<%= encodeURIComponent(w.technician) %>"><%= w.technician %></a>
-          <% } else { %>—<% } %>
+          <% } else { %><% } %>
         </td>
         <td><%= (typeof formatWorkOrderStatusLabel === 'function' ? formatWorkOrderStatusLabel(w.status) : (w.status || 'Open')) %></td>
         <td>₱<%= runningBill.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
@@ -117,130 +106,6 @@
 </div>
 
 <script>
-  (function bindVehicleFinder() {
-    const entries = <%- JSON.stringify(vehicleSearchEntries) %>;
-    const input = document.getElementById('wo-vehicle-search');
-    const suggest = document.getElementById('wo-vehicle-suggest');
-    const techEl = document.getElementById('wo-vehicle-tech');
-    const statusEl = document.getElementById('wo-vehicle-status');
-    const actionsEl = document.getElementById('wo-vehicle-actions');
-    if (!input || !suggest || !techEl || !statusEl || !actionsEl) return;
-
-    let activeIndex = -1;
-    let visible = [];
-
-    function escapeHtml(value) {
-      return String(value == null ? '' : value)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-    }
-
-    function searchHaystack(entry) {
-      return [entry.vehicle, entry.make, entry.model, entry.plate, entry.technician]
-        .map((part) => String(part || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim())
-        .join(' ');
-    }
-
-    function matchEntries(query) {
-      const tokens = String(query || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean);
-      if (!tokens.length) return [];
-      return entries.filter((entry) => {
-        const hay = searchHaystack(entry);
-        return tokens.every((token) => hay.indexOf(token) !== -1);
-      }).slice(0, 20);
-    }
-
-    function closeSuggest() {
-      suggest.classList.remove('is-open');
-      suggest.innerHTML = '';
-      activeIndex = -1;
-      visible = [];
-    }
-
-    function renderSuggest(items, keepIndex) {
-      visible = items;
-      if (!items.length) {
-        closeSuggest();
-        return;
-      }
-      if (!keepIndex || activeIndex < 0 || activeIndex >= items.length) {
-        activeIndex = 0;
-      }
-      suggest.innerHTML = items.map((entry, index) => (
-        '<li><button type="button" data-index="' + index + '"' +
-        (index === activeIndex ? ' class="is-active"' : '') +
-        '>' + escapeHtml(entry.vehicle) +
-        ' — ' + escapeHtml(entry.technician) +
-        ' · ' + escapeHtml(entry.status) +
-        '</button></li>'
-      )).join('');
-      suggest.classList.add('is-open');
-    }
-
-    function highlightRow(id) {
-      document.querySelectorAll('tr.work-order-row.is-vehicle-hit').forEach((row) => {
-        row.classList.remove('is-vehicle-hit');
-      });
-      const row = document.querySelector('tr.work-order-row[data-wo-id="' + id + '"]');
-      if (!row) return;
-      row.classList.add('is-vehicle-hit');
-      row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    }
-
-    function selectEntry(entry) {
-      if (!entry) return;
-      input.value = entry.vehicle;
-      const techName = String(entry.technician || '').trim();
-      if (techName && techName !== '—') {
-        techEl.innerHTML = '<a href="/work-order-transactions/technicians/' + encodeURIComponent(techName) + '">' + escapeHtml(techName) + '</a>';
-      } else {
-        techEl.textContent = '—';
-      }
-      statusEl.textContent = entry.status || '—';
-      const id = encodeURIComponent(entry.id);
-      actionsEl.innerHTML =
-        '<a href="/work-orders/' + id + '/edit">Edit Entry</a>' +
-        '<a href="/work-orders/' + id + '/service">Services</a>' +
-        '<a href="/work-orders/' + id + '/technician-print" target="_blank">Print WO</a>' +
-        '<a href="/work-orders/' + id + '/billing">Billing</a>';
-      highlightRow(entry.id);
-      closeSuggest();
-    }
-
-    input.addEventListener('input', () => {
-      renderSuggest(matchEntries(input.value));
-    });
-
-    input.addEventListener('keydown', (event) => {
-      if (event.key === 'ArrowDown' && visible.length) {
-        event.preventDefault();
-        activeIndex = (activeIndex + 1) % visible.length;
-        renderSuggest(visible, true);
-      } else if (event.key === 'ArrowUp' && visible.length) {
-        event.preventDefault();
-        activeIndex = (activeIndex - 1 + visible.length) % visible.length;
-        renderSuggest(visible, true);
-      } else if (event.key === 'Enter' && visible[activeIndex]) {
-        event.preventDefault();
-        selectEntry(visible[activeIndex]);
-      } else if (event.key === 'Escape') {
-        closeSuggest();
-      }
-    });
-
-    suggest.addEventListener('mousedown', (event) => {
-      const button = event.target.closest('button[data-index]');
-      if (!button) return;
-      event.preventDefault();
-      selectEntry(visible[Number(button.getAttribute('data-index'))]);
-    });
-
-    document.addEventListener('click', (event) => {
-      if (!event.target.closest('#wo-vehicle-finder')) closeSuggest();
-    });
-  })();
 
   (function enforceWorkOrderOrder() {
     const tbody = document.querySelector('table.list tbody');
@@ -271,6 +136,48 @@
       const indexCell = row.querySelector('td');
       if (indexCell) indexCell.textContent = String(idx + 1);
     });
+  })();
+  (function bindWorkOrderSearch() {
+    const tbody = document.querySelector('table.list tbody');
+    const input = document.getElementById('wo-search-input');
+    const mode = document.getElementById('wo-search-mode');
+    if (!tbody || !input || !mode) return;
+
+    const rows = Array.from(tbody.querySelectorAll('tr.work-order-row'));
+
+    function normalize(value) {
+      return String(value == null ? '' : value).toLowerCase();
+    }
+
+    function updatePlaceholder() {
+      input.placeholder = mode.value === 'plate' ? 'Search plate number' : 'Search customer';
+    }
+
+    function applyFilter() {
+      const query = normalize(input.value).trim();
+      const attr = mode.value === 'plate' ? 'data-plate' : 'data-customer';
+      let visibleIndex = 1;
+
+      rows.forEach((row) => {
+        const hay = normalize(row.getAttribute(attr) || '');
+        const match = !query || hay.includes(query);
+        row.style.display = match ? '' : 'none';
+        if (match) {
+          const indexCell = row.querySelector('td');
+          if (indexCell) indexCell.textContent = String(visibleIndex++);
+        }
+      });
+    }
+
+    mode.addEventListener('change', () => {
+      updatePlaceholder();
+      applyFilter();
+      input.focus();
+    });
+
+    input.addEventListener('input', applyFilter);
+
+    updatePlaceholder();
   })();
 </script>
 

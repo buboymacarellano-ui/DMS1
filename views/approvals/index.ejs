@@ -13,7 +13,7 @@
       <div class="dashboard-card__header admin-panel-header">Change Branch Duty (CBD)</div>
       <form method="post" action="/approvals/request/cbd" class="form">
         <% if (!employeeId) { %>
-          <label>Employee ID<input name="employee_id" required></label>
+          <label>Employee ID / Barcode<input name="employee_id" required></label>
         <% } %>
         <label>Target Branch
           <select name="target_branch" required>

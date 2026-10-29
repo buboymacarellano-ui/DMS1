@@ -47,7 +47,15 @@ totalColumns.forEach(c => columns.push(c));
     <p style="color:#6bff91;font-weight:700;margin-bottom:10px;"><%= importSuccess %></p>
   <% } %>
 
-  <div id="import-csv-panel" style="display:none;background:#1e2128;border:1px solid rgba(255,255,255,0.15);padding:16px;margin-bottom:16px;">
+  <div style="display:flex;align-items:center;gap:10px;margin:12px 0;flex-wrap:wrap;">
+    <span class="dashboard-note admin-note" style="margin:0;">Page <%= (typeof page!=='undefined'?page:1) %> of <%= (typeof totalPages!=='undefined'?totalPages:1) %> (<%= (typeof total!=='undefined'?total:records.length) %> records)</span>
+    <% if ((typeof page !== 'undefined' ? page : 1) > 1) { %>
+      <a class="btn btn-sm" href="/transactions/database?page=<%= page-1 %>">← Prev</a>
+    <% } %>
+    <% if ((typeof page !== 'undefined' ? page : 1) < (typeof totalPages !== 'undefined' ? totalPages : 1)) { %>
+      <a class="btn btn-sm" href="/transactions/database?page=<%= page+1 %>">Next →</a>
+    <% } %>
+  </div>
     <div class="dashboard-card__header admin-panel-header" style="margin-bottom:10px;">Import CSV — Merge with Existing Database</div>
     <p class="dashboard-note admin-note">Records will be <strong>validated</strong> before saving. A preview will show valid and invalid rows so you can confirm before committing.</p>
     <p class="dashboard-note admin-note">Required fields: <strong>work order Number</strong> (7 digits), <strong>Transaction date</strong>, <strong>Customer name</strong>. Duplicates are auto-skipped.</p>
@@ -62,6 +70,13 @@ totalColumns.forEach(c => columns.push(c));
     </form>
   </div>
 
+  <form method="get" action="/transactions/database" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:end;">
+    <label style="font-size:12px;">Start Date<input type="date" name="startDate" value="<%= typeof startDate!=='undefined'?startDate:'' %>" style="display:block;"></label>
+    <label style="font-size:12px;">End Date<input type="date" name="endDate" value="<%= typeof endDate!=='undefined'?endDate:'' %>" style="display:block;"></label>
+    <label style="font-size:12px;">By Branch<input type="text" name="branch" value="<%= typeof branch!=='undefined'?branch:'' %>" style="display:block;"></label>
+    <label style="font-size:12px;">By Tech<input type="text" name="tech" value="<%= typeof tech!=='undefined'?tech:'' %>" style="display:block;"></label>
+    <button type="submit" class="btn btn-sm">Search</button>
+  </form>
   <div class="table-scroll" style="overflow-x:auto;max-height:75vh;overflow-y:auto;">
     <table class="list" style="min-width:max-content;font-size:12px;">
       <thead style="position:sticky;top:0;z-index:5;">

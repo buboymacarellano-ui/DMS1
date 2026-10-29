@@ -12,6 +12,7 @@
         <section class="employee-pane">
           <h3>1. Primary Identification & Core Profile</h3>
           <label>Employee ID <input name="employee_id" value="<%= employee.employee_id || '' %>" required></label>
+          <label>Barcode <input name="barcode" value="<%= employee.barcode || '' %>" placeholder="Scan or type barcode"></label>
           <label>First Name <input name="first_name" value="<%= employee.first_name || '' %>" required></label>
           <label>Middle Name / Initial <input name="middle_name" value="<%= employee.middle_name || '' %>"></label>
           <label>Last Name <input name="last_name" value="<%= employee.last_name || '' %>" required></label>

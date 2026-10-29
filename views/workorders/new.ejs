@@ -49,15 +49,31 @@
     </select>
   </label>
   <label class="wo-new-c1 wo-new-r4">Technician
-    <input id="technician-input" name="technician" list="technician-suggestions" autocomplete="off" value="<%= formPrefill.technician || '' %>">
+    <input id="technician-input" name="technician" list="technician-suggestions" autocomplete="off" value="<%= formPrefill.technician || '' %>" placeholder="Type technician name or barcode">
     <datalist id="technician-suggestions">
       <% techDirectorySafe.forEach(tech => { %>
-        <option value="<%= tech.name %>" data-branch="<%= tech.branch || '' %>"></option>
+        <option value="<%= tech.name %>" data-barcode="<%= tech.barcode || '' %>" data-branch="<%= tech.branch || '' %>"><%= tech.name %><%= tech.barcode ? ' | ' + tech.barcode : '' %></option>
       <% }) %>
     </datalist>
   </label>
-  <label class="wo-new-c1 wo-new-r5">Time-In
-    <input id="time-in-input" name="time_in" placeholder="Auto after technician is assigned" readonly>
+  <label class="wo-new-span wo-new-timelogs">
+    <div class="wo-new-tl-header">
+      <span class="wo-new-tl-title">Technician Time Logs</span>
+      <button type="submit" class="wo-new-create-btn">Create</button>
+    </div>
+    <% for (let i = 1; i <= 20; i += 1) { %>
+      <div class="tl-block">
+        <label class="tl-field">Start
+          <input name="tl_start_<%= i %>" placeholder="HH:MM">
+        </label>
+        <label class="tl-field">Stop<%= i %>
+          <input name="tl_stop_<%= i %>" placeholder="HH:MM">
+        </label>
+        <label class="tl-field">Reason<%= i %>
+          <input name="tl_reason_<%= i %>" placeholder="Reason">
+        </label>
+      </div>
+    <% } %>
   </label>
 
   <label class="wo-new-c3 wo-new-r0">Plate Number
@@ -95,9 +111,6 @@
   <label class="wo-new-c3 wo-new-r4">Odometer
     <input id="odometer-input" name="odometer" type="number" min="0" step="1" value="<%= formPrefill.odometer || '' %>">
   </label>
-  <label class="wo-new-c3 wo-new-r5">Time Out
-    <input id="time-out-input" name="time_out" placeholder="17:00" value="<%= formPrefill.time_out || '' %>">
-  </label>
 
   <input type="hidden" id="car-year" name="car_year" value="<%= formPrefill.car_year || '' %>">
   <input type="hidden" id="vehicle-id" name="vehicle_id" value="<%= formPrefill.vehicle_id || '' %>" />
@@ -107,24 +120,26 @@
     <% }) %>
   </datalist>
 
-  <label class="wo-new-span">Creator <input name="service_advisor" value="<%= currentUser && currentUser.username ? currentUser.username : '' %>" readonly></label>
-  <label class="wo-new-span">Description <textarea name="description" class="description-faded"><%= formPrefill.description || '' %></textarea></label>
+  <label class="wo-new-span wo-new-desc-compact">Description <textarea name="description" class="description-faded"><%= formPrefill.description || '' %></textarea></label>
   <label class="wo-new-span">Status
     <select id="wo-status-select" name="status">
       <% (typeof workOrderStatusOptions !== 'undefined' ? workOrderStatusOptions : [
         { value: 'open', label: 'Open' },
         { value: 'in-progress', label: 'In Progress' },
         { value: 'waiting-parts', label: 'Waiting Parts' },
+        { value: 'transfer-job', label: 'TransferJob' },
+        { value: 'under-time', label: 'UnderTime' },
         { value: 'break', label: 'Break' },
-        { value: 'on-other-priority', label: 'On Other Priority' },
+        { value: 'off-time', label: 'OffTime' },
+        { value: 'on-other-priority', label: 'Other Priority' },
+        { value: 'done', label: 'Done' },
         { value: 'completed', label: 'Completed' }
       ]).forEach((option) => { %>
         <option value="<%= option.value %>" <%= option.value === 'open' ? 'selected' : '' %>><%= option.label %></option>
       <% }) %>
     </select>
-    <small>Open is set when the work order number is created. In Progress is set when a technician is assigned. Waiting Parts, Break, and On Other Priority are operator-selected. Completed is set when the technician reports done from the phone.</small>
+    <small>Open is set when the work order number is created. In Progress is set when a technician is assigned. Waiting Parts, TransferJob, UnderTime, Other Priority, OffTime and Done are recorded accordingly as operator-selected on the Phone. Completed is set when the technician reports done from the phone.</small>
   </label>
-  <button type="submit">Create</button>
   <a href="/work-orders">Cancel</a>
 </form>
 

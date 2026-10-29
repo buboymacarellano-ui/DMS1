@@ -81,17 +81,11 @@ Two independent login bypasses exist and should not be confused:
 
 There are two separate mechanisms. They are often confused, and mixing them causes bugs.
 
-### 1. In-app Full Screen button
+### 1. In-app Full Screen button (removed)
 
-Implemented once, in `views/partials/footer.ejs` (`initFullscreenToggle`). The button markup lives in `views/partials/header.ejs` as `#fullscreen-toggle`.
+The in-app **Full Screen / Exit Full Screen** header button has been removed, together with its `initFullscreenToggle` script in `views/partials/footer.ejs`. There is no in-app full screen mode any more: the `app-fullscreen` body class is never applied, and the `ae_app_full_mode` localStorage key is cleared on load. Full screen now comes only from the browser (F11) or from kiosk mode below.
 
-Behavior:
-
-- Toggles on click only. Calls `requestFullscreen()` / `exitFullscreen()`.
-- Persists the preference in `localStorage` under `ae_app_full_mode`.
-- Applies the `app-fullscreen` body class, which hides the footer and widens the container (see `public/styles.css`). This layout still applies when the browser blocks native fullscreen.
-
-**Do not add a second fullscreen script.** A duplicate implementation previously lived in `header.ejs` and was removed. It registered global `click` / `touchstart` / `keydown` listeners that forced fullscreen on any first interaction, ignored the stored preference, and raced the footer's `exitFullscreen()` so the user could not leave fullscreen. If fullscreen behaves oddly, check for a second handler on `#fullscreen-toggle` before changing the footer script.
+**Do not add a second fullscreen script.** A duplicate implementation previously lived in `header.ejs` and was removed. It registered global `click` / `touchstart` / `keydown` listeners that forced fullscreen on any first interaction, ignored the stored preference, and raced the footer's `exitFullscreen()` so the user could not leave fullscreen. If an in-app full screen button is ever reintroduced, implement it once in `views/partials/footer.ejs` and put the button markup in `views/partials/header.ejs` as `#fullscreen-toggle`.
 
 ### 2. Kiosk mode (browser launch flags)
 

@@ -1,7 +1,7 @@
 const express = require('express');
 const store = require('../data/store');
 const workOrdersRouter = require('./workorders');
-const { isFrontlineRole } = require('../lib/frontline-roles');
+const { isFrontlineRole, employeeMatchesIdentifier, accountEmployeeId } = require('../lib/frontline-roles');
 const { recordGmApproval, TYPES: GM_TXN_TYPES } = require('../lib/gm-transaction-log');
 const approvalControls = require('../lib/approval-controls');
 
@@ -27,13 +27,13 @@ function requireApprover(req, res, next) {
 }
 
 function requesterEmployeeId(user) {
-  return normalize(user.receptionist_employee_id || user.technician_employee_id || user.employee_id);
+  return normalize(user.receptionist_employee_id || user.technician_employee_id || user.employee_id || user.barcode);
 }
 
 // Applies an approved CBD request; returns an error message or ''.
 async function applyCbd(request) {
   const employees = await store.getAll('employees');
-  const employee = employees.find(item => normalize(item.employee_id) === normalize(request.employee_id));
+  const employee = employees.find((item) => employeeMatchesIdentifier(item, request.employee_id));
   if (!employee) return 'Employee record not found.';
   await store.update('employees', employee.id, {
     work_location_branch_id: request.target_branch,
@@ -41,7 +41,7 @@ async function applyCbd(request) {
   });
   const users = await store.getAll('users');
   const linkedUsers = users.filter(user => (
-    normalize(user.receptionist_employee_id || user.technician_employee_id || user.employee_id) === normalize(request.employee_id)
+    accountEmployeeId(user) === normalize(employee.employee_id)
   ));
   await Promise.all(linkedUsers.map(user => store.update('users', user.id, { branch: request.target_branch })));
   return '';
@@ -97,8 +97,6 @@ router.get('/', async (req, res) => {
       .filter((transfer) => String(transfer.status || '').trim().toLowerCase() === 'pending')
       .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
     : [];
-
-  // My Transactions Records: footprint of GM-approved PO / Stock Transfer / FTE Request
   const myTransactionRecords = approver
     ? [...(gmTransactionRecords || [])].sort((a, b) => new Date(b.approved_at || 0) - new Date(a.approved_at || 0))
     : [];
@@ -126,7 +124,7 @@ router.post('/request/cbd', async (req, res) => {
     return res.redirect('/approvals?error=Employee+ID+and+target+branch+are+required.');
   }
 
-  const employee = (await store.getAll('employees')).find(item => normalize(item.employee_id) === employeeId);
+  const employee = (await store.getAll('employees')).find(item => employeeMatchesIdentifier(item, employeeId));
   if (!employee) return res.redirect('/approvals?error=Employee+record+not+found.');
 
   const request = await store.create('approval_requests', {
